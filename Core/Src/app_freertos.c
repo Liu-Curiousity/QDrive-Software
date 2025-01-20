@@ -136,20 +136,27 @@ void App_DebugTask(void *argument)
     FOC_Start(&FOC);
 
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);                   //开启PWM输出,用于触发ADC采样
-    HAL_ADC_Start_DMA(&hadc1, (uint32_t *) I_Values, 2);  //开启ADC采样
+    HAL_ADC_Start_DMA(&hadc1, (uint32_t *) I_Values, 2);        //开启ADC采样
 
 
 
 
     /* Infinite loop */
-//    FOC_Ctrl(&FOC, FOC_PositionCtrl, M_PI_2);                   //设置目标位置
-    FOC_Ctrl(&FOC, FOC_SpeedCtrl, 900);
-//    FOC_Ctrl(&FOC, FOC_CurrentCtrl, 50);
+    FOC_Ctrl(&FOC, FOC_PositionCtrl, M_PI_2);                   //设置目标位置
+    // FOC_Ctrl(&FOC, FOC_SpeedCtrl, 500);
+    // FOC_Ctrl(&FOC, FOC_CurrentCtrl, 100);
     for (;;) {
-        static uint8_t buffer[50];
-        sprintf(buffer, "%.4f,%.4f,%.4f,%.4f\n", FOC.Iq, FOC.Id, FOC.Speed, FOC.Angle);
-        HAL_UART_Transmit(&huart3, buffer, strlen(buffer), HAL_MAX_DELAY);
+        // static uint8_t buffer[50];
+        // sprintf(buffer, "%.4f,%.4f,%.4f,%.4f\n", FOC.Iq, FOC.Id, FOC.Speed, FOC.Angle);
+        // HAL_UART_Transmit(&huart3, buffer, strlen(buffer), HAL_MAX_DELAY);
 //        PID_SetTarget(&FOC.PID_CurrentQ, 950 * cosf(FOC.Angle + 5.7));
+        // FOC_Ctrl(&FOC, FOC_SpeedCtrl, 500);
+        // osDelay(500);
+        // FOC_Ctrl(&FOC, FOC_SpeedCtrl, -500);
+        // FOC_Ctrl(&FOC, FOC_PositionCtrl, M_PI_2);
+        // osDelay(1000);
+        // FOC_Ctrl(&FOC, FOC_PositionCtrl, M_PI);
+        osDelay(1000);
     }
   /* USER CODE END App_DebugTask */
 }
@@ -215,30 +222,35 @@ void FOC_MSP_Init() {
             .PID_CurrentQ_InitStructure = {
                     .PID_Type = PID_TYPE_DELTA,
                     .Target = 0,
-                    .Kp = -3e-3f,
-                    .Ki = -5e-4f,
+                    .Kp = -3e-4f,
+                    .Ki = -1.4e-5f,
                     .Kd = 0,
                     .Limit_Output = 1.0f
             },
             .PID_CurrentD_InitStructure = {
                     .PID_Type = PID_TYPE_DELTA,
                     .Target = 0,
-                    .Kp = -2.5e-3f,
-                    .Ki = -5e-4f,
+                    .Kp = -3e-4f,
+                    .Ki = -1.5e-5f,
                     .Kd = 0,
             },
             .PID_Speed_InitStructure = {
                     .PID_Type = PID_TYPE_POSITION,
                     .Target = 0,
-                    .Kp = 2.9f,
-                    .Ki = 0.39f,
+                    // .Kp = -2.4f,
+                    // .Ki = -0.025f,
+                    /*超强*/
+                    .Kp = -9.0f,
+                    .Ki = -0.05f,
                     .Kd = 0.0f,
                     .Limit_SumError = 5e3f
             },
             .PID_Position_InitStructure = {
                     .PID_Type = PID_TYPE_DELTA,
                     .Target = 0,
-                    .Kp = -500.0f,
+                    // .Kp = -600.0f,
+                    /*超强*/
+                    .Kp = -800.0f,
                     .Ki = 0.0f,
                     .Kd = 0,
             },

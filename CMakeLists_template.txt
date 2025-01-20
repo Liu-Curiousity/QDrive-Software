@@ -48,11 +48,11 @@ else ()
     add_compile_options(-Og -g)
 endif ()
 
-include_directories(${includes} BSP/Inc)
+include_directories(${includes} BSP/Inc UserLib/retarget UserLib/PID)
 
 add_definitions(${defines})
 
-file(GLOB_RECURSE SOURCES ${sources} "BSP/*.*")
+file(GLOB_RECURSE SOURCES ${sources} "BSP/*.*" "UserLib/*.*")
 
 set(LINKER_SCRIPT $${CMAKE_SOURCE_DIR}/${linkerScript})
 

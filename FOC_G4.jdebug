@@ -4,7 +4,7 @@
 *                         www.segger.com                             *
 **********************************************************************
 
-File          : D:/Clion/STM32/Project/FOC_G4/FOC_G4.jdebug
+File          : 
 Created       : 16 Jan 2025 22:03
 Ozone Version : V3.38b
 */
@@ -22,6 +22,7 @@ void OnProjectLoad (void) {
   //
   // Dialog-generated settings
   //
+  Project.SetTraceSource ("SWO");
   Project.AddPathSubstitute ("D:/Clion/STM32/Project/FOC_G4", "$(ProjectDir)");
   Project.AddPathSubstitute ("d:/clion/stm32/project/foc_g4", "$(ProjectDir)");
   Project.SetDevice ("STM32G431CB");
@@ -32,6 +33,7 @@ void OnProjectLoad (void) {
   //
   // User settings
   //
+  Edit.SysVar (VAR_SWO_PORTMASK, 0);
   File.Open ("$(ProjectDir)/cmake-build-debug/FOC_G4.elf");
 }
 

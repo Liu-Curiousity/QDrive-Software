@@ -32,14 +32,12 @@
 #ifndef _PRINTF_H_
 #define _PRINTF_H_
 
-#include <stdarg.h>
-#include <stddef.h>
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#include <stdarg.h>
+#include <stddef.h>
 
 /**
  * Output a character to a custom device like UART, used by the printf() function
@@ -58,6 +56,7 @@ void _putchar(char character);
  * \return The number of characters that are written into the array, not counting the terminating null character
  */
 #define printf printf_
+
 int printf_(const char* format, ...);
 
 
@@ -69,6 +68,7 @@ int printf_(const char* format, ...);
  * \return The number of characters that are WRITTEN into the buffer, not counting the terminating null character
  */
 #define sprintf sprintf_
+
 int sprintf_(char* buffer, const char* format, ...);
 
 
@@ -84,7 +84,9 @@ int sprintf_(char* buffer, const char* format, ...);
  */
 #define snprintf  snprintf_
 #define vsnprintf vsnprintf_
-int  snprintf_(char* buffer, size_t count, const char* format, ...);
+
+int snprintf_(char* buffer, size_t count, const char* format, ...);
+
 int vsnprintf_(char* buffer, size_t count, const char* format, va_list va);
 
 
@@ -95,6 +97,7 @@ int vsnprintf_(char* buffer, size_t count, const char* format, va_list va);
  * \return The number of characters that are WRITTEN into the buffer, not counting the terminating null character
  */
 #define vprintf vprintf_
+
 int vprintf_(const char* format, va_list va);
 
 
@@ -108,10 +111,8 @@ int vprintf_(const char* format, va_list va);
  */
 int fctprintf(void (*out)(char character, void* arg), void* arg, const char* format, ...);
 
-
 #ifdef __cplusplus
-}
+};
 #endif
-
 
 #endif  // _PRINTF_H_

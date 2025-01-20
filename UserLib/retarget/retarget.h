@@ -1,9 +1,13 @@
 #ifndef _RETARGET_H__
 #define _RETARGET_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define USE_TinyPrintf 1
 
-#define STDIO_SUPPORT 1
+#define STDIO_SUPPORT 0
 
 #include "stm32g4xx_hal.h"
 #include <sys/stat.h>
@@ -36,6 +40,10 @@ int _read(int fd, char *ptr, int len);
 
 int _fstat(int fd, struct stat *st);
 
+#endif
+
+#ifdef __cplusplus
+};
 #endif
 
 #endif //#ifndef _RETARGET_H__

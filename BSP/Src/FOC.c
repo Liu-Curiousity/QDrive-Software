@@ -70,19 +70,26 @@ static void FOC_SetPhaseVoltage(FOC_HandleTypeDef *FOC, float Uq, float Ud) {
     assert_param(Uq <= 1 && Uq >= -1);
     assert_param(Ud <= 1 && Ud >= -1);
 
+    // TODO：临时方案有待改进
+    // Uu,Uv,Uw不能设置到最大值1,为了防止电流采样时候MOS对电机有驱动,影响采样
+    // 表现为某一相Ux=0时候(堵转测试),电流采样值偶尔出现尖峰,电机异常抽搐
+    // *0.99f为临时解决方案,缺点是牺牲功率密度
+    Uq*=0.99f;
+    Ud*=0.99f;
+
     /**2.帕克逆变换**/
     float cos_angle = cosf(FOC->ElectricalAngle);
     float sin_angle = sinf(FOC->ElectricalAngle);
-    float Ualpha = (-Uq * sin_angle + Ud * cos_angle) / 2;       //除以2将Ualpha范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
-    float Ubeta = (Uq * cos_angle + Ud * sin_angle) / 2;        //除以2将Ubeta范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
+    float Ualpha = (-Uq * sin_angle + Ud * cos_angle) / 2; // 除以2将Ualpha范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
+    float Ubeta = (Uq * cos_angle + Ud * sin_angle) / 2;   // 除以2将Ubeta范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
 
     /**3.克拉克逆变换**/
-    volatile float Uu = Ualpha + 0.5f;                          //加0.5使得Uu均值为0.5,在[0,1]之间变化
+    volatile float Uu = Ualpha + 0.5f; //加0.5使得Uu均值为0.5,在[0,1]之间变化
     volatile float Uv = -Ualpha / 2 + Ubeta * M_SQRT3_F / 2 + 0.5f;
 
-    //原公式:
-    //float Uw = -Ualpha / 2 - Ubeta * M_SQRT3_F / 2 + 0.5f;
-    //使用Uu,Uv计算得来,减少运算量(其实运算量大头在sin和cos):
+    // 原公式:
+    // float Uw = -Ualpha / 2 - Ubeta * M_SQRT3_F / 2 + 0.5f;
+    // 使用Uu,Uv计算得来,减少运算量(其实运算量大头在sin和cos):
     volatile float Uw = 1.5f - Uu - Uv;
 
     /**4.设置驱动器占空比**/
@@ -103,7 +110,7 @@ int FOC_Init(FOC_HandleTypeDef *FOC, FOC_InitTypeDef *InitStructure) {
     PID_Init_(&FOC->PID_CurrentD, &FOC->Init.PID_CurrentD_InitStructure);
     PID_Init_(&FOC->PID_Speed, &FOC->Init.PID_Speed_InitStructure);
     PID_Init_(&FOC->PID_Position, &FOC->Init.PID_Position_InitStructure);
-    PID_SetLimit(&FOC->PID_CurrentQ, 0, 1);      //电流环输出限幅[-1,1],对应FOC_SetPhaseVoltage()的归一化输入
+    // PID_SetLimit(&FOC->PID_CurrentQ, 0, 1); //电流环输出限幅[-1,1],对应FOC_SetPhaseVoltage()的归一化输入
 
     /**4.初始化BLDC驱动**/
     BLDC_Init(&FOC->Driver, &FOC->Init.Driver_InitStructure);
