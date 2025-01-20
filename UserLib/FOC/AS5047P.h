@@ -34,6 +34,7 @@
 #define MAG         0x3FFD  //CORDIC magnitude
 #define ANGLEUNC    0x3FFE  //Measured angle without dynamic angle error compensation\
                               bit0,
+
 #define ANGLECOM    0x3FFF  //Measured angle with dynamic angle error compensation\
                               bit0,
 
@@ -44,13 +45,17 @@
 #define SETTINGS1   0x0018  //Custom setting register 1
 #define SETTINGS2   0x0019  //Custom setting register 2
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @brief AS5047P错误枚举
  * */
 typedef enum {
-    AS5047P_SPI_FRAME_ERROR = 0x0001,   //SPI帧错误
-    AS5047P_COMMAND_ERROR = 0x0002,     //命令错误
-    AS5047P_PARITY_ERROR = 0x0004,      //偶校验错误
+    AS5047P_SPI_FRAME_ERROR = 0x0001, //SPI帧错误
+    AS5047P_COMMAND_ERROR = 0x0002,   //命令错误
+    AS5047P_PARITY_ERROR = 0x0004,    //偶校验错误
 } AS5047P_Error_EnumTypeDef;
 
 /**
@@ -117,12 +122,12 @@ typedef enum {
  * @brief AS5047P编程结构体
  * */
 typedef struct {
-    bool Direction;                                     //旋转方向
-    bool DynamicAngleErrorCompensation;                 //动态角度误差补偿
-    AS5047P_Mode_EnumTypeDef Mode;                      //模式
-    AS5047P_ABI_Resolution_EnumTypeDef ABI_Resolution;  //ABI分辨率
-    AS5047P_Hysteresis_EnumTypeDef Hysteresis;          //滞迟
-    AS5047P_UVW_PolePairs_EnumTypeDef UVW_PolePairs;    //UVW极对数
+    bool Direction;                                    //旋转方向
+    bool DynamicAngleErrorCompensation;                //动态角度误差补偿
+    AS5047P_Mode_EnumTypeDef Mode;                     //模式
+    AS5047P_ABI_Resolution_EnumTypeDef ABI_Resolution; //ABI分辨率
+    AS5047P_Hysteresis_EnumTypeDef Hysteresis;         //滞迟
+    AS5047P_UVW_PolePairs_EnumTypeDef UVW_PolePairs;   //UVW极对数
 } AS5047P_OTP_Config_TypeDef;
 
 
@@ -130,9 +135,9 @@ typedef struct {
  * @brief AS5047P结构体
  * */
 typedef struct {
-    GPIO_TypeDef *CS_GPIO_Port_;    //CS引脚端口号
-    uint16_t CS_GPIO_Pin_;          //CS引脚号
-    SPI_HandleTypeDef *hspi;        //SPI句柄
+    GPIO_TypeDef *CS_GPIO_Port_; //CS引脚端口号
+    uint16_t CS_GPIO_Pin_;       //CS引脚号
+    SPI_HandleTypeDef *hspi;     //SPI句柄
 } AS5047P_TypeDef;
 
 /**
@@ -170,5 +175,9 @@ extern AS5047P_Error_EnumTypeDef AS5047P_GetError(AS5047P_TypeDef *AS5047P);
  * */
 extern AS5047P_ProgrammingStatus_EnumTypeDef
 AS5047P_Programming(AS5047P_TypeDef *AS5047P, AS5047P_OTP_Config_TypeDef *Config);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //AS5047P_H

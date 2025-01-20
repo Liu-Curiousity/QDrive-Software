@@ -3,7 +3,7 @@
  * @details BLDC驱动库封装并提供以下接口:
  *          start()    启动BLDC驱动
  *          stop()     关闭BLDC驱动
- *          setDuty()  设置BLDC三相占空比,归一化
+ *          set_duty()  设置BLDC三相占空比,归一化
  * @author  LiuHaoqi
  * @date    2025-1-20
  * @version V2.0.0
@@ -36,8 +36,8 @@ void BLDC_Driver::stop() const {
     HAL_TIMEx_PWMN_Stop(htim, TIM_CHANNEL_3);
 }
 
-__attribute__((section(".ccmram_func"))) inline
-void BLDC_Driver::setDuty(float u, float v, float w) const {
+// __attribute__((section(".ccmram_func"))) inline
+void BLDC_Driver::set_duty(float u, float v, float w) const {
     u *= static_cast<float>(MaxDuty);
     v *= static_cast<float>(MaxDuty);
     w *= static_cast<float>(MaxDuty);

@@ -3,7 +3,7 @@
  * @details BLDC驱动库封装并提供以下接口:
  *          start()    启动BLDC驱动
  *          stop()     关闭BLDC驱动
- *          setDuty()  设置BLDC三相占空比,归一化
+ *          set_duty()  设置BLDC三相占空比,归一化
  * @author  LiuHaoqi
  * @date    2025-1-20
  * @version V2.0.0
@@ -25,7 +25,7 @@ public:
 
     void start() const;
     void stop() const;
-    void setDuty(float u, float v, float w) const;
+    void set_duty(float u, float v, float w) const;
 private:
     TIM_HandleTypeDef *htim;
     uint16_t MaxDuty;
