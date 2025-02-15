@@ -60,6 +60,9 @@ public:
         CurrentFilter(CurrentFilter), SpeedFilter(SpeedFilter),
         PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Position(PID_Position) {}
 
+    [[nodiscard]] float speed() const { return Speed; }
+    [[nodiscard]] float angle() const { return Angle; }
+
     void start() {
         bldc_driver.start();  //1.启动BLDC驱动
         bldc_encoder.start(); //2.启动编码器

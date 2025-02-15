@@ -21,6 +21,7 @@ extern "C" {
 //任务句柄和任务函数声明
 //任务函数必须在此声明(在extern "C"块中),否则在app_freertos.c中找不到该函数符号
 void App_DebugTask(void* argument);
+void StartFOCTask(void* argument);
 /**======================================================================================**/
 
 #ifdef __cplusplus

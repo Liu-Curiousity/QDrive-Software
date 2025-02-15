@@ -37,7 +37,7 @@
  * @param Iu U相电流
  * @param Iv V相电流
  * */
-__attribute__((section(".ccmram_func"))) inline
+__attribute__((section(".ccmram_func")))
 void FOC::UpdateCurrent(const float Iu, const float Iv) {
     /**1.检查输入参数**/
     assert_param(Iq != NULL);
@@ -59,7 +59,7 @@ void FOC::UpdateCurrent(const float Iu, const float Iv) {
  * @param Uq 切向力矩,必须在0~1之间!
  * @param Ud 法向力矩,必须在0~1之间!
  * */
-__attribute__((section(".ccmram_func"))) inline
+__attribute__((section(".ccmram_func")))
 void FOC::SetPhaseVoltage(float Uq, float Ud) const {
     /**1.检查输入参数**/
     assert_param(Driver != NULL);
@@ -107,7 +107,7 @@ void FOC::Ctrl(const CtrlType ctrl_type, const float value) {
     }
 }
 
-//__attribute__((section(".ccmram_func")))
+__attribute__((section(".ccmram_func")))
 void FOC::Ctrl_ISR() {
     /**1.计算转速**/
     static float temp = 0;
@@ -137,7 +137,7 @@ void FOC::Ctrl_ISR() {
 }
 
 /*CCMRAM加速运行*/
-// __attribute__((section(".ccmram_func"))) inline
+__attribute__((section(".ccmram_func")))
 void FOC::CurrentLoopCtrl_ISR(float Iu, float Iv) {
     /**1.检查输入参数**/
     assert_param(FOC != NULL);

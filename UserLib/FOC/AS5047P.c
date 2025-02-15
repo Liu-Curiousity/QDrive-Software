@@ -99,7 +99,7 @@ void AS5047P_Init(AS5047P_TypeDef *AS5047P, SPI_HandleTypeDef *hspi, GPIO_TypeDe
     HAL_GPIO_WritePin(CS_GPIO_Port, CS_GPIO_Pin, GPIO_PIN_SET);
 }
 
-__attribute__((section(".ccmram_func"))) inline
+__attribute__((section(".ccmram_func")))
 void AS5047P_ReadAngleContinuously(AS5047P_TypeDef *AS5047P, uint16_t *pRxData) {
     /**为极致效率放弃兼容性**/
     static uint16_t txData = 0xFFFF;

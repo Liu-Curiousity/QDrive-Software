@@ -54,6 +54,13 @@ const osThreadAttr_t DebugTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
   .stack_size = 512 * 4
 };
+/* Definitions for FOCTask */
+osThreadId_t FOCTaskHandle;
+const osThreadAttr_t FOCTask_attributes = {
+  .name = "FOCTask",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 512 * 4
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -61,6 +68,7 @@ const osThreadAttr_t DebugTask_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void App_DebugTask(void *argument);
+extern void StartFOCTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -94,6 +102,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of DebugTask */
   DebugTaskHandle = osThreadNew(App_DebugTask, NULL, &DebugTask_attributes);
 
+  /* creation of FOCTask */
+  FOCTaskHandle = osThreadNew(StartFOCTask, NULL, &FOCTask_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -111,7 +122,8 @@ void MX_FREERTOS_Init(void) {
   * @retval None
   */
 /* USER CODE END Header_App_DebugTask */
-__weak void App_DebugTask(void *argument){
+__weak void App_DebugTask(void *argument)
+{
   /* USER CODE BEGIN App_DebugTask */
     for (;;){
 

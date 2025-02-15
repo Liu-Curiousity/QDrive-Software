@@ -36,7 +36,7 @@ void BLDC_Driver::stop() const {
     HAL_TIMEx_PWMN_Stop(htim, TIM_CHANNEL_3);
 }
 
-// __attribute__((section(".ccmram_func"))) inline
+__attribute__((section(".ccmram_func")))
 void BLDC_Driver::set_duty(float u, float v, float w) const {
     u *= static_cast<float>(MaxDuty);
     v *= static_cast<float>(MaxDuty);

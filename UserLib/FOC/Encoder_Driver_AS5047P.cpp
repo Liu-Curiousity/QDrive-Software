@@ -20,7 +20,7 @@
 void Encoder::start() {}
 void Encoder::stop() {}
 
-// __attribute__((section(".ccmram_func"))) inline
+__attribute__((section(".ccmram_func")))
 float Encoder::read_angle() {
     static uint16_t rxData;
     AS5047P_ReadAngleContinuously(&AS5047P, &rxData);
