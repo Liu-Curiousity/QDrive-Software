@@ -8,13 +8,13 @@
 uint16_t I_Values[3];
 
 BLDC_Driver bldc_driver(&htim1, 2125);
-Encoder bldc_encoder(SPI1_CSn_GPIO_Port, SPI1_CSn_Pin, &hspi1, 1275);
-PID PID_CurrentQ(PID::delta_type, -3e-4f, -1.4e-5f, 0, 0, 0, 1.0f, -1.0f);
-PID PID_CurrentD(PID::delta_type, -3e-4f, -1.5e-5f, 0, 0, 0, 1.0f, -1.0f);
-// PID PID_Speed(PID::position_type, -2.4f, -0.025f, 0, 5e3f, -5e3f);
-PID PID_Speed(PID::position_type, -9.0f, -0.05f, 0, 5e3f, -5e3f);
-// PID PID_Position(PID::delta_type, -600.0f, 0, 0);
-PID PID_Position(PID::delta_type, -800.0f, 0, 0);
+Encoder bldc_encoder(SPI1_CSn_GPIO_Port, SPI1_CSn_Pin, &hspi1, 395);
+PID PID_CurrentQ(PID::delta_type, -3e-3f, -1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
+PID PID_CurrentD(PID::delta_type, -3e-3f, -1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
+// PID PID_Speed(PID::position_type, 2.4f, 0.018f, 0, 5e3f, -5e3f);
+PID PID_Speed(PID::position_type, 4.0f, 0.02f, 0, 5e3f, -5e3f);
+// PID PID_Position(PID::delta_type, -900.0f, 0, 0);
+PID PID_Position(PID::delta_type, -1200.0f, 0, 0);
 // PID PID_Position(PID::delta_type, 10000, 2, 80000); //位置环直接控制电流
 
 __attribute__((section(".ccmram")))

@@ -1,38 +1,38 @@
 
 
-GraphedExpression="(foc).Speed", Color=#e56a6f
-GraphedExpression="((foc).PID_CurrentQ).output", Color=#35792b, Show=0
-GraphedExpression="((foc).PID_CurrentD).output", Color=#769dda, Show=0
-GraphedExpression="(foc).Id", Color=#b14f0d
-GraphedExpression="(foc).Iq", Color=#b3c38e
+GraphedExpression="(foc).Speed", Color=#e56a6f, Show=0
+GraphedExpression="(foc).Iq", Color=#35792b
+GraphedExpression="(foc).Id", Color=#769dda
+GraphedExpression="(foc).Angle", Color=#b14f0d, Show=0
 OpenDocument="tasks.c", FilePath="D:/Clion/STM32/Project/FOC/Middlewares/Third_Party/FreeRTOS/Source/tasks.c", Line=3401
 OpenDocument="startup_stm32g431cbux.s", FilePath="D:/Clion/STM32/Project/FOC/Core/Startup/startup_stm32g431cbux.s", Line=54
 OpenDocument="main.c", FilePath="D:/Clion/STM32/Project/FOC/Core/Src/main.c", Line=67
 OpenToolbar="Debug", Floating=0, x=0, y=0
-OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=0, w=471, h=298, TabPos=0, TopOfStack=0, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
-OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=471, h=298, TabPos=1, TopOfStack=1, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Global Data", DockArea=RIGHT, x=0, y=1, w=471, h=255, TabPos=1, TopOfStack=0, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=471, h=255, TabPos=2, TopOfStack=0, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Watched Data 1", DockArea=RIGHT, x=0, y=1, w=471, h=255, TabPos=0, TopOfStack=1, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Functions", DockArea=LEFT, x=0, y=0, w=450, h=260, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Data Sampling", DockArea=LEFT, x=0, y=1, w=450, h=314, TabPos=1, TopOfStack=1, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, VisibleTab=0, UniformSampleSpacing=0
-OpenWindow="Power Sampling", DockArea=LEFT, x=0, y=1, w=450, h=314, TabPos=0, TopOfStack=0, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, UniformSampleSpacing=0
-OpenWindow="Timeline", DockArea=BOTTOM, x=0, y=0, w=2087, h=661, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=1, DataPaneShown=1, PowerPaneShown=0, CodePaneShown=0, PinCursor="Cursor Movable", TimePerDiv="1 s / Div", TimeStampFormat="Time", DataGraphDrawAsPoints=0, DataGraphLegendShown=1, DataGraphUniformSampleSpacing=0, DataGraphLegendPosition="0;0", DataGraphShowNamesAtCursor=1, PowerGraphDrawAsPoints=0, PowerGraphLegendShown=0, PowerGraphAvgFilterTime=Off, PowerGraphAvgFilterLen=Off, PowerGraphUniformSampleSpacing=0, PowerGraphLegendPosition="1833;-73", CodeGraphLegendShown=0, CodeGraphLegendPosition="1789;0"
+OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=0, w=471, h=308, TabPos=0, TopOfStack=0, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=471, h=308, TabPos=1, TopOfStack=1, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Global Data", DockArea=RIGHT, x=0, y=1, w=471, h=245, TabPos=1, TopOfStack=0, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Local Data", DockArea=RIGHT, x=0, y=1, w=471, h=245, TabPos=2, TopOfStack=0, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Watched Data 1", DockArea=RIGHT, x=0, y=1, w=471, h=245, TabPos=0, TopOfStack=1, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Functions", DockArea=LEFT, x=0, y=0, w=450, h=263, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Data Sampling", DockArea=LEFT, x=0, y=1, w=450, h=311, TabPos=1, TopOfStack=1, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, VisibleTab=0, UniformSampleSpacing=0
+OpenWindow="Power Sampling", DockArea=LEFT, x=0, y=1, w=450, h=311, TabPos=0, TopOfStack=0, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, UniformSampleSpacing=0
+OpenWindow="Timeline", DockArea=BOTTOM, x=0, y=0, w=2087, h=661, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=1, DataPaneShown=1, PowerPaneShown=0, CodePaneShown=0, PinCursor="Cursor Movable", TimePerDiv="1 s / Div", TimeStampFormat="Time", DataGraphDrawAsPoints=0, DataGraphLegendShown=1, DataGraphUniformSampleSpacing=0, DataGraphLegendPosition="0;0", DataGraphShowNamesAtCursor=1, PowerGraphDrawAsPoints=0, PowerGraphLegendShown=0, PowerGraphAvgFilterTime=Off, PowerGraphAvgFilterLen=Off, PowerGraphUniformSampleSpacing=0, PowerGraphLegendPosition="1832;-73", CodeGraphLegendShown=0, CodeGraphLegendPosition="1870;0"
 OpenWindow="Console", DockArea=BOTTOM, x=1, y=0, w=472, h=661, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 SmartViewPlugin="", Page="", Toolbar="Hidden", Window="SmartView 1"
-TableHeader="Global Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Access";"Scope"], ColWidths=[143;100;102;100;100;0;514]
-TableHeader="Watched Data 1", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh";"Access"], ColWidths=[172;100;137;100;100]
-TableHeader="Data Sampling Table", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";" (foc).Speed";" ((foc).PID_CurrentQ).output";" ((foc).PID_CurrentD).output";" (foc).Id";" (foc).Iq"], ColWidths=[100;100;100;100;100;100;100]
-TableHeader="Data Sampling Setup", SortCol="Type", SortOrder="ASCENDING", VisibleCols=["Expression";"Type";"Value";"Min";"Max";"Average";"# Changes";"Min. Change";"Max. Change"], ColWidths=[124;100;154;124;124;154;126;144;143]
-TableHeader="Local Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Access";"Scope"], ColWidths=[100;100;105;100;100;0;214]
-TableHeader="Functions", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Address";"Size";"#Insts";"Class";"Source"], ColWidths=[1458;104;100;100;238;324]
-TableHeader="Power Sampling", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
+TableHeader="Global Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Access";"Scope"], ColWidths=[191;100;102;100;100;0;514]
+TableHeader="Watched Data 1", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh";"Access"], ColWidths=[230;100;137;100;100]
+TableHeader="Local Data", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Location";"Size";"Type";"Access";"Scope"], ColWidths=[100;100;105;100;100;0;100]
 TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[100;144;364]
+TableHeader="Power Sampling", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;224]
+TableHeader="Functions", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Address";"Size";"#Insts";"Class";"Source"], ColWidths=[1458;104;100;100;238;324]
 TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]
-TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[200;100;100;366]
+TableHeader="Data Sampling Table", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";" (foc).Speed";" (foc).Iq";" (foc).Id";" (foc).Angle"], ColWidths=[100;100;100;100;100;100]
+TableHeader="Data Sampling Setup", SortCol="Type", SortOrder="ASCENDING", VisibleCols=["Expression";"Type";"Value";"Min";"Max";"Average";"# Changes";"Min. Change";"Max. Change"], ColWidths=[124;100;100;154;164;105;126;138;143]
 WatchedExpression="(foc).Angle", Window=Watched Data 1
 WatchedExpression="(foc).Speed", Window=Watched Data 1
-WatchedExpression="((foc).PID_CurrentQ).output", Window=Watched Data 1
-WatchedExpression="((foc).PID_CurrentD).output", Window=Watched Data 1
-WatchedExpression="(foc).Id", Window=Watched Data 1
 WatchedExpression="(foc).Iq", Window=Watched Data 1
+WatchedExpression="(foc).Id", Window=Watched Data 1
+WatchedExpression="((foc).PID_CurrentQ).kp", Window=Watched Data 1
+WatchedExpression="((foc).PID_CurrentQ).ki", Window=Watched Data 1
+WatchedExpression="((foc).PID_CurrentQ).kd", Window=Watched Data 1
+WatchedExpression="((foc).PID_CurrentQ).target", RefreshRate=1, Window=Watched Data 1
