@@ -10,7 +10,7 @@ uint16_t I_Values[3];
 BLDC_Driver bldc_driver(&htim1, 2125);
 Encoder bldc_encoder(SPI1_CSn_GPIO_Port, SPI1_CSn_Pin, &hspi1, 1275);
 PID PID_CurrentQ(PID::delta_type, -3e-4f, -1.4e-5f, 0, 0, 0, 1.0f, -1.0f);
-PID PID_CurrentD(PID::delta_type, -3e-4f, -1.5e-5f, 0);
+PID PID_CurrentD(PID::delta_type, -3e-4f, -1.5e-5f, 0, 0, 0, 1.0f, -1.0f);
 // PID PID_Speed(PID::position_type, -2.4f, -0.025f, 0, 5e3f, -5e3f);
 PID PID_Speed(PID::position_type, -9.0f, -0.05f, 0, 5e3f, -5e3f);
 // PID PID_Position(PID::delta_type, -600.0f, 0, 0);
