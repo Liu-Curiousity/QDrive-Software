@@ -27,14 +27,16 @@ void StartFOCTask(void *argument) {
     HAL_TIM_Base_Start_IT(&htim6); //开启速度环位置环中断控制
     foc.start();                   //启动FOC
 
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);                             //开启PWM输出,用于触发ADC采样
-    HAL_ADC_Start_DMA(&hadc1, reinterpret_cast<uint32_t *>(I_Values), 2); //开启ADC采样
+    //TODO: 该采样方式存在同步问题,需要优化
+    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);                                 //开启PWM输出,用于触发ADC采样
+    HAL_ADC_Start_DMA(&hadc1, reinterpret_cast<uint32_t *>(I_Values), 1);     //开启ADC采样
+    HAL_ADC_Start_DMA(&hadc2, reinterpret_cast<uint32_t *>(I_Values + 1), 1); //开启ADC采样
 
 
     /* Infinite loop */
-    foc.Ctrl(FOC::CtrlType::PositionCtrl, M_PI_2); //设置目标位置
+    // foc.Ctrl(FOC::CtrlType::PositionCtrl, M_PI_2); //设置目标位置
     // foc.Ctrl(FOC::CtrlType::SpeedCtrl, 30);
-    // foc.Ctrl(FOC::CtrlType::CurrentCtrl, 80);
+    foc.Ctrl(FOC::CtrlType::CurrentCtrl, 80);
     while (true) {
         osDelay(10);
     }

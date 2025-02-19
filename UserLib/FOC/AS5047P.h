@@ -20,7 +20,6 @@
 
 #include <stdbool.h>
 #include "main.h"
-#include "retarget.h"
 
 //是否打印编程信息
 #define AS5047P_PRINT_PROGRAMMING_INFO 0
