@@ -114,6 +114,7 @@ void FOC::Ctrl_ISR() {
     else if (Angle - PreviousAngle < -M_PI) temp -= M_PI * 2;
     temp *= 60 * CtrlFrequency / (M_PI * 2);
     Speed = temp * (1 - SpeedFilter) + Speed * SpeedFilter;
+    // Speed = LPF2(temp);
     PreviousAngle = Angle;
 
     /**2.速度闭环控制**/
