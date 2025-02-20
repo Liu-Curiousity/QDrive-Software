@@ -87,10 +87,10 @@ public:
 
     /**
      * @brief FOC电流闭环控制中断服务函数
-     * @param Iu U相电流
-     * @param Iv V相电流
+     * @param iu U相电流
+     * @param iv V相电流
      * */
-    void CurrentLoopCtrl_ISR(float Iu, float Iv);
+    void CurrentLoopCtrl_ISR(float iu, float iv);
 
     BLDC_Driver bldc_driver; //驱动器
     Encoder bldc_encoder;    //编码器
@@ -102,8 +102,8 @@ public:
     const float SpeedFilter{0};   //速度低通滤波器系数,0~1,0为不滤波
 
 private:
-    void UpdateCurrent(float Iu, float Iv);
-    void SetPhaseVoltage(float Uq, float Ud) const;
+    void UpdateCurrent(float iu, float iv);
+    void SetPhaseVoltage(float uq, float ud);
 
     CtrlType ctrl_type{CtrlType::CurrentCtrl}; //当前控制类型
 
@@ -118,8 +118,22 @@ private:
     float PreviousAngle{0};   //上一次电机角度(速度环、位置环更新中),单位rad
     float ElectricalAngle{0}; //当前电机电角度,单位rad
     float Speed{0};           //电机转速,单位rpm
-    float Iq{0};              //切向电流
-    float Id{0};              //法向电流
+
+    float Uu{0}; //U相电压
+    float Uv{0}; //V相电压
+    float Uw{0}; //W相电压
+    float Ua{0}; //A轴电压
+    float Ub{0}; //B轴电压
+    float Uq{0}; //切向电压
+    float Ud{0}; //法向电压
+
+    float Iu{0}; //U相电流
+    float Iv{0}; //V相电流
+    float Iw{0}; //W相电流
+    float Ia{0}; //A轴电流
+    float Ib{0}; //B轴电流
+    float Iq{0}; //切向电流
+    float Id{0}; //法向电流
 };
 
 #endif //FOC_H
