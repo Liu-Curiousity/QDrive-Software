@@ -118,6 +118,8 @@ private:
     float PreviousAngle{0};   //上一次电机角度(速度环、位置环更新中),单位rad
     float ElectricalAngle{0}; //当前电机电角度,单位rad
     float Speed{0};           //电机转速,单位rpm
+    float Ia{0};              //切向电流
+    float Ib{0};              //法向电流
     float Iq{0};              //切向电流
     float Id{0};              //法向电流
 };

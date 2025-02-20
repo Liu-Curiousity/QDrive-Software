@@ -33,7 +33,6 @@ void OnProjectLoad (void) {
   //
   // User settings
   //
-  Edit.SysVar (VAR_HSS_SPEED, BP_STATE_OFF);
   Edit.SysVar (VAR_SWO_PORTMASK, 0);
   File.Open ("$(ProjectDir)/cmake-build-debug/FOC_G4.elf");
 }

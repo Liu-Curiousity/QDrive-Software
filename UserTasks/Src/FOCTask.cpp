@@ -65,8 +65,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 __attribute__((section(".ccmram_func")))
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     if (&hadc1 == hadc) {
-        const float Iu = static_cast<float>(I_Values[0]) - 2048;
-        const float Iv = static_cast<float>(I_Values[1]) - 2048;
+        const float Iu = 2051 - static_cast<float>(I_Values[0]);
+        const float Iv = static_cast<float>(I_Values[1]) - 1996;
         HAL_GPIO_WritePin(TestPin_GPIO_Port, TestPin_Pin, GPIO_PIN_SET);
         foc.CurrentLoopCtrl_ISR(Iu, Iv);
         HAL_GPIO_WritePin(TestPin_GPIO_Port, TestPin_Pin, GPIO_PIN_RESET);

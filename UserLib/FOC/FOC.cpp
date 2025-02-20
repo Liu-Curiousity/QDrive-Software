@@ -44,8 +44,8 @@ void FOC::UpdateCurrent(const float Iu, const float Iv) {
     assert_param(Id != NULL);
 
     /**2.克拉克变换**/
-    const float Ia = Iu;
-    const float Ib = (Iu + 2 * Iv) * M_1_SQRT3_F;
+    Ia = Iu;
+    Ib = (Iu + 2 * Iv) * M_1_SQRT3_F;
 
     /**3.帕克变换**/
     const float cos_angle = cosf(ElectricalAngle);
