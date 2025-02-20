@@ -34,14 +34,15 @@
 
 /**
  * @brief FOC电流变换
- * @param Iu U相电流
- * @param Iv V相电流
+ * @param iu U相电流
+ * @param iv V相电流
  * */
 __attribute__((section(".ccmram_func")))
-void FOC::UpdateCurrent(const float Iu, const float Iv) {
-    /**1.检查输入参数**/
-    assert_param(Iq != NULL);
-    assert_param(Id != NULL);
+void FOC::UpdateCurrent(const float iu, const float iv) {
+    /**1.保存电流值**/
+    Iu = iu;
+    Iv = iv;
+    Iw = -Iu - Iv;
 
     /**2.克拉克变换**/
     Ia = Iu;
@@ -56,13 +57,12 @@ void FOC::UpdateCurrent(const float Iu, const float Iv) {
 
 /**
  * @brief FOC控制函数
- * @param Uq 切向力矩,必须在0~1之间!
- * @param Ud 法向力矩,必须在0~1之间!
+ * @param uq 切向力矩,必须在0~1之间!
+ * @param ud 法向力矩,必须在0~1之间!
  * */
 __attribute__((section(".ccmram_func")))
-void FOC::SetPhaseVoltage(float Uq, float Ud) const {
+void FOC::SetPhaseVoltage(float uq, float ud) {
     /**1.检查输入参数**/
-    assert_param(Driver != NULL);
     assert_param(Uq <= 1 && Uq >= -1);
     assert_param(Ud <= 1 && Ud >= -1);
 
@@ -70,23 +70,27 @@ void FOC::SetPhaseVoltage(float Uq, float Ud) const {
     // Uu,Uv,Uw不能设置到最大值1,为了防止电流采样时候MOS对电机有驱动,影响采样
     // 表现为某一相Ux=0时候(堵转测试),电流采样值偶尔出现尖峰,电机异常抽搐
     // *0.99f为临时解决方案,缺点是牺牲功率密度
-    Uq *= 0.99f;
-    Ud *= 0.99f;
+    uq *= 0.99f;
+    ud *= 0.99f;
+
+    /*2.保存电压值*/
+    Uq = uq;
+    Ud = ud;
 
     /**2.帕克逆变换**/
     const float cos_angle = cosf(ElectricalAngle);
     const float sin_angle = sinf(ElectricalAngle);
-    const float Ualpha = (-Uq * sin_angle + Ud * cos_angle) / 2; // 除以2将Ualpha范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
-    const float Ubeta = (Uq * cos_angle + Ud * sin_angle) / 2;   // 除以2将Ubeta范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
+    Ua = (-Uq * sin_angle + Ud * cos_angle) / 2; // 除以2将Ua范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
+    Ub = (Uq * cos_angle + Ud * sin_angle) / 2;  // 除以2将Ub范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
 
     /**3.克拉克逆变换**/
-    const float Uu = Ualpha + 0.5f; //加0.5使得Uu均值为0.5,在[0,1]之间变化
-    const float Uv = -Ualpha / 2 + Ubeta * M_SQRT3_F / 2 + 0.5f;
+    Uu = Ua + 0.5f; //加0.5使得Uu均值为0.5,在[0,1]之间变化
+    Uv = -Ua / 2 + Ub * M_SQRT3_F / 2 + 0.5f;
 
     // 原公式:
-    // float Uw = -Ualpha / 2 - Ubeta * M_SQRT3_F / 2 + 0.5f;
+    // float Uw = -Ua / 2 - Ub * M_SQRT3_F / 2 + 0.5f;
     // 使用Uu,Uv计算得来,减少运算量(其实运算量大头在sin和cos):
-    const float Uw = 1.5f - Uu - Uv;
+    Uw = 1.5f - Uu - Uv;
 
     /**4.设置驱动器占空比**/
     bldc_driver.set_duty(Uu, Uv, Uw);
@@ -138,17 +142,16 @@ void FOC::Ctrl_ISR() {
 
 /*CCMRAM加速运行*/
 __attribute__((section(".ccmram_func")))
-void FOC::CurrentLoopCtrl_ISR(float Iu, float Iv) {
-    /**1.检查输入参数**/
-    assert_param(FOC != NULL);
+void FOC::CurrentLoopCtrl_ISR(float iu, float iv) {
+    /**1.电流变换**/
+    UpdateCurrent(iu, iv);
 
-    /**2.电流变换**/
-    UpdateCurrent(Iu, Iv);
-
-    /**3.读取编码器角度**/
+    /**2.读取编码器角度**/
     Angle = bldc_encoder.read_angle();
     ElectricalAngle = Angle * PolePairs;
 
-    /**4.电流闭环控制**/
-    SetPhaseVoltage(PID_CurrentQ.clac(Iq), PID_CurrentD.clac(Id));
+    /**3.电流闭环控制**/
+    const float uq = PID_CurrentQ.clac(Iq);
+    const float ud = PID_CurrentD.clac(Id);
+    SetPhaseVoltage(uq, ud);
 }
