@@ -7,8 +7,8 @@
 
 uint16_t I_Values[3];
 
-BLDC_Driver bldc_driver(&htim1, 2125);
-Encoder bldc_encoder(SPI1_CSn_GPIO_Port, SPI1_CSn_Pin, &hspi1, 395);
+BLDC_Driver bldc_driver(&htim8, 2125);
+Encoder bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2, 395);
 PID PID_CurrentQ(PID::delta_type, -3e-3f, -1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
 PID PID_CurrentD(PID::delta_type, -3e-3f, -1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
 // PID PID_Speed(PID::position_type, 2.4f, 0.018f, 0, 5e3f, -5e3f);
@@ -28,7 +28,7 @@ void StartFOCTask(void *argument) {
     foc.start();                   //启动FOC
 
     //TODO: 该采样方式存在同步问题,需要优化
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);                                 //开启PWM输出,用于触发ADC采样
+    HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_4);                                 //开启PWM输出,用于触发ADC采样
     HAL_ADC_Start_DMA(&hadc1, reinterpret_cast<uint32_t *>(I_Values), 1);     //开启ADC采样
     HAL_ADC_Start_DMA(&hadc2, reinterpret_cast<uint32_t *>(I_Values + 1), 1); //开启ADC采样
 

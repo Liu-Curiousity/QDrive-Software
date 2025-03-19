@@ -59,11 +59,10 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define TestPin_Pin GPIO_PIN_13
 #define TestPin_GPIO_Port GPIOC
-#define SPI1_CSn_Pin GPIO_PIN_4
-#define SPI1_CSn_GPIO_Port GPIOA
+#define SPI2_CSn_Pin GPIO_PIN_12
+#define SPI2_CSn_GPIO_Port GPIOB
 #define KEY1_Pin GPIO_PIN_11
 #define KEY1_GPIO_Port GPIOC
-#define KEY1_EXTI_IRQn EXTI15_10_IRQn
 
 /* USER CODE BEGIN Private defines */
 
