@@ -8,9 +8,10 @@
 uint16_t I_Values[3];
 
 BLDC_Driver bldc_driver(&htim8, 2125);
-Encoder bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2, 395);
-PID PID_CurrentQ(PID::delta_type, -3e-3f, -1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
-PID PID_CurrentD(PID::delta_type, -3e-3f, -1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
+// Encoder bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2, 865);
+Encoder bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2, 955);
+PID PID_CurrentQ(PID::delta_type, -1e-3f, -1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
+PID PID_CurrentD(PID::delta_type, -1e-3f, -1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
 // PID PID_Speed(PID::position_type, 2.4f, 0.018f, 0, 5e3f, -5e3f);
 PID PID_Speed(PID::position_type, 4.0f, 0.02f, 0, 5e3f, -5e3f);
 // PID PID_Position(PID::delta_type, -900.0f, 0, 0);
@@ -18,7 +19,7 @@ PID PID_Position(PID::delta_type, -1200.0f, 0, 0);
 // PID PID_Position(PID::delta_type, 10000, 2, 80000); //位置环直接控制电流
 
 __attribute__((section(".ccmram")))
-FOC foc(7, 1000, 0.8f, 0.5f, bldc_driver, bldc_encoder,
+FOC foc(14, 1000, 0.8f, 0.5f, bldc_driver, bldc_encoder,
         PID_CurrentQ, PID_CurrentD, PID_Speed, PID_Position);
 
 void StartFOCTask(void *argument) {
@@ -65,8 +66,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 __attribute__((section(".ccmram_func")))
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     if (&hadc1 == hadc) {
-        const float Iu = 2051 - static_cast<float>(I_Values[0]);
-        const float Iv = static_cast<float>(I_Values[1]) - 1996;
+        const float Iu = static_cast<float>(I_Values[0]) - 2045;
+        const float Iv = (static_cast<float>(I_Values[1]) - 1982) * 1.03f;
         HAL_GPIO_WritePin(TestPin_GPIO_Port, TestPin_Pin, GPIO_PIN_SET);
         foc.CurrentLoopCtrl_ISR(Iu, Iv);
         HAL_GPIO_WritePin(TestPin_GPIO_Port, TestPin_Pin, GPIO_PIN_RESET);

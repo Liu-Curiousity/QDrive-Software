@@ -25,5 +25,5 @@ float Encoder::read_angle() {
     static uint16_t rxData;
     AS5047P_ReadAngleContinuously(&AS5047P, &rxData);
     rxData = (rxData + ZeroPosition_Calibration) % 0x3fff; //矫正零点
-    return 2 * M_PI - static_cast<double>(rxData) / 0x3fff * 2 * M_PI; //转化为弧度制
+    return static_cast<double>(rxData) / 0x3fff * 2 * M_PI; //转化为弧度制
 }
