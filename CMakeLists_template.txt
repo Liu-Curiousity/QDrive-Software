@@ -49,7 +49,7 @@ else ()
     add_compile_options(-Og -g)
 endif ()
 
-include_directories(${includes} UserLib/ UserLib/retarget UserLib/PID UserLib/FOC UserTasks/Inc)
+include_directories(${includes} UserLib/ UserLib/retarget UserLib/PID UserLib/FOC UserLib/FOC/base_classes UserTasks/Inc)
 
 add_definitions(${defines})
 

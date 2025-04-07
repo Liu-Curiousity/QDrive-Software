@@ -25,7 +25,7 @@
 #ifndef FOC_H
 #define FOC_H
 
-#include "BLDC_Driver_FD6288.h"
+#include "BLDC_Driver.h"
 #include "ENCODER_DRIVER_AS5047P.h"
 #include "PID.h"
 
@@ -54,7 +54,7 @@ public:
      * @param PID_Position 位置PID
      */
     FOC(uint8_t PolePairs, uint16_t CtrlFrequency, float CurrentFilter, float SpeedFilter,
-        const BLDC_Driver& driver, const Encoder& encoder,
+        BLDC_Driver& driver, const Encoder& encoder,
         const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Position):
         bldc_driver(driver), bldc_encoder(encoder), PolePairs(PolePairs), CtrlFrequency(CtrlFrequency),
         CurrentFilter(CurrentFilter), SpeedFilter(SpeedFilter),
@@ -63,14 +63,19 @@ public:
     [[nodiscard]] float speed() const { return Speed; }
     [[nodiscard]] float angle() const { return Angle; }
 
+    void init() {
+        bldc_driver.init();
+        // bldc_encoder.init();
+    }
+
     void start() {
-        bldc_driver.start();  //1.启动BLDC驱动
+        bldc_driver.enable(); //1.启动BLDC驱动
         bldc_encoder.start(); //2.启动编码器
     }
 
     void stop() {
-        bldc_driver.stop();  //1.关闭BLDC驱动
-        bldc_encoder.stop(); //2.关闭编码器
+        bldc_driver.disable(); //1.关闭BLDC驱动
+        bldc_encoder.stop();   //2.关闭编码器
     }
 
     /**
@@ -92,8 +97,8 @@ public:
      * */
     void CurrentLoopCtrl_ISR(float iu, float iv);
 
-    BLDC_Driver bldc_driver; //驱动器
-    Encoder bldc_encoder;    //编码器
+    BLDC_Driver& bldc_driver; //驱动器
+    Encoder bldc_encoder;     //编码器
 
     //初始化配置项
     const uint8_t PolePairs;      //极对数
