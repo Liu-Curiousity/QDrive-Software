@@ -22,16 +22,9 @@
  * */
 
 
+#include "numbers"
 #include "FOC.h"
 #include "main.h"
-
-#ifndef M_SQRT3_F
-#define M_SQRT3_F 1.73205080756887719000f
-#endif
-
-#ifndef M_1_SQRT3_F
-#define M_1_SQRT3_F 0.57735026918962576451f
-#endif
 
 /**
  * @brief FOC电流变换
@@ -47,7 +40,7 @@ void FOC::UpdateCurrent(const float iu, const float iv) {
 
     /**2.克拉克变换**/
     Ia = Iu;
-    Ib = (Iu + 2 * Iv) * M_1_SQRT3_F;
+    Ib = (Iu + 2 * Iv) * std::numbers::inv_sqrt3_v<float>;
 
     /**3.帕克变换**/
     const float cos_angle = cosf(ElectricalAngle);
@@ -86,7 +79,7 @@ void FOC::SetPhaseVoltage(float uq, float ud) {
 
     /**3.克拉克逆变换**/
     Uu = Ua + 0.5f; //加0.5使得Uu均值为0.5,在[0,1]之间变化
-    Uv = -Ua / 2 + Ub * M_SQRT3_F / 2 + 0.5f;
+    Uv = -Ua / 2 + Ub * std::numbers::sqrt3_v<float> / 2 + 0.5f;
 
     // 原公式:
     // float Uw = -Ua / 2 - Ub * M_SQRT3_F / 2 + 0.5f;
