@@ -1,11 +1,11 @@
 #include "task_public.h"
 #include "FOC.h"
-#include "BLDC_Driver_FD6288.h"
 #include "tim.h"
 #include "spi.h"
 #include "adc.h"
 #include "cmsis_os2.h"
 #include "Encoder_AS5047P.h"
+#include "BLDC_Driver_FD6288.h"
 
 uint16_t I_Values[3];
 
