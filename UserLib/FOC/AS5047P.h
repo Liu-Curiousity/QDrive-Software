@@ -19,7 +19,8 @@
 #define AS5047P_H
 
 #include <stdbool.h>
-#include "main.h"
+#include <stdint.h>
+#include "gpio.h"
 
 //是否打印编程信息
 #define AS5047P_PRINT_PROGRAMMING_INFO 0

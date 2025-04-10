@@ -23,6 +23,7 @@
 
 
 #include "FOC.h"
+#include "main.h"
 
 #ifndef M_SQRT3_F
 #define M_SQRT3_F 1.73205080756887719000f
@@ -147,7 +148,7 @@ void FOC::CurrentLoopCtrl_ISR(float iu, float iv) {
     UpdateCurrent(iu, iv);
 
     /**2.读取编码器角度**/
-    Angle = bldc_encoder.read_angle();
+    Angle = bldc_encoder.get_angle();
     ElectricalAngle = Angle * PolePairs;
 
     /**3.电流闭环控制**/

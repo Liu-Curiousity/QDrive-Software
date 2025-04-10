@@ -29,7 +29,7 @@ public:
     BLDC_Driver_DRV8300(TIM_HandleTypeDef *htim, const uint16_t MaxDuty) :
         htim(htim), MaxDuty(MaxDuty) { initialized = true; }
 
-    void init() override { initialized = true; };
+    void init() override { initialized = true; }
 
     void enable() override {
         enabled = true;
@@ -40,7 +40,7 @@ public:
         HAL_TIMEx_PWMN_Start(htim, TIM_CHANNEL_1);
         HAL_TIMEx_PWMN_Start(htim, TIM_CHANNEL_2);
         HAL_TIMEx_PWMN_Start(htim, TIM_CHANNEL_3);
-    };
+    }
 
     void disable() override {
         enabled = false;
@@ -65,7 +65,7 @@ public:
             __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_2, v);
             __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_3, w);
         }
-    };
+    }
 
 private:
     TIM_HandleTypeDef *htim;

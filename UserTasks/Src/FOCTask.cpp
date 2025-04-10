@@ -5,12 +5,13 @@
 #include "spi.h"
 #include "adc.h"
 #include "cmsis_os2.h"
+#include "Encoder_AS5047P.h"
 
 uint16_t I_Values[3];
 
 BLDC_Driver_DRV8300 bldc_driver(&htim8, 2125);
 // Encoder bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2, 865);
-Encoder bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2, 955);
+Encoder_AS5047P bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2, 955);
 PID PID_CurrentQ(PID::delta_type, -1e-3f, -1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
 PID PID_CurrentD(PID::delta_type, -1e-3f, -1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
 // PID PID_Speed(PID::position_type, 2.4f, 0.018f, 0, 5e3f, -5e3f);
@@ -27,7 +28,7 @@ void StartFOCTask(void *argument) {
     HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED); //校准ADC
     ///2.启动
     HAL_TIM_Base_Start_IT(&htim6); //开启速度环位置环中断控制
-    foc.init();                   //启动FOC
+    foc.init();                    //启动FOC
     foc.start();                   //启动FOC
 
     //TODO: 该采样方式存在同步问题,需要优化
