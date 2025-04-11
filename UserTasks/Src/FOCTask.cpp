@@ -23,9 +23,9 @@ PID PID_Position(PID::delta_type, -1200.0f, 0, 0);
 
 LowPassFilter_1_Order CurrentQFilter(0.00005f, 800); // 20kHz
 LowPassFilter_1_Order CurrentDFilter(0.00005f, 800); // 20kHz
-LowPassFilter_1_Order SpeedFilter(0.001f, 160);      // 1kHz
+LowPassFilter_1_Order SpeedFilter(0.00005f, 160);    // 20kHz
 __attribute__((section(".ccmram")))
-FOC foc(14, 1000, CurrentQFilter, CurrentDFilter, SpeedFilter,
+FOC foc(14, 1000, 20000, CurrentQFilter, CurrentDFilter, SpeedFilter,
         bldc_driver, bldc_encoder, PID_CurrentQ, PID_CurrentD, PID_Speed, PID_Position);
 
 void StartFOCTask(void *argument) {

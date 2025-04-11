@@ -1,24 +1,15 @@
 /**
  * @brief   FOC驱动库
- * @details 该库需要提供以下定义即对应接口:
- *          Encoder_Driver_HandleTypeDef 编码器句柄
- *          BLDC_Driver_HandleTypeDef    BLDC句柄
- *          Encoder_Init()     初始化Encoder句柄,具体接口因方案而异
- *          Encoder_Start()    启动编码器
- *          Encoder_Stop()     关闭编码器
- *          Encoder_ReadAngle()读取编码器角度,弧度制
- *          BLDC_Init()     初始化BLDC句柄,具体接口因方案而异
- *          BLDC_Start()    启动BLDC驱动
- *          BLDC_Stop()     关闭BLDC驱动
- *          BLDC_SetDuty()  设置BLDC三相占空比,归一化
+ * @details
  * @author  LiuHaoqi
  * @date    2024-7-10
- * @version V2.0.0
+ * @version V3.0.0
  * @note    此库为中间层库,与硬件完全解耦
  * @warning 无
  * @par     历史版本:
 		    V1.0.0创建于2024-7-3
 		    v2.0.0修改于2024-7-10,添加d轴电流PID控制
+		    V3.0.0修改于2025-4-12,中间漏了好多版本
  * */
 
 
@@ -43,7 +34,7 @@ void FOC::UpdateCurrent(const float iu, const float iv) {
 
     /**2.克拉克变换**/
     Ia = Iu;
-    Ib = (Iu + 2 * Iv) * std::numbers::inv_sqrt3_v<float>;
+    Ib = (Iu + 2 * Iv) * numbers::inv_sqrt3_v<float>;
 
     /**3.帕克变换**/
     const float cos_angle = cosf(ElectricalAngle);
@@ -82,7 +73,7 @@ void FOC::SetPhaseVoltage(float uq, float ud) {
 
     /**3.克拉克逆变换**/
     Uu = Ua + 0.5f; //加0.5使得Uu均值为0.5,在[0,1]之间变化
-    Uv = -Ua / 2 + Ub * std::numbers::sqrt3_v<float> / 2 + 0.5f;
+    Uv = -Ua / 2 + Ub * numbers::sqrt3_v<float> / 2 + 0.5f;
 
     // 原公式:
     // float Uw = -Ua / 2 - Ub * M_SQRT3_F / 2 + 0.5f;
@@ -110,15 +101,7 @@ void FOC::Ctrl(const CtrlType ctrl_type, const float value) {
 
 __attribute__((section(".ccmram_func")))
 void FOC::Ctrl_ISR() {
-    /**1.计算转速**/
-    static float temp = 0;
-    temp = PreviousAngle - Angle;
-    if (Angle - PreviousAngle > numbers::pi_v<float>) temp += numbers::pi_v<float> * 2;
-    else if (Angle - PreviousAngle < -numbers::pi_v<float>) temp -= numbers::pi_v<float> * 2;
-    Speed = SpeedFilter(temp * 60 * CtrlFrequency / (numbers::pi_v<float> * 2));
-    PreviousAngle = Angle;
-
-    /**2.速度闭环控制**/
+    /**1.速度闭环控制**/
     switch (ctrl_type) {
         case CtrlType::PositionCtrl:
             //使电机始终沿差值小于pi的方向转动
@@ -146,7 +129,15 @@ void FOC::CurrentLoopCtrl_ISR(float iu, float iv) {
     Angle = bldc_encoder.get_angle();
     ElectricalAngle = Angle * PolePairs;
 
-    /**3.电流闭环控制**/
+    /**3.计算转速**/
+    static float temp = 0;
+    temp = PreviousAngle - Angle;
+    if (Angle - PreviousAngle > numbers::pi_v<float>) temp += numbers::pi_v<float> * 2;
+    else if (Angle - PreviousAngle < -numbers::pi_v<float>) temp -= numbers::pi_v<float> * 2;
+    Speed = SpeedFilter(temp * 60 * CurrentCtrlFrequency / (numbers::pi_v<float> * 2));
+    PreviousAngle = Angle;
+
+    /**4.电流闭环控制**/
     const float uq = PID_CurrentQ.clac(Iq);
     const float ud = PID_CurrentD.clac(Id);
     SetPhaseVoltage(uq, ud);
