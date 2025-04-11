@@ -46,6 +46,7 @@ public:
      * @brief 初始化
      * @param PolePairs 极对数
      * @param CtrlFrequency 控制频率,用于计算转速
+     * @param CurrentCtrlFrequency 电流控制频率,单位Hz
      * @param CurrentQFilter Q轴电流采样滤波器系数
      * @param CurrentDFilter D轴电流采样滤波器系数
      * @param SpeedFilter 速度滤波器系数
@@ -56,11 +57,12 @@ public:
      * @param PID_Speed 速度PID
      * @param PID_Position 位置PID
      */
-    FOC(uint8_t PolePairs, uint16_t CtrlFrequency,
+    FOC(uint8_t PolePairs, uint16_t CtrlFrequency, uint16_t CurrentCtrlFrequency,
         LowPassFilter& CurrentQFilter, LowPassFilter& CurrentDFilter, LowPassFilter& SpeedFilter,
         BLDC_Driver& driver, Encoder& encoder,
         const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Position):
-        bldc_driver(driver), bldc_encoder(encoder), PolePairs(PolePairs), CtrlFrequency(CtrlFrequency),
+        bldc_driver(driver), bldc_encoder(encoder), PolePairs(PolePairs),
+        CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
         CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter),
         PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Position(PID_Position) {}
 
@@ -105,13 +107,12 @@ public:
     Encoder& bldc_encoder;    //编码器
 
     //初始化配置项
-    const uint8_t PolePairs;       //极对数
-    const uint16_t CtrlFrequency;  //控制频率(速度环、位置环),单位Hz
-    LowPassFilter& CurrentQFilter; //Q轴电流低通滤波器
-    LowPassFilter& CurrentDFilter; //D轴电流低通滤波器
-    LowPassFilter& SpeedFilter;    //速度低通滤波器
-    // const float CurrentFilter{0}; //电流低通滤波器系数,0~1,0为不滤波
-    // const float SpeedFilter{0}; //速度低通滤波器系数,0~1,0为不滤波
+    const uint8_t PolePairs;             //极对数
+    const uint16_t CtrlFrequency;        //控制频率(速度环、位置环),单位Hz
+    const uint16_t CurrentCtrlFrequency; //控制频率(电流环),单位Hz
+    LowPassFilter& CurrentQFilter;       //Q轴电流低通滤波器
+    LowPassFilter& CurrentDFilter;       //D轴电流低通滤波器
+    LowPassFilter& SpeedFilter;          //速度低通滤波器
 
 private:
     void UpdateCurrent(float iu, float iv);
