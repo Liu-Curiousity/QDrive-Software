@@ -33,7 +33,7 @@ public:
      * @param Fc Low pass filter cut-off frequency,unit Hz
      */
     LowPassFilter_1_Order(const float Ts, const float Fc) :
-        Fc(Fc), a(2 * numbers::pi_v<float> * Fc * Ts / (2 * numbers::pi_v<float> * Fc * Ts + 1)) {}
+        Ts(Ts), Fc(Fc), a(2 * numbers::pi_v<float> * Fc * Ts / (2 * numbers::pi_v<float> * Fc * Ts + 1)) {}
 
     float Fc; //!< Low pass filter cut-off frequency
 
@@ -43,8 +43,51 @@ public:
     }
 
 private:
+    const float Ts;
     float value{0};
-    float a{1}; //filter coefficient,default 1(no filter)
+    float a; //filter coefficient,default 1(no filter)
+};
+
+/**
+ * @brief two-order low pass filter
+ */
+class LowPassFilter_2_Order final : public LowPassFilter {
+public:
+    /**
+     * @brief constructor
+     * @param Ts Low pass filter time constant,unit s
+     * @param Fc Low pass filter cut-off frequency,unit Hz
+     */
+    LowPassFilter_2_Order(const float Ts, const float Fc) :
+        Fc(Fc), Ts(Ts), wc(2 * numbers::pi_v<float> * Fc), b0(wc * wc * Ts * Ts),
+        a0(4 + 4 * dampingRatio * wc * Ts + b0),
+        a1(-8 + 2 * b0), a2(b0 + 4 - 4 * dampingRatio * wc * Ts) {}
+
+    float Fc; //!< Low pass filter cut-off frequency
+
+    float operator()(const float x) override {
+        xin[2] = x;
+        yout[2] = (b0 * xin[2] + 2 * b0 * xin[1] + b0 * xin[0] - a1 * yout[1] - a2 * yout[0]) / a0;
+        xin[0] = xin[1];
+        xin[1] = xin[2];
+        yout[0] = yout[1];
+        yout[1] = yout[2];
+
+        return yout[2];
+    }
+
+private:
+    const float Ts;                   // 采样周期
+    const float dampingRatio = 0.707; // 阻尼比
+    float wc{0};
+
+    float b0{0};
+    float a0{0};
+    float a1{0};
+    float a2{0};
+
+    float xin[3]{};
+    float yout[3]{};
 };
 
 /**
@@ -104,33 +147,5 @@ private:
 };
 
 
-// #define Const_2pi       (6.283185)
-// #define Const_TS        (0.001)     //1000us/1KHz
-//
-// //二阶低通滤波器
-// float LPF2(float xin) {
-//     float f = 160; //截止频率/Hz
-//     float wc = Const_2pi * f;
-//     float dampingRatio = 0.707; //阻尼比
-//
-//     float lpf2_b0 = wc * wc * Const_TS * Const_TS;
-//     float lpf2_a0 = 4 + 4 * dampingRatio * wc * Const_TS + lpf2_b0;
-//     float lpf2_a1 = -8 + 2 * lpf2_b0;
-//     //float lpf2_a2 = 4 - 4*dampingRatio*wc*Const_TS  + lpf2_a0; //原始这里应该有误
-//     float lpf2_a2 = lpf2_b0 + 4 - 4 * dampingRatio * wc * Const_TS;
-//
-//     static float lpf2_yout[3] = {0};
-//     static float lpf2_xin[3] = {0};
-//
-//     lpf2_xin[2] = xin;
-//     lpf2_yout[2] = (lpf2_b0 * lpf2_xin[2] + 2 * lpf2_b0 * lpf2_xin[1] + lpf2_b0 * lpf2_xin[0] - lpf2_a1 * lpf2_yout[1] -
-//                     lpf2_a2 * lpf2_yout[0]) / lpf2_a0;
-//     lpf2_xin[0] = lpf2_xin[1];
-//     lpf2_xin[1] = lpf2_xin[2];
-//     lpf2_yout[0] = lpf2_yout[1];
-//     lpf2_yout[1] = lpf2_yout[2];
-//
-//     return lpf2_yout[2];
-// }
 
 #endif //FILTERS_H
