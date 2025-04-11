@@ -21,9 +21,9 @@ PID PID_Speed(PID::position_type, 4.0f, 0.02f, 0, 5e3f, -5e3f);
 PID PID_Position(PID::delta_type, -1200.0f, 0, 0);
 // PID PID_Position(PID::delta_type, 10000, 2, 80000); //位置环直接控制电流
 
-LowPassFilter_1_Order CurrentQFilter(0.00005f, 800); // 20kHz
-LowPassFilter_1_Order CurrentDFilter(0.00005f, 800); // 20kHz
-LowPassFilter_1_Order SpeedFilter(0.00005f, 160);    // 20kHz
+LowPassFilter_2_Order CurrentQFilter(0.00005f, 800); // 20kHz
+LowPassFilter_2_Order CurrentDFilter(0.00005f, 800); // 20kHz
+LowPassFilter_2_Order SpeedFilter(0.00005f, 160);    // 20kHz
 __attribute__((section(".ccmram")))
 FOC foc(14, 1000, 20000, CurrentQFilter, CurrentDFilter, SpeedFilter,
         bldc_driver, bldc_encoder, PID_CurrentQ, PID_CurrentD, PID_Speed, PID_Position);
