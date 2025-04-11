@@ -102,4 +102,35 @@ private:
     float sum{0};
     float *values{nullptr};
 };
+
+
+// #define Const_2pi       (6.283185)
+// #define Const_TS        (0.001)     //1000us/1KHz
+//
+// //二阶低通滤波器
+// float LPF2(float xin) {
+//     float f = 160; //截止频率/Hz
+//     float wc = Const_2pi * f;
+//     float dampingRatio = 0.707; //阻尼比
+//
+//     float lpf2_b0 = wc * wc * Const_TS * Const_TS;
+//     float lpf2_a0 = 4 + 4 * dampingRatio * wc * Const_TS + lpf2_b0;
+//     float lpf2_a1 = -8 + 2 * lpf2_b0;
+//     //float lpf2_a2 = 4 - 4*dampingRatio*wc*Const_TS  + lpf2_a0; //原始这里应该有误
+//     float lpf2_a2 = lpf2_b0 + 4 - 4 * dampingRatio * wc * Const_TS;
+//
+//     static float lpf2_yout[3] = {0};
+//     static float lpf2_xin[3] = {0};
+//
+//     lpf2_xin[2] = xin;
+//     lpf2_yout[2] = (lpf2_b0 * lpf2_xin[2] + 2 * lpf2_b0 * lpf2_xin[1] + lpf2_b0 * lpf2_xin[0] - lpf2_a1 * lpf2_yout[1] -
+//                     lpf2_a2 * lpf2_yout[0]) / lpf2_a0;
+//     lpf2_xin[0] = lpf2_xin[1];
+//     lpf2_xin[1] = lpf2_xin[2];
+//     lpf2_yout[0] = lpf2_yout[1];
+//     lpf2_yout[1] = lpf2_yout[2];
+//
+//     return lpf2_yout[2];
+// }
+
 #endif //FILTERS_H

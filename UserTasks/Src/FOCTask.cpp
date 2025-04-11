@@ -1,5 +1,3 @@
-#include "filters.h"
-
 #include "task_public.h"
 #include "FOC.h"
 #include "tim.h"
@@ -8,6 +6,7 @@
 #include "cmsis_os2.h"
 #include "Encoder_AS5047P.h"
 #include "BLDC_Driver_FD6288.h"
+#include "filters.h"
 
 uint16_t I_Values[3];
 
@@ -22,9 +21,12 @@ PID PID_Speed(PID::position_type, 4.0f, 0.02f, 0, 5e3f, -5e3f);
 PID PID_Position(PID::delta_type, -1200.0f, 0, 0);
 // PID PID_Position(PID::delta_type, 10000, 2, 80000); //位置环直接控制电流
 
+LowPassFilter_1_Order CurrentQFilter(0.00005f, 800); // 20kHz
+LowPassFilter_1_Order CurrentDFilter(0.00005f, 800); // 20kHz
+LowPassFilter_1_Order SpeedFilter(0.001f, 160);      // 1kHz
 __attribute__((section(".ccmram")))
-FOC foc(14, 1000, 0.8f, 0.5f, bldc_driver, bldc_encoder,
-        PID_CurrentQ, PID_CurrentD, PID_Speed, PID_Position);
+FOC foc(14, 1000, CurrentQFilter, CurrentDFilter, SpeedFilter,
+        bldc_driver, bldc_encoder, PID_CurrentQ, PID_CurrentD, PID_Speed, PID_Position);
 
 void StartFOCTask(void *argument) {
     HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED); //校准ADC

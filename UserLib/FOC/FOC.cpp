@@ -22,9 +22,12 @@
  * */
 
 
+#include <numbers>
 #include "numbers"
 #include "FOC.h"
 #include "main.h"
+
+using namespace std;
 
 /**
  * @brief FOC电流变换
@@ -45,8 +48,8 @@ void FOC::UpdateCurrent(const float iu, const float iv) {
     /**3.帕克变换**/
     const float cos_angle = cosf(ElectricalAngle);
     const float sin_angle = sinf(ElectricalAngle);
-    Iq = (Ib * cos_angle - Ia * sin_angle) * (1 - CurrentFilter) + Iq * CurrentFilter;
-    Id = (Ib * sin_angle + Ia * cos_angle) * (1 - CurrentFilter) + Id * CurrentFilter;
+    Iq = CurrentQFilter(Ib * cos_angle - Ia * sin_angle);
+    Id = CurrentDFilter(Ib * sin_angle + Ia * cos_angle);
 }
 
 /**
@@ -110,21 +113,19 @@ void FOC::Ctrl_ISR() {
     /**1.计算转速**/
     static float temp = 0;
     temp = PreviousAngle - Angle;
-    if (Angle - PreviousAngle > M_PI) temp += M_PI * 2;
-    else if (Angle - PreviousAngle < -M_PI) temp -= M_PI * 2;
-    temp *= 60 * CtrlFrequency / (M_PI * 2);
-    Speed = temp * (1 - SpeedFilter) + Speed * SpeedFilter;
-    // Speed = LPF2(temp);
+    if (Angle - PreviousAngle > numbers::pi_v<float>) temp += numbers::pi_v<float> * 2;
+    else if (Angle - PreviousAngle < -numbers::pi_v<float>) temp -= numbers::pi_v<float> * 2;
+    Speed = SpeedFilter(temp * 60 * CtrlFrequency / (numbers::pi_v<float> * 2));
     PreviousAngle = Angle;
 
     /**2.速度闭环控制**/
     switch (ctrl_type) {
         case CtrlType::PositionCtrl:
             //使电机始终沿差值小于pi的方向转动
-            if (Angle - PID_Position.target > M_PI)
-                PID_Speed.SetTarget(PID_Position.clac(Angle - 2 * M_PI));
-            else if (Angle - PID_Position.target < -M_PI)
-                PID_Speed.SetTarget(PID_Position.clac(Angle + 2 * M_PI));
+            if (Angle - PID_Position.target > numbers::pi_v<float>)
+                PID_Speed.SetTarget(PID_Position.clac(Angle - 2 * numbers::pi_v<float>));
+            else if (Angle - PID_Position.target < -numbers::pi_v<float>)
+                PID_Speed.SetTarget(PID_Position.clac(Angle + 2 * numbers::pi_v<float>));
             else
                 PID_Speed.SetTarget(PID_Position.clac(Angle));
         case CtrlType::SpeedCtrl:
