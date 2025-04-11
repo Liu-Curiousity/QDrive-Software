@@ -25,9 +25,11 @@
 #ifndef FOC_H
 #define FOC_H
 
-#include "BLDC_Driver_FD6288.h"
-#include "ENCODER_DRIVER_AS5047P.h"
+#include "BLDC_Driver.h"
+#include "Encoder.h"
+#include "LowPassFilter.h"
 #include "PID.h"
+#include "cstdint"
 
 /**
  * @brief FOC句柄结构体
@@ -44,7 +46,9 @@ public:
      * @brief 初始化
      * @param PolePairs 极对数
      * @param CtrlFrequency 控制频率,用于计算转速
-     * @param CurrentFilter 电流采样滤波器系数
+     * @param CurrentCtrlFrequency 电流控制频率,单位Hz
+     * @param CurrentQFilter Q轴电流采样滤波器系数
+     * @param CurrentDFilter D轴电流采样滤波器系数
      * @param SpeedFilter 速度滤波器系数
      * @param driver BLDC驱动
      * @param encoder 编码器驱动
@@ -53,24 +57,31 @@ public:
      * @param PID_Speed 速度PID
      * @param PID_Position 位置PID
      */
-    FOC(uint8_t PolePairs, uint16_t CtrlFrequency, float CurrentFilter, float SpeedFilter,
-        const BLDC_Driver& driver, const Encoder& encoder,
+    FOC(uint8_t PolePairs, uint16_t CtrlFrequency, uint16_t CurrentCtrlFrequency,
+        LowPassFilter& CurrentQFilter, LowPassFilter& CurrentDFilter, LowPassFilter& SpeedFilter,
+        BLDC_Driver& driver, Encoder& encoder,
         const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Position):
-        bldc_driver(driver), bldc_encoder(encoder), PolePairs(PolePairs), CtrlFrequency(CtrlFrequency),
-        CurrentFilter(CurrentFilter), SpeedFilter(SpeedFilter),
+        bldc_driver(driver), bldc_encoder(encoder), PolePairs(PolePairs),
+        CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
+        CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter),
         PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Position(PID_Position) {}
 
     [[nodiscard]] float speed() const { return Speed; }
     [[nodiscard]] float angle() const { return Angle; }
 
-    void start() {
-        bldc_driver.start();  //1.启动BLDC驱动
-        bldc_encoder.start(); //2.启动编码器
+    void init() const {
+        bldc_driver.init();
+        bldc_encoder.init();
     }
 
-    void stop() {
-        bldc_driver.stop();  //1.关闭BLDC驱动
-        bldc_encoder.stop(); //2.关闭编码器
+    void start() const {
+        bldc_driver.enable();  //1.启动BLDC驱动
+        bldc_encoder.enable(); //2.启动编码器
+    }
+
+    void stop() const {
+        bldc_driver.disable();  //1.关闭BLDC驱动
+        bldc_encoder.disable(); //2.关闭编码器
     }
 
     /**
@@ -92,14 +103,16 @@ public:
      * */
     void CurrentLoopCtrl_ISR(float iu, float iv);
 
-    BLDC_Driver bldc_driver; //驱动器
-    Encoder bldc_encoder;    //编码器
+    BLDC_Driver& bldc_driver; //驱动器
+    Encoder& bldc_encoder;    //编码器
 
     //初始化配置项
-    const uint8_t PolePairs;      //极对数
-    const uint16_t CtrlFrequency; //控制频率(速度环、位置环),单位Hz
-    const float CurrentFilter{0}; //电流低通滤波器系数,0~1,0为不滤波
-    const float SpeedFilter{0};   //速度低通滤波器系数,0~1,0为不滤波
+    const uint8_t PolePairs;             //极对数
+    const uint16_t CtrlFrequency;        //控制频率(速度环、位置环),单位Hz
+    const uint16_t CurrentCtrlFrequency; //控制频率(电流环),单位Hz
+    LowPassFilter& CurrentQFilter;       //Q轴电流低通滤波器
+    LowPassFilter& CurrentDFilter;       //D轴电流低通滤波器
+    LowPassFilter& SpeedFilter;          //速度低通滤波器
 
 private:
     void UpdateCurrent(float iu, float iv);

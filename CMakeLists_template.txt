@@ -14,7 +14,7 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 # project settings
 project(${projectName} C CXX ASM)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_C_STANDARD 11)
 
 #Uncomment for hardware floating point
@@ -49,7 +49,7 @@ else ()
     add_compile_options(-Og -g)
 endif ()
 
-include_directories(${includes} UserLib/ UserLib/retarget UserLib/PID UserLib/FOC UserTasks/Inc)
+include_directories(${includes} UserLib/ UserLib/retarget UserLib/PID UserLib/FOC UserLib/FOC/core UserLib/FOC/core/base_classes UserTasks/Inc)
 
 add_definitions(${defines})
 
