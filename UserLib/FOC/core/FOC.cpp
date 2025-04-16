@@ -14,11 +14,41 @@
 
 
 #include <numbers>
-#include "numbers"
 #include "FOC.h"
 #include "main.h"
 
 using namespace std;
+
+void FOC::init() const {
+    // 1.初始化BLDC驱动
+    if (!bldc_driver.initialized)
+        bldc_driver.init();
+    // 2.初始化编码器
+    if (!bldc_encoder.initialized)
+        bldc_encoder.init();
+}
+
+void FOC::enable() const {
+    //1.启动BLDC驱动
+    if (!bldc_driver.enabled)
+        bldc_driver.enable();
+    //2.启动编码器
+    if (!bldc_encoder.enabled)
+        bldc_encoder.enable();
+}
+
+void FOC::disable() const {
+    //1.关闭BLDC驱动
+    if (bldc_driver.enabled) {
+        bldc_driver.set_duty(0, 0, 0);
+        bldc_driver.disable();
+    }
+    //2.关闭编码器
+    if (bldc_driver.enabled)
+        bldc_encoder.disable();
+}
+
+void FOC::calibration() {}
 
 /**
  * @brief FOC电流变换
@@ -121,16 +151,18 @@ void FOC::Ctrl_ISR() {
 
 /*CCMRAM加速运行*/
 __attribute__((section(".ccmram_func")))
-void FOC::CurrentLoopCtrl_ISR(float iu, float iv) {
+void FOC::loopCtrl(float iu, float iv) {
+    static float temp;
     /**1.电流变换**/
     UpdateCurrent(iu, iv);
 
     /**2.读取编码器角度**/
-    Angle = bldc_encoder.get_angle();
+    temp = bldc_encoder.get_angle() + zero_electric_angle;
+    Angle = temp > 2 * numbers::pi_v<float> ? temp - 2 * numbers::pi_v<float> :
+            temp < 0 ? temp + 2 * numbers::pi_v<float> : temp;
     ElectricalAngle = Angle * PolePairs;
 
     /**3.计算转速**/
-    static float temp = 0;
     temp = PreviousAngle - Angle;
     if (Angle - PreviousAngle > numbers::pi_v<float>) temp += numbers::pi_v<float> * 2;
     else if (Angle - PreviousAngle < -numbers::pi_v<float>) temp -= numbers::pi_v<float> * 2;

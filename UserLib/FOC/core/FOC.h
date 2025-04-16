@@ -1,17 +1,7 @@
 /**
  * @brief   FOC驱动库
- * @details 该库需要提供以下定义即对应接口:
- *          Encoder_Driver_HandleTypeDef 编码器句柄
- *          BLDC_Driver_HandleTypeDef    BLDC句柄
- *          Encoder_Init()     初始化Encoder句柄,具体接口因方案而异
- *          Encoder_Start()    启动编码器
- *          Encoder_Stop()     关闭编码器
- *          Encoder_ReadAngle()读取编码器角度,弧度制
- *          BLDC_Init()     初始化BLDC句柄,具体接口因方案而异
- *          BLDC_Start()    启动BLDC驱动
- *          BLDC_Stop()     关闭BLDC驱动
- *          BLDC_SetDuty()  设置BLDC三相占空比,归一化
- * @author  LiuHaoqi
+ * @details
+ * @author  Haoqi Liu
  * @date    2024-7-10
  * @version V2.0.0
  * @note    此库为中间层库,与硬件完全解耦
@@ -52,6 +42,7 @@ public:
      * @param SpeedFilter 速度滤波器系数
      * @param driver BLDC驱动
      * @param encoder 编码器驱动
+     * @param zero_electric_angle 电机零点电角度,单位rad
      * @param PID_CurrentQ Q轴电流PID
      * @param PID_CurrentD D轴电流PID
      * @param PID_Speed 速度PID
@@ -59,9 +50,9 @@ public:
      */
     FOC(uint8_t PolePairs, uint16_t CtrlFrequency, uint16_t CurrentCtrlFrequency,
         LowPassFilter& CurrentQFilter, LowPassFilter& CurrentDFilter, LowPassFilter& SpeedFilter,
-        BLDC_Driver& driver, Encoder& encoder,
+        BLDC_Driver& driver, Encoder& encoder, float zero_electric_angle,
         const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Position):
-        bldc_driver(driver), bldc_encoder(encoder), PolePairs(PolePairs),
+        bldc_driver(driver), bldc_encoder(encoder), zero_electric_angle(zero_electric_angle), PolePairs(PolePairs),
         CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
         CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter),
         PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Position(PID_Position) {}
@@ -69,21 +60,13 @@ public:
     [[nodiscard]] float speed() const { return Speed; }
     [[nodiscard]] float angle() const { return Angle; }
 
-    void init() const {
-        bldc_driver.init();
-        bldc_encoder.init();
-    }
+    void init() const;
 
-    void start() const {
-        bldc_driver.enable();  //1.启动BLDC驱动
-        bldc_encoder.enable(); //2.启动编码器
-    }
+    void enable() const;
 
-    void stop() const {
-        bldc_driver.disable();  //1.关闭BLDC驱动
-        bldc_encoder.disable(); //2.关闭编码器
-    }
+    void disable() const;
 
+    void calibration();
     /**
      * @brief FOC控制设置函数
      * @param ctrl_type 控制类型
@@ -101,23 +84,15 @@ public:
      * @param iu U相电流
      * @param iv V相电流
      * */
-    void CurrentLoopCtrl_ISR(float iu, float iv);
+    void loopCtrl(float iu, float iv);
 
-    BLDC_Driver& bldc_driver; //驱动器
-    Encoder& bldc_encoder;    //编码器
 
     //初始化配置项
     const uint8_t PolePairs;             //极对数
     const uint16_t CtrlFrequency;        //控制频率(速度环、位置环),单位Hz
     const uint16_t CurrentCtrlFrequency; //控制频率(电流环),单位Hz
-    LowPassFilter& CurrentQFilter;       //Q轴电流低通滤波器
-    LowPassFilter& CurrentDFilter;       //D轴电流低通滤波器
-    LowPassFilter& SpeedFilter;          //速度低通滤波器
 
 private:
-    void UpdateCurrent(float iu, float iv);
-    void SetPhaseVoltage(float uq, float ud);
-
     CtrlType ctrl_type{CtrlType::CurrentCtrl}; //当前控制类型
 
     //PID类
@@ -126,11 +101,18 @@ private:
     PID PID_Speed;    //速度PID
     PID PID_Position; //位置PID
 
+    BLDC_Driver& bldc_driver;      //驱动器
+    Encoder& bldc_encoder;         //编码器
+    LowPassFilter& CurrentQFilter; //Q轴电流低通滤波器
+    LowPassFilter& CurrentDFilter; //D轴电流低通滤波器
+    LowPassFilter& SpeedFilter;    //速度低通滤波器
+
     //运行时参数
-    float Angle{0};           //当前电机角度,单位rad
-    float PreviousAngle{0};   //上一次电机角度(速度环、位置环更新中),单位rad
-    float ElectricalAngle{0}; //当前电机电角度,单位rad
-    float Speed{0};           //电机转速,单位rpm
+    float zero_electric_angle{0}; // 电机零点电角度,单位rad
+    float Angle{0};               // 当前电机角度,单位rad
+    float PreviousAngle{0};       // 上一次电机角度(速度环、位置环更新中),单位rad
+    float ElectricalAngle{0};     // 当前电机电角度,单位rad
+    float Speed{0};               // 电机转速,单位rpm
 
     float Uu{0}; //U相电压
     float Uv{0}; //V相电压
@@ -147,6 +129,10 @@ private:
     float Ib{0}; //B轴电流
     float Iq{0}; //切向电流
     float Id{0}; //法向电流
+
+    void alignAngle();
+    void UpdateCurrent(float iu, float iv);
+    void SetPhaseVoltage(float uq, float ud);
 };
 
 #endif //FOC_H
