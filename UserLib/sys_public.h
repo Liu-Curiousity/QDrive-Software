@@ -3,13 +3,14 @@
  * @brief 		用于支持简单平台移植的中间层
  * @detail
  * @author 	    Haoqi Liu
- * @date        24-11-27
- * @version 	V2.0.0
+ * @date        25-4-17
+ * @version 	V3.0.0
  * @note 		用户需要根据提示定义相关宏函数,其中,MAX_DELAY应与delay()匹配
  * @warning
  * @par 		历史版本
                 V1.0.0创建于24-11-24
                 V2.0.0创建于24-11-27,修改打印日志宏函数命名,添加更多日志打印方式
+                V3.0.0创建于25-4-17,重写new和delete函数
  * */
 
 #ifndef SYS_PUBLIC_H
@@ -50,6 +51,26 @@ extern "C" {
 
 #ifdef __cplusplus
 };
+
+/**====================================User Code Begin====================================**/
+#include <cstdint>
+#include "FreeRTOS.h"
+/**=====================================User Code End=====================================**/
+inline void* operator new(const std::size_t size) {
+    return pvPortMalloc(size);
+}
+
+inline void* operator new[](const std::size_t size) {
+    return pvPortMalloc(size);
+}
+
+inline void operator delete(void *ptr) {
+    vPortFree(ptr);
+}
+
+inline void operator delete[](void *ptr) {
+    vPortFree(ptr);
+}
 #endif
 
 #endif //SYS_PUBLIC_H

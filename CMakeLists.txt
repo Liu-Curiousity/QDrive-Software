@@ -28,7 +28,9 @@ add_link_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
 
 add_compile_options(-mcpu=cortex-m4 -mthumb -mthumb-interwork)
 add_compile_options(-ffunction-sections -fdata-sections -fno-common -fmessage-length=0)
-add_compile_options(-fno-exceptions)
+
+# 失能异常和RTTI
+add_compile_options(-fno-exceptions -fno-rtti)
 
 # uncomment to mitigate c++17 absolute addresses warnings
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register")
@@ -55,6 +57,14 @@ include_directories(Core/Inc Drivers/STM32G4xx_HAL_Driver/Inc Drivers/STM32G4xx_
 add_definitions(-DDEBUG -DUSE_HAL_DRIVER -DSTM32G431xx)
 
 file(GLOB_RECURSE SOURCES "Core/*.*" "Middlewares/*.*" "Drivers/*.*" "UserLib/*.*" "UserTasks/*.*")
+
+# 查找 UserLib 下的所有源文件
+file(GLOB_RECURSE USERLIB_SOURCES "UserLib/*.*" "UserLib/*.*" "UserTasks/*.*" "UserTasks/*.*")
+
+# 为每个 UserLib 源文件添加编译选项 -include public.h
+foreach (SRC ${USERLIB_SOURCES})
+    set_source_files_properties(${SRC} PROPERTIES COMPILE_OPTIONS "-include;sys_public.h")
+endforeach ()
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32G431CBUX_FLASH.ld)
 
