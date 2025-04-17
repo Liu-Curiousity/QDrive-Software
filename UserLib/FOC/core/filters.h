@@ -2,21 +2,21 @@
  * @brief 		filters implementation
  * @detail
  * @author 	    Haoqi Liu
- * @date        25-4-11
- * @version 	V3.0.0
+ * @date        25-4-17
+ * @version 	V3.0.1
  * @note
  * @warning
  * @par 		history
                 V1.0.0 on 24-12-7
                 V2.0.0 on 25-2-21,optimize LowPassFilter(rename,delete template,add constructor,add operator())
                 V3.0.0 on 25-4-11,refactor with C++ inheritance
+                V3.0.1 on 25-4-17,replace malloc/free with new/delete
  * */
 
 #ifndef FILTERS_H
 #define FILTERS_H
 
 #include "LowPassFilter.h"
-#include <cstdlib>
 #include <cstring>
 #include <numbers>
 
@@ -124,12 +124,10 @@ public:
      * @brief constructor
      * @param window_size window size
      */
-    explicit MovingAverageFilter(const size_t window_size) : window_size(window_size) {
-        values = static_cast<float *>(malloc(window_size * sizeof(float)));
-        memset(values, 0, window_size * sizeof(float));
-    }
+    explicit MovingAverageFilter(const size_t window_size) :
+        window_size(window_size), values(new float[window_size]) {}
 
-    ~MovingAverageFilter() override { free(values); }
+    ~MovingAverageFilter() override { delete[] values; }
 
     float operator()(const float value) override {
         sum -= values[index];
@@ -143,9 +141,8 @@ private:
     size_t index{0};
     size_t window_size{0};
     float sum{0};
-    float *values{nullptr};
+    float *values;
 };
-
 
 
 #endif //FILTERS_H

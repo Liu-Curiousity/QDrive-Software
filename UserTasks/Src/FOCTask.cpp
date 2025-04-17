@@ -45,7 +45,7 @@ void StartFOCTask(void *argument) {
     // foc.Ctrl(FOC::CtrlType::SpeedCtrl, 30);
     foc.Ctrl(FOC::CtrlType::CurrentCtrl, 80);
     while (true) {
-        osDelay(10);
+        delay(10);
     }
 }
 
