@@ -79,23 +79,23 @@ void FOC::calibration() {
     /*2.校准电角度零点*/
     float sum_offset_angle = 0;
     for (int i = 0; i < PolePairs; ++i) {
-        SetPhaseVoltage(0, 0.9f, 0);
-        delay(200);
-        for (int j = 0; j < 50; ++j) {
-            if (encoder_direction)
-                sum_offset_angle += (2 * numbers::pi_v<float> - bldc_encoder.get_angle()) / 50;
-            else
-                sum_offset_angle += bldc_encoder.get_angle() / 50;
-            delay(2);
-        }
-        SetPhaseVoltage(0, 0, 0);
         // 按q轴正方向硬拖2pi电角度
-        for (int j = 0; j < 100; ++j) {
-            const float angle = 2 * numbers::pi_v<float> * j / 100.0f;
+        for (int j = 0; j < 250; ++j) {
+            const float angle = 2 * numbers::pi_v<float> * j / 250.0f;
             SetPhaseVoltage(0, 0.5f, angle);
-            delay(2);
+            delay(1);
+        }
+        SetPhaseVoltage(0, 0.9f, 0);
+        delay(300);
+        for (int j = 0; j < 100; ++j) {
+            if (encoder_direction)
+                sum_offset_angle += (2 * numbers::pi_v<float> - bldc_encoder.get_angle()) / 100;
+            else
+                sum_offset_angle += bldc_encoder.get_angle() / 100;
+            delay(1);
         }
     }
+    SetPhaseVoltage(0, 0, 0);
     zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (PolePairs - 1)) / PolePairs;
 
     /*TODO:添加齿槽转矩补偿校准*/
