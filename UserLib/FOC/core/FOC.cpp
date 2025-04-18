@@ -48,7 +48,58 @@ void FOC::disable() const {
         bldc_encoder.disable();
 }
 
-void FOC::calibration() {}
+void FOC::calibration() {
+    /*1.校准编码器正方向,使其与q轴正方向相同*/
+    SetPhaseVoltage(0, 0.5f, 0);
+    // 读取电机角度,100次平均
+    delay(100);
+    float begin_angle = 0;
+    for (int i = 0; i < 100; ++i) {
+        begin_angle += bldc_encoder.get_angle() / 100;
+    }
+    // 按q轴正方向硬拖2pi电角度
+    for (int i = 0; i < 500; ++i) {
+        const float angle = 2 * numbers::pi_v<float> * i / 500.0f;
+        SetPhaseVoltage(0, 0.5f, angle);
+        delay(1);
+    }
+    // 读取电机角度,100次平均
+    float end_angle = 0;
+    for (int i = 0; i < 100; ++i) {
+        end_angle += bldc_encoder.get_angle() / 100;
+    }
+    SetPhaseVoltage(0, 0, 0); // 停止电机
+    if ((end_angle > begin_angle && end_angle < begin_angle - numbers::pi_v<float>) ||
+        end_angle < begin_angle - numbers::pi_v<float>) {
+        encoder_direction = true;
+    } else {
+        encoder_direction = false;
+    }
+
+    /*2.校准电角度零点*/
+    float sum_offset_angle = 0;
+    for (int i = 0; i < PolePairs; ++i) {
+        SetPhaseVoltage(0, 0.9f, 0);
+        delay(200);
+        for (int j = 0; j < 50; ++j) {
+            if (encoder_direction)
+                sum_offset_angle += (2 * numbers::pi_v<float> - bldc_encoder.get_angle()) / 50;
+            else
+                sum_offset_angle += bldc_encoder.get_angle() / 50;
+            delay(2);
+        }
+        SetPhaseVoltage(0, 0, 0);
+        // 按q轴正方向硬拖2pi电角度
+        for (int j = 0; j < 100; ++j) {
+            const float angle = 2 * numbers::pi_v<float> * j / 100.0f;
+            SetPhaseVoltage(0, 0.5f, angle);
+            delay(2);
+        }
+    }
+    zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (PolePairs - 1)) / PolePairs;
+
+    /*TODO:添加齿槽转矩补偿校准*/
+}
 
 /**
  * @brief FOC电流变换
@@ -77,9 +128,10 @@ void FOC::UpdateCurrent(const float iu, const float iv) {
  * @brief FOC控制函数
  * @param uq 切向力矩,必须在0~1之间!
  * @param ud 法向力矩,必须在0~1之间!
+ * @param ElectricalAngle 电机电角度,单位弧度
  * */
 __attribute__((section(".ccmram_func")))
-void FOC::SetPhaseVoltage(float uq, float ud) {
+void FOC::SetPhaseVoltage(float uq, float ud, const float ElectricalAngle) {
     /**1.检查输入参数**/
     assert_param(Uq <= 1 && Uq >= -1);
     assert_param(Ud <= 1 && Ud >= -1);
@@ -157,20 +209,23 @@ void FOC::loopCtrl(float iu, float iv) {
     UpdateCurrent(iu, iv);
 
     /**2.读取编码器角度**/
-    temp = bldc_encoder.get_angle() + zero_electric_angle;
+    if (encoder_direction)
+        temp = bldc_encoder.get_angle() + zero_electric_angle;
+    else
+        temp = 2 * numbers::pi_v<float> - bldc_encoder.get_angle() + zero_electric_angle;
     Angle = temp > 2 * numbers::pi_v<float> ? temp - 2 * numbers::pi_v<float> :
             temp < 0 ? temp + 2 * numbers::pi_v<float> : temp;
     ElectricalAngle = Angle * PolePairs;
 
     /**3.计算转速**/
-    temp = PreviousAngle - Angle;
-    if (Angle - PreviousAngle > numbers::pi_v<float>) temp += numbers::pi_v<float> * 2;
-    else if (Angle - PreviousAngle < -numbers::pi_v<float>) temp -= numbers::pi_v<float> * 2;
+    temp = Angle - PreviousAngle;
+    if (PreviousAngle - Angle > numbers::pi_v<float>) temp += numbers::pi_v<float> * 2;
+    else if (PreviousAngle - Angle < -numbers::pi_v<float>) temp -= numbers::pi_v<float> * 2;
     Speed = SpeedFilter(temp * 60 * CurrentCtrlFrequency / (numbers::pi_v<float> * 2));
     PreviousAngle = Angle;
 
     /**4.电流闭环控制**/
     const float uq = PID_CurrentQ.clac(Iq);
     const float ud = PID_CurrentD.clac(Id);
-    SetPhaseVoltage(uq, ud);
+    SetPhaseVoltage(uq, ud, ElectricalAngle);
 }

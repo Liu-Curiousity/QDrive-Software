@@ -15,11 +15,11 @@
 #ifndef FOC_H
 #define FOC_H
 
+#include "cstdint"
 #include "BLDC_Driver.h"
 #include "Encoder.h"
 #include "LowPassFilter.h"
 #include "PID.h"
-#include "cstdint"
 
 /**
  * @brief FOC句柄结构体
@@ -42,7 +42,6 @@ public:
      * @param SpeedFilter 速度滤波器系数
      * @param driver BLDC驱动
      * @param encoder 编码器驱动
-     * @param zero_electric_angle 电机零点电角度,单位rad
      * @param PID_CurrentQ Q轴电流PID
      * @param PID_CurrentD D轴电流PID
      * @param PID_Speed 速度PID
@@ -50,9 +49,9 @@ public:
      */
     FOC(uint8_t PolePairs, uint16_t CtrlFrequency, uint16_t CurrentCtrlFrequency,
         LowPassFilter& CurrentQFilter, LowPassFilter& CurrentDFilter, LowPassFilter& SpeedFilter,
-        BLDC_Driver& driver, Encoder& encoder, float zero_electric_angle,
+        BLDC_Driver& driver, Encoder& encoder,
         const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Position):
-        bldc_driver(driver), bldc_encoder(encoder), zero_electric_angle(zero_electric_angle), PolePairs(PolePairs),
+        bldc_driver(driver), bldc_encoder(encoder), PolePairs(PolePairs),
         CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
         CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter),
         PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Position(PID_Position) {}
@@ -107,12 +106,14 @@ private:
     LowPassFilter& CurrentDFilter; //D轴电流低通滤波器
     LowPassFilter& SpeedFilter;    //速度低通滤波器
 
-    //运行时参数
+    // 校准参数
+    bool encoder_direction{true}; // true if the encoder is in the same direction as the motor(Uq)
     float zero_electric_angle{0}; // 电机零点电角度,单位rad
-    float Angle{0};               // 当前电机角度,单位rad
-    float PreviousAngle{0};       // 上一次电机角度(速度环、位置环更新中),单位rad
-    float ElectricalAngle{0};     // 当前电机电角度,单位rad
-    float Speed{0};               // 电机转速,单位rpm
+    // 运行时参数
+    float Angle{0};           // 当前电机角度,单位rad
+    float PreviousAngle{0};   // 上一次电机角度(速度环、位置环更新中),单位rad
+    float ElectricalAngle{0}; // 当前电机电角度,单位rad
+    float Speed{0};           // 电机转速,单位rpm
 
     float Uu{0}; //U相电压
     float Uv{0}; //V相电压
@@ -132,7 +133,7 @@ private:
 
     void alignAngle();
     void UpdateCurrent(float iu, float iv);
-    void SetPhaseVoltage(float uq, float ud);
+    void SetPhaseVoltage(float uq, float ud, float ElectricalAngle);
 };
 
 #endif //FOC_H
