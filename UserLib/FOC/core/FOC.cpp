@@ -77,9 +77,10 @@ void FOC::UpdateCurrent(const float iu, const float iv) {
  * @brief FOC控制函数
  * @param uq 切向力矩,必须在0~1之间!
  * @param ud 法向力矩,必须在0~1之间!
+ * @param ElectricalAngle 电机电角度,单位弧度
  * */
 __attribute__((section(".ccmram_func")))
-void FOC::SetPhaseVoltage(float uq, float ud) {
+void FOC::SetPhaseVoltage(float uq, float ud, const float ElectricalAngle) {
     /**1.检查输入参数**/
     assert_param(Uq <= 1 && Uq >= -1);
     assert_param(Ud <= 1 && Ud >= -1);
@@ -157,7 +158,7 @@ void FOC::loopCtrl(float iu, float iv) {
     UpdateCurrent(iu, iv);
 
     /**2.读取编码器角度**/
-    temp = bldc_encoder.get_angle() + zero_electric_angle;
+    temp = (2 * numbers::pi_v<float> - bldc_encoder.get_angle()) + zero_electric_angle;
     Angle = temp > 2 * numbers::pi_v<float> ? temp - 2 * numbers::pi_v<float> :
             temp < 0 ? temp + 2 * numbers::pi_v<float> : temp;
     ElectricalAngle = Angle * PolePairs;
@@ -172,5 +173,5 @@ void FOC::loopCtrl(float iu, float iv) {
     /**4.电流闭环控制**/
     const float uq = PID_CurrentQ.clac(Iq);
     const float ud = PID_CurrentD.clac(Id);
-    SetPhaseVoltage(uq, ud);
+    SetPhaseVoltage(uq, ud, ElectricalAngle);
 }

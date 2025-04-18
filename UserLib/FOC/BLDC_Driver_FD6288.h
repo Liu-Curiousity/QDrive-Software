@@ -62,8 +62,8 @@ public:
             w *= static_cast<float>(MaxDuty);
             //设置PWM占空比
             __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_1, u);
-            __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_2, v);
-            __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_3, w);
+            __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_3, v);
+            __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_2, w);
         }
     }
 

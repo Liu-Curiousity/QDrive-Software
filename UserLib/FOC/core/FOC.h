@@ -132,7 +132,7 @@ private:
 
     void alignAngle();
     void UpdateCurrent(float iu, float iv);
-    void SetPhaseVoltage(float uq, float ud);
+    void SetPhaseVoltage(float uq, float ud, float ElectricalAngle);
 };
 
 #endif //FOC_H

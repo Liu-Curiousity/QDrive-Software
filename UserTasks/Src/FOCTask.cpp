@@ -29,10 +29,14 @@ FOC foc(14, 1000, 20000, CurrentQFilter, CurrentDFilter, SpeedFilter,
 
 void StartFOCTask(void *argument) {
     HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED); //校准ADC
+
     ///2.启动
-    HAL_TIM_Base_Start_IT(&htim6); //开启速度环位置环中断控制
-    foc.init();                    //启动FOC
-    foc.enable();                  //启动FOC
+    foc.init();   // 初始化FOC
+    foc.enable(); // 启动FOC
+
+    foc.calibration();
+    delay(200);
+    HAL_TIM_Base_Start_IT(&htim6); // 开启速度环位置环中断控制
 
     //TODO: 该采样方式存在同步问题,需要优化
     HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_4);                                 //开启PWM输出,用于触发ADC采样
@@ -72,8 +76,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 __attribute__((section(".ccmram_func")))
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     if (&hadc1 == hadc) {
-        const float Iu = static_cast<float>(I_Values[0]) - 2045;
-        const float Iv = (static_cast<float>(I_Values[1]) - 1982) * 1.03f;
+        const float Iu = (static_cast<float>(I_Values[1]) - 1982) * 1.03f;
+        const float Iv = static_cast<float>(I_Values[0]) - 2045;
         HAL_GPIO_WritePin(TestPin_GPIO_Port, TestPin_Pin, GPIO_PIN_SET);
         foc.loopCtrl(Iu, Iv);
         HAL_GPIO_WritePin(TestPin_GPIO_Port, TestPin_Pin, GPIO_PIN_RESET);
