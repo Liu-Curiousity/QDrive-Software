@@ -4,16 +4,16 @@
 #include "spi.h"
 #include "adc.h"
 #include "cmsis_os2.h"
-#include "Encoder_AS5047P.h"
+#include "Encoder_KTH7823.h"
 #include "BLDC_Driver_FD6288.h"
 #include "filters.h"
 
 uint16_t I_Values[3];
 
 BLDC_Driver_DRV8300 bldc_driver(&htim8, 2125);
-Encoder_AS5047P bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2);
-PID PID_CurrentQ(PID::delta_type, -1e-3f, -1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
-PID PID_CurrentD(PID::delta_type, -1e-3f, -1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
+Encoder_KTH7823 bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2);
+PID PID_CurrentQ(PID::delta_type, 1e-3f, 1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
+PID PID_CurrentD(PID::delta_type, 1e-3f, 1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
 // PID PID_Speed(PID::position_type, 2.4f, 0.018f, 0, 5e3f, -5e3f);
 PID PID_Speed(PID::position_type, 4.0f, 0.02f, 0, 5e3f, -5e3f);
 // PID PID_Position(PID::delta_type, -900.0f, 0, 0);
@@ -47,7 +47,7 @@ void StartFOCTask(void *argument) {
     /* Infinite loop */
     // foc.Ctrl(FOC::CtrlType::PositionCtrl, M_PI_2); //设置目标位置
     // foc.Ctrl(FOC::CtrlType::SpeedCtrl, 30);
-    foc.Ctrl(FOC::CtrlType::CurrentCtrl, 80);
+    foc.Ctrl(FOC::CtrlType::CurrentCtrl, 30);
     while (true) {
         delay(10);
     }
