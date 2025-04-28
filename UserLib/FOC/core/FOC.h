@@ -114,8 +114,12 @@ private:
     LowPassFilter& SpeedFilter;    //速度低通滤波器
 
     // 校准参数
-    bool encoder_direction{true}; // true if the encoder is in the same direction as the motor(Uq)
-    float zero_electric_angle{0}; // 电机零点电角度,单位rad
+    bool anticogging_calibrating{false};     // 是否正在校准齿槽转矩
+    bool encoder_direction{true};            // true if the encoder is in the same direction as the motor(Uq)
+    float zero_electric_angle{0};            // 电机零点电角度,单位rad
+    static constexpr uint16_t map_len{1000}; // 齿槽转矩校准点数
+    float cogging_map[map_len];              // 齿槽转矩补偿表
+
     // 运行时参数
     float Angle{0};           // 当前电机角度,单位rad
     float PreviousAngle{0};   // 上一次电机角度(速度环、位置环更新中),单位rad

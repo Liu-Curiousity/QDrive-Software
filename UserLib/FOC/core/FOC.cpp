@@ -14,6 +14,7 @@
 
 
 #include <numbers>
+#include <numeric>
 #include "FOC.h"
 #include "main.h"
 
@@ -108,8 +109,38 @@ void FOC::calibration() {
     SetPhaseVoltage(0, 0, 0);
     zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (PolePairs - 1)) / PolePairs;
 
-    /*TODO:添加齿槽转矩补偿校准*/
+    /*3.建立齿槽转矩补偿表*/
+    Ctrl(CtrlType::CurrentCtrl, 0);
+    anticogging_calibrating = true;
+    delay(5);
+    // 读取电角度零点校准后的电机角度,并确定补偿表开始索引
+    auto index = static_cast<uint16_t>(Angle / numbers::pi_v<float> / 2 * map_len);
+    for (int i = 0; i < map_len; ++i) {
+        index = (index + 1) % map_len;
+        Ctrl(CtrlType::PositionCtrl, numbers::pi_v<float> * 2 * index / map_len);
+        float angle_ = 0, speed_ = 0.2, iq_ = 0;
+        while (abs(angle_ - numbers::pi_v<float> * 2 * index / map_len) > numbers::pi_v<float> * 2 / map_len / 10 ||
+               abs(speed_) > 0.1) {
+            // 0度2pi度溢出补偿
+            float tmp = Angle;
+            if (numbers::pi_v<float> * 2 * index / map_len > 6.2 && tmp < 0.1) tmp += numbers::pi_v<float> * 2;
+            if (numbers::pi_v<float> * 2 * index / map_len < 0.1 && tmp > 6.2) tmp -= numbers::pi_v<float> * 2;
+            // 过个低通
+            angle_ = angle_ * 0.8f + tmp * 0.2f;
+            speed_ = speed_ * 0.99f + Speed * 0.01f;
+            iq_ = iq_ * 0.97f + Iq * 0.03f;
+            delay(1);
+        }
+        cogging_map[index] = iq_;
+    }
+    anticogging_calibrating = false;
+    // 后处理:将补偿表平移到0点(应为正转校准时的Iq平均值大于0(需推动转子转动))
+    const float cogging_avg = accumulate(cogging_map, cogging_map + map_len, 0.0f) / map_len;
+    for (auto& cogging : cogging_map) {
+        cogging -= cogging_avg;
+    }
 
+    /*4.校准完成*/
     calibrated = true;
 }
 
@@ -179,7 +210,6 @@ void FOC::SetPhaseVoltage(float uq, float ud, const float ElectricalAngle) {
 }
 
 void FOC::Ctrl(const CtrlType ctrl_type, const float value) {
-    this->ctrl_type = ctrl_type;
     switch (ctrl_type) {
         case CtrlType::PositionCtrl:
             PID_Position.SetTarget(value);
@@ -191,11 +221,12 @@ void FOC::Ctrl(const CtrlType ctrl_type, const float value) {
             PID_CurrentQ.SetTarget(value);
             break;
     }
+    this->ctrl_type = ctrl_type;
 }
 
 __attribute__((section(".ccmram_func")))
 void FOC::Ctrl_ISR() {
-    if (!started) return;
+    if (!started && !anticogging_calibrating) return;
 
     /**1.速度闭环控制**/
     switch (ctrl_type) {
@@ -209,8 +240,8 @@ void FOC::Ctrl_ISR() {
                 PID_Speed.SetTarget(PID_Position.clac(Angle));
         case CtrlType::SpeedCtrl:
             PID_CurrentQ.SetTarget(PID_Speed.clac(Speed));
-            break;
         case CtrlType::CurrentCtrl:
+            /*TODO:应用齿槽转矩补偿*/
             break;
     }
 }
@@ -218,7 +249,7 @@ void FOC::Ctrl_ISR() {
 /*CCMRAM加速运行*/
 __attribute__((section(".ccmram_func")))
 void FOC::loopCtrl(float iu, float iv) {
-    if (!started) return;
+    if (!started && !anticogging_calibrating) return;
 
     static float temp;
     /**1.电流变换**/
