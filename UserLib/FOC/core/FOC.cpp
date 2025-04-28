@@ -28,16 +28,17 @@ void FOC::init() const {
         bldc_encoder.init();
 }
 
-void FOC::enable() const {
+void FOC::enable() {
     //1.启动BLDC驱动
     if (!bldc_driver.enabled)
         bldc_driver.enable();
     //2.启动编码器
     if (!bldc_encoder.enabled)
         bldc_encoder.enable();
+    enabled = true;
 }
 
-void FOC::disable() const {
+void FOC::disable() {
     //1.关闭BLDC驱动
     if (bldc_driver.enabled) {
         bldc_driver.set_duty(0, 0, 0);
@@ -46,6 +47,15 @@ void FOC::disable() const {
     //2.关闭编码器
     if (bldc_driver.enabled)
         bldc_encoder.disable();
+    enabled = false;
+}
+
+void FOC::start() {
+    if (enabled && calibrated) started = true;
+}
+
+void FOC::stop() {
+    started = false;
 }
 
 void FOC::calibration() {
@@ -99,6 +109,8 @@ void FOC::calibration() {
     zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (PolePairs - 1)) / PolePairs;
 
     /*TODO:添加齿槽转矩补偿校准*/
+
+    calibrated = true;
 }
 
 /**
@@ -183,6 +195,8 @@ void FOC::Ctrl(const CtrlType ctrl_type, const float value) {
 
 __attribute__((section(".ccmram_func")))
 void FOC::Ctrl_ISR() {
+    if (!started) return;
+
     /**1.速度闭环控制**/
     switch (ctrl_type) {
         case CtrlType::PositionCtrl:
@@ -204,6 +218,8 @@ void FOC::Ctrl_ISR() {
 /*CCMRAM加速运行*/
 __attribute__((section(".ccmram_func")))
 void FOC::loopCtrl(float iu, float iv) {
+    if (!started) return;
+
     static float temp;
     /**1.电流变换**/
     UpdateCurrent(iu, iv);

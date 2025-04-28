@@ -61,9 +61,13 @@ public:
 
     void init() const;
 
-    void enable() const;
+    void enable();
 
-    void disable() const;
+    void disable();
+
+    void start();
+
+    void stop();
 
     void calibration();
     /**
@@ -87,9 +91,12 @@ public:
 
 
     //初始化配置项
-    const uint8_t PolePairs;             //极对数
-    const uint16_t CtrlFrequency;        //控制频率(速度环、位置环),单位Hz
-    const uint16_t CurrentCtrlFrequency; //控制频率(电流环),单位Hz
+    bool enabled{false};                 // 是否使能
+    bool started{false};                 // 是否启动
+    bool calibrated{false};              // 是否校准过
+    const uint8_t PolePairs;             // 极对数
+    const uint16_t CtrlFrequency;        // 控制频率(速度环、位置环),单位Hz
+    const uint16_t CurrentCtrlFrequency; // 控制频率(电流环),单位Hz
 
 private:
     CtrlType ctrl_type{CtrlType::CurrentCtrl}; //当前控制类型
@@ -131,7 +138,6 @@ private:
     float Iq{0}; //切向电流
     float Id{0}; //法向电流
 
-    void alignAngle();
     void UpdateCurrent(float iu, float iv);
     void SetPhaseVoltage(float uq, float ud, float ElectricalAngle);
 };
