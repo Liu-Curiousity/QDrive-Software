@@ -69,7 +69,7 @@ void FOC::calibration() {
         end_angle += bldc_encoder.get_angle() / 100;
     }
     SetPhaseVoltage(0, 0, 0); // 停止电机
-    if ((end_angle > begin_angle && end_angle < begin_angle - numbers::pi_v<float>) ||
+    if ((end_angle > begin_angle && end_angle < begin_angle + numbers::pi_v<float>) ||
         end_angle < begin_angle - numbers::pi_v<float>) {
         encoder_direction = true;
     } else {
