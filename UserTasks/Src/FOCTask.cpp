@@ -8,8 +8,6 @@
 #include "BLDC_Driver_FD6288.h"
 #include "filters.h"
 
-uint16_t I_Values[3];
-
 BLDC_Driver_DRV8300 bldc_driver(&htim8, 2125);
 Encoder_KTH7823 bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2);
 PID PID_CurrentQ(PID::delta_type, 1e-3f, 1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
@@ -38,18 +36,26 @@ void StartFOCTask(void *argument) {
     delay(200);
     HAL_TIM_Base_Start_IT(&htim6); // 开启速度环位置环中断控制
 
-    //TODO: 该采样方式存在同步问题,需要优化
-    HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_4);                                 //开启PWM输出,用于触发ADC采样
-    HAL_ADC_Start_DMA(&hadc1, reinterpret_cast<uint32_t *>(I_Values), 1);     //开启ADC采样
-    HAL_ADC_Start_DMA(&hadc2, reinterpret_cast<uint32_t *>(I_Values + 1), 1); //开启ADC采样
-
+    HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_4); //开启PWM输出,用于触发ADC采样
+    ADC_Enable(&hadc1);
+    ADC_Enable(&hadc2);
+    HAL_ADCEx_InjectedStart_IT(&hadc1); //开启ADC采样
 
     /* Infinite loop */
     // foc.Ctrl(FOC::CtrlType::PositionCtrl, M_PI_2); //设置目标位置
     // foc.Ctrl(FOC::CtrlType::SpeedCtrl, 30);
     foc.Ctrl(FOC::CtrlType::CurrentCtrl, 30);
     while (true) {
-        delay(10);
+        // TODO: 电压无法采样
+
+        // HAL_ADCEx_MultiModeGetValue(&hadc1);
+        HAL_ADC_Start_IT(&hadc2);
+        // LL_ADC_REG_ReadMultiConversionData32()
+        // LL_ADC_REG_StartConversion(hadc2.Instance);
+        // HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
+        // vbus = HAL_ADC_GetValue(&hadc2) / 4095.0f * 3.3f / 2 * 17;
+        // HAL_ADC_Stop(&hadc2);
+        delay(100);
     }
 }
 
@@ -74,13 +80,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 }
 
 __attribute__((section(".ccmram_func")))
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
+void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc) {
     if (&hadc1 == hadc) {
-        const float Iu = (static_cast<float>(I_Values[1]) - 1982) * 1.03f;
-        const float Iv = static_cast<float>(I_Values[0]) - 2045;
-        HAL_GPIO_WritePin(TestPin_GPIO_Port, TestPin_Pin, GPIO_PIN_SET);
+        const float Iu = (static_cast<float>(hadc2.Instance->JDR1) - 1982) * 1.03f;
+        const float Iv = static_cast<float>(hadc1.Instance->JDR1) - 2045;
         foc.loopCtrl(Iu, Iv);
-        HAL_GPIO_WritePin(TestPin_GPIO_Port, TestPin_Pin, GPIO_PIN_RESET);
     }
 }
 
