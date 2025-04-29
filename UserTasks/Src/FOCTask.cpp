@@ -33,10 +33,12 @@ void StartFOCTask(void *argument) {
     HAL_ADCEx_InjectedStart_IT(&hadc1); //开启ADC采样
 
     ///2.启动
-    foc.init();        // 初始化FOC
-    foc.enable();      // 启动FOC
-    foc.calibration(); // 校准FOC
+    foc.init();                    // 初始化FOC
+    foc.enable();                  // 启动FOC
+    foc.calibration();             // 校准FOC
+    foc.anticogging_calibration(); // 齿槽转矩校准
     delay(2000);
+    foc.anticogging_enabled = true;
     foc.start(); // 启动FOC
 
     /* Infinite loop */

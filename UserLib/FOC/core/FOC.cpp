@@ -60,6 +60,8 @@ void FOC::stop() {
 }
 
 void FOC::calibration() {
+    if (started) return; // 如果已经启动,则不能校准
+
     /*1.校准编码器正方向,使其与q轴正方向相同*/
     SetPhaseVoltage(0, 0.5f, 0);
     // 读取电机角度,100次平均
@@ -109,18 +111,28 @@ void FOC::calibration() {
     SetPhaseVoltage(0, 0, 0);
     zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (PolePairs - 1)) / PolePairs;
 
-    /*3.建立齿槽转矩补偿表*/
-    Ctrl(CtrlType::CurrentCtrl, 0);
-    anticogging_calibrating = true;
+    /*3.校准完成*/
+    calibrated = true;
+}
+
+void FOC::anticogging_calibration() {
+    if (started) return; // 如果已经启动,则不能校准
+
+    Ctrl(CtrlType::CurrentCtrl, 0); // 释放电机
+    anticogging_calibrating = true; // 开始校准,即开始闭环控制
     delay(5);
     // 读取电角度零点校准后的电机角度,并确定补偿表开始索引
     auto index = static_cast<uint16_t>(Angle / numbers::pi_v<float> / 2 * map_len);
-    for (int i = 0; i < map_len; ++i) {
+    Ctrl(CtrlType::PositionCtrl, numbers::pi_v<float> * 2 * index / map_len); // 先定位到前一个点,并延时做准备
+    delay(20);
+    float angle_ = 0, iq_ = 0;
+    // 采集初期几个点不可信任,多采集5个点将其覆盖
+    for (int i = 0; i < map_len + 5; ++i) {
         index = (index + 1) % map_len;
         Ctrl(CtrlType::PositionCtrl, numbers::pi_v<float> * 2 * index / map_len);
-        float angle_ = 0, speed_ = 0.2, iq_ = 0;
+        float speed_ = 0.5;
         while (abs(angle_ - numbers::pi_v<float> * 2 * index / map_len) > numbers::pi_v<float> * 2 / map_len / 10 ||
-               abs(speed_) > 0.1) {
+               abs(speed_) > 0.08) {
             // 0度2pi度溢出补偿
             float tmp = Angle;
             if (numbers::pi_v<float> * 2 * index / map_len > 6.2 && tmp < 0.1) tmp += numbers::pi_v<float> * 2;
@@ -131,17 +143,16 @@ void FOC::calibration() {
             iq_ = iq_ * 0.97f + Iq * 0.03f;
             delay(1);
         }
-        cogging_map[index] = iq_;
+        anticogging_map[index] = iq_;
     }
-    anticogging_calibrating = false;
+    Ctrl(CtrlType::CurrentCtrl, 0);  // 释放电机
+    anticogging_calibrating = false; // 结束校准,即关闭闭环控制
     // 后处理:将补偿表平移到0点(应为正转校准时的Iq平均值大于0(需推动转子转动))
-    const float cogging_avg = accumulate(cogging_map, cogging_map + map_len, 0.0f) / map_len;
-    for (auto& cogging : cogging_map) {
-        cogging -= cogging_avg;
+    const float anticogging_avg = accumulate(anticogging_map, anticogging_map + map_len, 0.0f) / map_len;
+    for (auto& anticogging : anticogging_map) {
+        anticogging -= anticogging_avg;
     }
-
-    /*4.校准完成*/
-    calibrated = true;
+    anticogging_calibrated = true;
 }
 
 /**
@@ -218,7 +229,7 @@ void FOC::Ctrl(const CtrlType ctrl_type, const float value) {
             PID_Speed.SetTarget(value);
             break;
         case CtrlType::CurrentCtrl:
-            PID_CurrentQ.SetTarget(value);
+            target_iq = value;
             break;
     }
     this->ctrl_type = ctrl_type;
@@ -239,9 +250,16 @@ void FOC::Ctrl_ISR() {
             else
                 PID_Speed.SetTarget(PID_Position.clac(Angle));
         case CtrlType::SpeedCtrl:
-            PID_CurrentQ.SetTarget(PID_Speed.clac(Speed));
+            target_iq = PID_Speed.clac(Speed);
         case CtrlType::CurrentCtrl:
-            /*TODO:应用齿槽转矩补偿*/
+            /*齿槽转矩补偿*/
+            if (anticogging_enabled && anticogging_calibrated) {
+                const uint16_t index =
+                    static_cast<uint16_t>(Angle * map_len / 2 / numbers::pi_v<float> + 0.5f) % map_len;
+                PID_CurrentQ.SetTarget(target_iq + anticogging_map[index]);
+            } else {
+                PID_CurrentQ.SetTarget(target_iq);
+            }
             break;
     }
 }
