@@ -44,14 +44,22 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Memories definition */
 MEMORY
 {
-  RAM    (xrw)    : ORIGIN = 0x20000000,   LENGTH = 32K
-  CCMRAM (xrw)    : ORIGIN = 0x10000000,   LENGTH = 10K
-  FLASH    (rx)    : ORIGIN = 0x8000000,   LENGTH = 128K
+  RAM       (xrw)   : ORIGIN = 0x20000000,    LENGTH = 32K
+  CCMRAM    (xrw)   : ORIGIN = 0x10000000,    LENGTH = 10K
+  FLASH     (rx)    : ORIGIN = 0x08000000,    LENGTH = 116K
+  FLASH_DATA(rx)    : ORIGIN = 0x0801D000,    LENGTH = 12K
 }
 
 /* Sections */
 SECTIONS
 {
+  .flash_data :
+  {
+    . = ALIGN(4);
+    KEEP(*(.flash_data))    /* .flash_data sections (code) */
+    KEEP(*(.flash_data*))   /* .flash_data* sections (code) */
+    . = ALIGN(4);
+  } >FLASH_DATA AT>FLASH_DATA
   /* The startup code into "FLASH" Rom type memory */
   .isr_vector :
   {

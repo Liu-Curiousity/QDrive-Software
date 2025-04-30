@@ -6,9 +6,12 @@
 #include "cmsis_os2.h"
 #include "Encoder_AS5047P.h"
 #include "BLDC_Driver_FD6288.h"
+#include "Storage_EmbeddedFlash.h"
 #include "filters.h"
 
 float VBUS;
+
+Storage_EmbeddedFlash storage;
 BLDC_Driver_DRV8300 bldc_driver(&htim8, 2125);
 Encoder_AS5047P bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2);
 PID PID_CurrentQ(PID::delta_type, 1e-3f, 1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
@@ -22,7 +25,7 @@ LowPassFilter_2_Order CurrentDFilter(0.00005f, 1500); // 20kHz
 LowPassFilter_2_Order SpeedFilter(0.00005f, 160);     // 20kHz
 __attribute__((section(".ccmram")))
 FOC foc(14, 1000, 20000, CurrentQFilter, CurrentDFilter, SpeedFilter,
-        bldc_driver, bldc_encoder, PID_CurrentQ, PID_CurrentD, PID_Speed, PID_Position);
+        bldc_driver, bldc_encoder, storage, PID_CurrentQ, PID_CurrentD, PID_Speed, PID_Position);
 
 void StartFOCTask(void *argument) {
     HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED); //校准ADC
@@ -33,10 +36,14 @@ void StartFOCTask(void *argument) {
     HAL_ADCEx_InjectedStart_IT(&hadc1); //开启ADC采样
 
     ///2.启动
-    foc.init();                    // 初始化FOC
-    foc.enable();                  // 启动FOC
-    foc.calibration();             // 校准FOC
-    foc.anticogging_calibration(); // 齿槽转矩校准
+    foc.init();   // 初始化FOC
+    foc.enable(); // 启动FOC
+    if (!foc.calibrated) {
+        foc.calibration(); // 校准FOC
+    }
+    if (!foc.anticogging_calibrated) {
+        foc.anticogging_calibration(); // 齿槽转矩校准
+    }
     delay(2000);
     foc.anticogging_enabled = true;
     foc.start(); // 启动FOC

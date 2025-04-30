@@ -20,13 +20,59 @@
 
 using namespace std;
 
-void FOC::init() const {
+void FOC::init() {
     // 1.初始化BLDC驱动
     if (!bldc_driver.initialized)
         bldc_driver.init();
     // 2.初始化编码器
     if (!bldc_encoder.initialized)
         bldc_encoder.init();
+    // 3.初始化flash
+    if (!storage.initialized)
+        storage.init();
+    //4.从flash中读取校准数据
+    load_storage_calibration();
+}
+
+void FOC::load_storage_calibration() {
+    StorageStatus storage_status;
+    storage.read(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+    if ((storage_status & 0xF0) == STORAGE_BASE_OK) {
+        // 如果基础校准数据正常,则读取
+        storage.read(0x100, reinterpret_cast<uint8_t *>(&encoder_direction), sizeof(encoder_direction));
+        storage.read(0x200, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
+        calibrated = true;
+    }
+    if ((storage_status & 0x0F) == STORAGE_ANTICOGGING_OK) {
+        storage.read(0x800, reinterpret_cast<uint8_t *>(anticogging_map), sizeof(anticogging_map));
+        anticogging_calibrated = true;
+    }
+}
+
+/**
+ * @brief 储存校准数据
+ * @param calibration_data_type false:基础校准数据, true:齿槽转矩补偿表
+ */
+void FOC::freeze_storage_calibration(const bool calibration_data_type) {
+    StorageStatus storage_status;
+    storage.read(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+    if (calibration_data_type == false) {
+        // 储存编码器方向
+        storage.write(0x100, reinterpret_cast<uint8_t *>(&encoder_direction), sizeof(encoder_direction));
+        // 储存零电角度
+        storage.write(0x200, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
+
+        // 更新储存状态
+        storage_status = static_cast<StorageStatus>((storage_status & 0x0F) | STORAGE_BASE_OK);
+        storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+    } else {
+        // 储存齿槽转矩补偿表
+        storage.write(0x800, reinterpret_cast<uint8_t *>(anticogging_map), sizeof(anticogging_map));
+
+        // 更新储存状态
+        storage_status = static_cast<StorageStatus>((storage_status & 0xF0) | STORAGE_ANTICOGGING_OK);
+        storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+    }
 }
 
 void FOC::enable() {
@@ -34,8 +80,10 @@ void FOC::enable() {
     if (!bldc_driver.enabled)
         bldc_driver.enable();
     //2.启动编码器
-    if (!bldc_encoder.enabled)
+    if (!bldc_encoder.enabled) {
         bldc_encoder.enable();
+        bldc_driver.set_duty(0, 0, 0);
+    }
     enabled = true;
 }
 
@@ -112,6 +160,7 @@ void FOC::calibration() {
     zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (PolePairs - 1)) / PolePairs;
 
     /*3.校准完成*/
+    freeze_storage_calibration(false); // 保存基础校准数据
     calibrated = true;
 }
 
@@ -152,6 +201,7 @@ void FOC::anticogging_calibration() {
     for (auto& anticogging : anticogging_map) {
         anticogging -= anticogging_avg;
     }
+    freeze_storage_calibration(true); // 保存基础校准数据
     anticogging_calibrated = true;
 }
 
