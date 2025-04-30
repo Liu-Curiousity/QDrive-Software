@@ -14,30 +14,82 @@
 
 
 #include <numbers>
+#include <numeric>
 #include "FOC.h"
 #include "main.h"
 
 using namespace std;
 
-void FOC::init() const {
+void FOC::init() {
     // 1.初始化BLDC驱动
     if (!bldc_driver.initialized)
         bldc_driver.init();
     // 2.初始化编码器
     if (!bldc_encoder.initialized)
         bldc_encoder.init();
+    // 3.初始化flash
+    if (!storage.initialized)
+        storage.init();
+    // 4.从flash中读取校准数据
+    load_storage_calibration();
+    // 5.完成初始化
+    initialized = true;
 }
 
-void FOC::enable() const {
+void FOC::load_storage_calibration() {
+    StorageStatus storage_status;
+    storage.read(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+    if ((storage_status & 0xF0) == STORAGE_BASE_OK) {
+        // 如果基础校准数据正常,则读取
+        storage.read(0x100, reinterpret_cast<uint8_t *>(&encoder_direction), sizeof(encoder_direction));
+        storage.read(0x200, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
+        calibrated = true;
+    }
+    if ((storage_status & 0x0F) == STORAGE_ANTICOGGING_OK) {
+        storage.read(0x800, reinterpret_cast<uint8_t *>(anticogging_map), sizeof(anticogging_map));
+        anticogging_calibrated = true;
+    }
+}
+
+/**
+ * @brief 储存校准数据
+ * @param calibration_data_type false:基础校准数据, true:齿槽转矩补偿表
+ */
+void FOC::freeze_storage_calibration(const bool calibration_data_type) {
+    StorageStatus storage_status;
+    storage.read(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+    if (calibration_data_type == false) {
+        // 储存编码器方向
+        storage.write(0x100, reinterpret_cast<uint8_t *>(&encoder_direction), sizeof(encoder_direction));
+        // 储存零电角度
+        storage.write(0x200, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
+
+        // 更新储存状态
+        storage_status = static_cast<StorageStatus>((storage_status & 0x0F) | STORAGE_BASE_OK);
+        storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+    } else {
+        // 储存齿槽转矩补偿表
+        storage.write(0x800, reinterpret_cast<uint8_t *>(anticogging_map), sizeof(anticogging_map));
+
+        // 更新储存状态
+        storage_status = static_cast<StorageStatus>((storage_status & 0xF0) | STORAGE_ANTICOGGING_OK);
+        storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+    }
+}
+
+void FOC::enable() {
     //1.启动BLDC驱动
     if (!bldc_driver.enabled)
         bldc_driver.enable();
     //2.启动编码器
-    if (!bldc_encoder.enabled)
+    if (!bldc_encoder.enabled) {
         bldc_encoder.enable();
+        bldc_driver.set_duty(0, 0, 0);
+    }
+    enabled = true;
 }
 
-void FOC::disable() const {
+void FOC::disable() {
     //1.关闭BLDC驱动
     if (bldc_driver.enabled) {
         bldc_driver.set_duty(0, 0, 0);
@@ -46,9 +98,20 @@ void FOC::disable() const {
     //2.关闭编码器
     if (bldc_driver.enabled)
         bldc_encoder.disable();
+    enabled = false;
+}
+
+void FOC::start() {
+    if (enabled && calibrated) started = true;
+}
+
+void FOC::stop() {
+    started = false;
 }
 
 void FOC::calibration() {
+    if (started) return; // 如果已经启动,则不能校准
+
     /*1.校准编码器正方向,使其与q轴正方向相同*/
     SetPhaseVoltage(0, 0.5f, 0);
     // 读取电机角度,100次平均
@@ -69,7 +132,7 @@ void FOC::calibration() {
         end_angle += bldc_encoder.get_angle() / 100;
     }
     SetPhaseVoltage(0, 0, 0); // 停止电机
-    if ((end_angle > begin_angle && end_angle < begin_angle - numbers::pi_v<float>) ||
+    if ((end_angle > begin_angle && end_angle < begin_angle + numbers::pi_v<float>) ||
         end_angle < begin_angle - numbers::pi_v<float>) {
         encoder_direction = true;
     } else {
@@ -79,26 +142,69 @@ void FOC::calibration() {
     /*2.校准电角度零点*/
     float sum_offset_angle = 0;
     for (int i = 0; i < PolePairs; ++i) {
-        SetPhaseVoltage(0, 0.9f, 0);
-        delay(200);
-        for (int j = 0; j < 50; ++j) {
-            if (encoder_direction)
-                sum_offset_angle += (2 * numbers::pi_v<float> - bldc_encoder.get_angle()) / 50;
-            else
-                sum_offset_angle += bldc_encoder.get_angle() / 50;
-            delay(2);
-        }
-        SetPhaseVoltage(0, 0, 0);
         // 按q轴正方向硬拖2pi电角度
-        for (int j = 0; j < 100; ++j) {
-            const float angle = 2 * numbers::pi_v<float> * j / 100.0f;
+        for (int j = 0; j < 250; ++j) {
+            const float angle = 2 * numbers::pi_v<float> * j / 250.0f;
             SetPhaseVoltage(0, 0.5f, angle);
-            delay(2);
+            delay(1);
+        }
+        SetPhaseVoltage(0, 0.9f, 0);
+        delay(300);
+        for (int j = 0; j < 100; ++j) {
+            if (encoder_direction)
+                sum_offset_angle += (2 * numbers::pi_v<float> - bldc_encoder.get_angle()) / 100;
+            else
+                sum_offset_angle += bldc_encoder.get_angle() / 100;
+            delay(1);
         }
     }
+    SetPhaseVoltage(0, 0, 0);
     zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (PolePairs - 1)) / PolePairs;
 
-    /*TODO:添加齿槽转矩补偿校准*/
+    /*3.校准完成*/
+    freeze_storage_calibration(false); // 保存基础校准数据
+    calibrated = true;
+}
+
+void FOC::anticogging_calibration() {
+    if (started) return; // 如果已经启动,则不能校准
+
+    Ctrl(CtrlType::CurrentCtrl, 0); // 释放电机
+    anticogging_calibrating = true; // 开始校准,即开始闭环控制
+    delay(5);
+    // 读取电角度零点校准后的电机角度,并确定补偿表开始索引
+    auto index = static_cast<uint16_t>(Angle / numbers::pi_v<float> / 2 * map_len);
+    Ctrl(CtrlType::PositionCtrl, numbers::pi_v<float> * 2 * index / map_len); // 先定位到前一个点,并延时做准备
+    delay(20);
+    float angle_ = 0, iq_ = 0;
+    // 采集初期几个点不可信任,多采集5个点将其覆盖
+    for (int i = 0; i < map_len + 5; ++i) {
+        index = (index + 1) % map_len;
+        Ctrl(CtrlType::PositionCtrl, numbers::pi_v<float> * 2 * index / map_len);
+        float speed_ = 0.5;
+        while (abs(angle_ - numbers::pi_v<float> * 2 * index / map_len) > numbers::pi_v<float> * 2 / map_len / 10 ||
+               abs(speed_) > 0.08) {
+            // 0度2pi度溢出补偿
+            float tmp = Angle;
+            if (numbers::pi_v<float> * 2 * index / map_len > 6.2 && tmp < 0.1) tmp += numbers::pi_v<float> * 2;
+            if (numbers::pi_v<float> * 2 * index / map_len < 0.1 && tmp > 6.2) tmp -= numbers::pi_v<float> * 2;
+            // 过个低通
+            angle_ = angle_ * 0.8f + tmp * 0.2f;
+            speed_ = speed_ * 0.99f + Speed * 0.01f;
+            iq_ = iq_ * 0.97f + Iq * 0.03f;
+            delay(1);
+        }
+        anticogging_map[index] = iq_;
+    }
+    Ctrl(CtrlType::CurrentCtrl, 0);  // 释放电机
+    anticogging_calibrating = false; // 结束校准,即关闭闭环控制
+    // 后处理:将补偿表平移到0点(应为正转校准时的Iq平均值大于0(需推动转子转动))
+    const float anticogging_avg = accumulate(anticogging_map, anticogging_map + map_len, 0.0f) / map_len;
+    for (auto& anticogging : anticogging_map) {
+        anticogging -= anticogging_avg;
+    }
+    freeze_storage_calibration(true); // 保存基础校准数据
+    anticogging_calibrated = true;
 }
 
 /**
@@ -166,8 +272,15 @@ void FOC::SetPhaseVoltage(float uq, float ud, const float ElectricalAngle) {
     bldc_driver.set_duty(Uu, Uv, Uw);
 }
 
+void FOC::updateVbus(float vbus) {
+    PID_CurrentQ.kp *= Vbus / vbus;
+    PID_CurrentD.kp *= Vbus / vbus;
+    PID_CurrentQ.ki *= Vbus / vbus;
+    PID_CurrentD.ki *= Vbus / vbus;
+    Vbus = vbus;
+}
+
 void FOC::Ctrl(const CtrlType ctrl_type, const float value) {
-    this->ctrl_type = ctrl_type;
     switch (ctrl_type) {
         case CtrlType::PositionCtrl:
             PID_Position.SetTarget(value);
@@ -176,13 +289,16 @@ void FOC::Ctrl(const CtrlType ctrl_type, const float value) {
             PID_Speed.SetTarget(value);
             break;
         case CtrlType::CurrentCtrl:
-            PID_CurrentQ.SetTarget(value);
+            target_iq = value;
             break;
     }
+    this->ctrl_type = ctrl_type;
 }
 
 __attribute__((section(".ccmram_func")))
 void FOC::Ctrl_ISR() {
+    if (!started && !anticogging_calibrating) return;
+
     /**1.速度闭环控制**/
     switch (ctrl_type) {
         case CtrlType::PositionCtrl:
@@ -194,9 +310,16 @@ void FOC::Ctrl_ISR() {
             else
                 PID_Speed.SetTarget(PID_Position.clac(Angle));
         case CtrlType::SpeedCtrl:
-            PID_CurrentQ.SetTarget(PID_Speed.clac(Speed));
-            break;
+            target_iq = PID_Speed.clac(Speed);
         case CtrlType::CurrentCtrl:
+            /*齿槽转矩补偿*/
+            if (anticogging_enabled && anticogging_calibrated) {
+                const uint16_t index =
+                    static_cast<uint16_t>(Angle * map_len / 2 / numbers::pi_v<float> + 0.5f) % map_len;
+                PID_CurrentQ.SetTarget(target_iq + anticogging_map[index]);
+            } else {
+                PID_CurrentQ.SetTarget(target_iq);
+            }
             break;
     }
 }
@@ -204,6 +327,8 @@ void FOC::Ctrl_ISR() {
 /*CCMRAM加速运行*/
 __attribute__((section(".ccmram_func")))
 void FOC::loopCtrl(float iu, float iv) {
+    if (!started && !anticogging_calibrating) return;
+
     static float temp;
     /**1.电流变换**/
     UpdateCurrent(iu, iv);

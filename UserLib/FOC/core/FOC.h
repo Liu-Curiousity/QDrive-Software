@@ -19,6 +19,7 @@
 #include "BLDC_Driver.h"
 #include "Encoder.h"
 #include "LowPassFilter.h"
+#include "Storage.h"
 #include "PID.h"
 
 /**
@@ -32,6 +33,13 @@ public:
         PositionCtrl = 2,
     };
 
+    enum StorageStatus:uint8_t {
+        STORAGE_BASE_OK = 0xA0,
+        STORAGE_ANTICOGGING_OK = 0x05,
+        STORAGE_ALL_OK = STORAGE_BASE_OK | STORAGE_ANTICOGGING_OK,
+        STORAGE_ERROR = 0xEE,
+    };
+
     /**
      * @brief 初始化
      * @param PolePairs 极对数
@@ -42,6 +50,7 @@ public:
      * @param SpeedFilter 速度滤波器系数
      * @param driver BLDC驱动
      * @param encoder 编码器驱动
+     * @param storage 存储器
      * @param PID_CurrentQ Q轴电流PID
      * @param PID_CurrentD D轴电流PID
      * @param PID_Speed 速度PID
@@ -49,9 +58,9 @@ public:
      */
     FOC(uint8_t PolePairs, uint16_t CtrlFrequency, uint16_t CurrentCtrlFrequency,
         LowPassFilter& CurrentQFilter, LowPassFilter& CurrentDFilter, LowPassFilter& SpeedFilter,
-        BLDC_Driver& driver, Encoder& encoder,
+        BLDC_Driver& driver, Encoder& encoder, Storage& storage,
         const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Position):
-        bldc_driver(driver), bldc_encoder(encoder), PolePairs(PolePairs),
+        storage(storage), bldc_driver(driver), bldc_encoder(encoder), PolePairs(PolePairs),
         CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
         CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter),
         PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Position(PID_Position) {}
@@ -59,13 +68,14 @@ public:
     [[nodiscard]] float speed() const { return Speed; }
     [[nodiscard]] float angle() const { return Angle; }
 
-    void init() const;
-
-    void enable() const;
-
-    void disable() const;
-
+    void init();
+    void enable();
+    void disable();
+    void start();
+    void stop();
     void calibration();
+    void anticogging_calibration();
+
     /**
      * @brief FOC控制设置函数
      * @param ctrl_type 控制类型
@@ -85,21 +95,31 @@ public:
      * */
     void loopCtrl(float iu, float iv);
 
+    void updateVbus(float vbus);
 
-    //初始化配置项
-    const uint8_t PolePairs;             //极对数
-    const uint16_t CtrlFrequency;        //控制频率(速度环、位置环),单位Hz
-    const uint16_t CurrentCtrlFrequency; //控制频率(电流环),单位Hz
+    // 初始化配置项
+    const uint8_t PolePairs;             // 极对数
+    const uint16_t CtrlFrequency;        // 控制频率(速度环、位置环),单位Hz
+    const uint16_t CurrentCtrlFrequency; // 控制频率(电流环),单位Hz
+
+    bool initialized{false};            // 是否初始化
+    bool enabled{false};                // 是否使能
+    bool started{false};                // 是否启动
+    bool calibrated{false};             // 是否校准过
+    bool anticogging_enabled{false};    // 是否使用齿槽转矩补偿
+    bool anticogging_calibrated{false}; // 是否校准过齿槽转矩
 
 private:
     CtrlType ctrl_type{CtrlType::CurrentCtrl}; //当前控制类型
 
     //PID类
-    PID PID_CurrentQ; //Q轴电流PID
-    PID PID_CurrentD; //D轴电流PID
-    PID PID_Speed;    //速度PID
-    PID PID_Position; //位置PID
+    PID PID_CurrentQ;      //Q轴电流PID
+    PID PID_CurrentD;      //D轴电流PID
+    PID PID_Speed;         //速度PID
+    PID PID_Position;      //位置PID
+    float target_iq{0.0f}; //目标Q轴电流
 
+    Storage& storage;              //存储器
     BLDC_Driver& bldc_driver;      //驱动器
     Encoder& bldc_encoder;         //编码器
     LowPassFilter& CurrentQFilter; //Q轴电流低通滤波器
@@ -107,8 +127,12 @@ private:
     LowPassFilter& SpeedFilter;    //速度低通滤波器
 
     // 校准参数
-    bool encoder_direction{true}; // true if the encoder is in the same direction as the motor(Uq)
-    float zero_electric_angle{0}; // 电机零点电角度,单位rad
+    bool encoder_direction{true};            // true if the encoder is in the same direction as the motor(Uq)
+    float zero_electric_angle{0};            // 电机零点电角度,单位rad
+    static constexpr uint16_t map_len{2000}; // 齿槽转矩校准点数
+    float anticogging_map[map_len]{};        // 齿槽转矩补偿表
+    bool anticogging_calibrating{false};     // 齿槽转矩是否正在校准
+
     // 运行时参数
     float Angle{0};           // 当前电机角度,单位rad
     float PreviousAngle{0};   // 上一次电机角度(速度环、位置环更新中),单位rad
@@ -131,7 +155,10 @@ private:
     float Iq{0}; //切向电流
     float Id{0}; //法向电流
 
-    void alignAngle();
+    float Vbus{1}; //母线电压
+
+    void load_storage_calibration();
+    void freeze_storage_calibration(bool calibration_data_type);
     void UpdateCurrent(float iu, float iv);
     void SetPhaseVoltage(float uq, float ud, float ElectricalAngle);
 };
