@@ -33,7 +33,7 @@ public:
         PositionCtrl = 2,
     };
 
-    enum  StorageStatus:uint8_t {
+    enum StorageStatus:uint8_t {
         STORAGE_BASE_OK = 0xA0,
         STORAGE_ANTICOGGING_OK = 0x05,
         STORAGE_ALL_OK = STORAGE_BASE_OK | STORAGE_ANTICOGGING_OK,
@@ -69,18 +69,13 @@ public:
     [[nodiscard]] float angle() const { return Angle; }
 
     void init();
-
     void enable();
-
     void disable();
-
     void start();
-
     void stop();
-
     void calibration();
-
     void anticogging_calibration();
+
     /**
      * @brief FOC控制设置函数
      * @param ctrl_type 控制类型
@@ -100,12 +95,14 @@ public:
      * */
     void loopCtrl(float iu, float iv);
 
+    void updateVbus(float vbus);
 
     // 初始化配置项
     const uint8_t PolePairs;             // 极对数
     const uint16_t CtrlFrequency;        // 控制频率(速度环、位置环),单位Hz
     const uint16_t CurrentCtrlFrequency; // 控制频率(电流环),单位Hz
 
+    bool initialized{false};            // 是否初始化
     bool enabled{false};                // 是否使能
     bool started{false};                // 是否启动
     bool calibrated{false};             // 是否校准过
@@ -157,6 +154,8 @@ private:
     float Ib{0}; //B轴电流
     float Iq{0}; //切向电流
     float Id{0}; //法向电流
+
+    float Vbus{1}; //母线电压
 
     void load_storage_calibration();
     void freeze_storage_calibration(bool calibration_data_type);

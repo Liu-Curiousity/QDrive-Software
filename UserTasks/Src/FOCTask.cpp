@@ -9,15 +9,12 @@
 #include "Storage_EmbeddedFlash.h"
 #include "filters.h"
 
-float VBUS;
-
 Storage_EmbeddedFlash storage;
 BLDC_Driver_DRV8300 bldc_driver(&htim8, 2125);
 Encoder_AS5047P bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2);
-PID PID_CurrentQ(PID::delta_type, 1e-3f, 1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
-PID PID_CurrentD(PID::delta_type, 1e-3f, 1.0e-4f, 0, 0, 0, 1.0f, -1.0f);
+PID PID_CurrentQ(PID::delta_type, 8e-3f, 8e-4f, 0, 0, 0, 1.0f, -1.0f);
+PID PID_CurrentD(PID::delta_type, 8e-3f, 8e-4f, 0, 0, 0, 1.0f, -1.0f);
 PID PID_Speed(PID::position_type, 4.0f/*最大6,不能再大了*/, 0.02f, 0, 5e3f, -5e3f);
-// PID PID_Position(PID::delta_type, -900.0f, 0, 0);
 PID PID_Position(PID::delta_type, 1200.0f, 0, 0);
 
 LowPassFilter_2_Order CurrentQFilter(0.00005f, 1500); // 20kHz
@@ -34,28 +31,11 @@ void StartFOCTask(void *argument) {
     ADC_Enable(&hadc1);
     ADC_Enable(&hadc2);
     HAL_ADCEx_InjectedStart_IT(&hadc1); //开启ADC采样
-
-    ///2.启动
-    foc.init();   // 初始化FOC
-    foc.enable(); // 启动FOC
-    if (!foc.calibrated) {
-        foc.calibration(); // 校准FOC
-    }
-    if (!foc.anticogging_calibrated) {
-        foc.anticogging_calibration(); // 齿槽转矩校准
-    }
-    delay(2000);
-    foc.anticogging_enabled = true;
-    foc.start(); // 启动FOC
-
-    /* Infinite loop */
-    // foc.Ctrl(FOC::CtrlType::PositionCtrl, M_PI_2); //设置目标位置
-    // foc.Ctrl(FOC::CtrlType::SpeedCtrl, 30);
-    foc.Ctrl(FOC::CtrlType::CurrentCtrl, 30);
+    foc.init();                         // 初始化FOC
     while (true) {
         if (!LL_ADC_REG_IsConversionOngoing(hadc1.Instance)) {
             LL_ADC_REG_StartConversion(hadc1.Instance);
-            VBUS = hadc2.Instance->DR / 4095.0f * 3.3f / 2 * 17 + 0.6f/*校准*/;
+            foc.updateVbus(hadc2.Instance->DR / 4095.0f * 3.3f / 2 * 17 + 0.6f/*校准*/);
             LL_ADC_REG_StopConversion(hadc1.Instance);
         }
         delay(1);
@@ -74,12 +54,6 @@ void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc) {
 __attribute__((section(".ccmram_func")))
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (&htim6 == htim) {
-        // 助力
-        // foc.Ctrl(FOC::CtrlType::CurrentCtrl, 1.5f * logf(fabsf(foc.speed()) + 1) * (foc.speed() > 0 ? -1.0f : 1.0f));
-        // 阻尼
-        // foc.Ctrl(FOC::CtrlType::CurrentCtrl, foc.speed() * 1.5f);
-        // 重力补偿
-        // foc.Ctrl(FOC::CtrlType::CurrentCtrl, 580 * cosf(foc.angle() - 2.76f));
         foc.Ctrl_ISR();
     }
 }

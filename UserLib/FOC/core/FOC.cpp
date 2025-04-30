@@ -30,8 +30,10 @@ void FOC::init() {
     // 3.初始化flash
     if (!storage.initialized)
         storage.init();
-    //4.从flash中读取校准数据
+    // 4.从flash中读取校准数据
     load_storage_calibration();
+    // 5.完成初始化
+    initialized = true;
 }
 
 void FOC::load_storage_calibration() {
@@ -268,6 +270,14 @@ void FOC::SetPhaseVoltage(float uq, float ud, const float ElectricalAngle) {
 
     /**4.设置驱动器占空比**/
     bldc_driver.set_duty(Uu, Uv, Uw);
+}
+
+void FOC::updateVbus(float vbus) {
+    PID_CurrentQ.kp *= Vbus / vbus;
+    PID_CurrentD.kp *= Vbus / vbus;
+    PID_CurrentQ.ki *= Vbus / vbus;
+    PID_CurrentD.ki *= Vbus / vbus;
+    Vbus = vbus;
 }
 
 void FOC::Ctrl(const CtrlType ctrl_type, const float value) {
