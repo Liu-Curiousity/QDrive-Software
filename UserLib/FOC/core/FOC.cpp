@@ -78,6 +78,7 @@ void FOC::freeze_storage_calibration(const bool calibration_data_type) {
 }
 
 void FOC::enable() {
+    if (!initialized) return; // 如果没有初始化,则不能使能
     //1.启动BLDC驱动
     if (!bldc_driver.enabled)
         bldc_driver.enable();
@@ -110,7 +111,8 @@ void FOC::stop() {
 }
 
 void FOC::calibration() {
-    if (started) return; // 如果已经启动,则不能校准
+    if (!initialized) return; // 如果没有初始化,则不能校准
+    if (started) return;      // 如果已经启动,则不能校准
 
     /*1.校准编码器正方向,使其与q轴正方向相同*/
     SetPhaseVoltage(0, 0.5f, 0);
@@ -167,7 +169,8 @@ void FOC::calibration() {
 }
 
 void FOC::anticogging_calibration() {
-    if (started) return; // 如果已经启动,则不能校准
+    if (!initialized) return; // 如果没有初始化,则不能校准
+    if (started) return;      // 如果已经启动,则不能校准
 
     Ctrl(CtrlType::CurrentCtrl, 0); // 释放电机
     anticogging_calibrating = true; // 开始校准,即开始闭环控制
