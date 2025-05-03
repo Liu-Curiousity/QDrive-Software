@@ -30,7 +30,7 @@ add_compile_options(-mcpu=cortex-m4 -mthumb -mthumb-interwork)
 add_compile_options(-ffunction-sections -fdata-sections -fno-common -fmessage-length=0)
 
 # 失能异常和RTTI
-add_compile_options(-fno-exceptions -fno-rtti)
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-fno-exceptions -fno-rtti")
 
 # uncomment to mitigate c++17 absolute addresses warnings
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register")
@@ -66,7 +66,7 @@ add_definitions(-DDEBUG -DUSE_HAL_DRIVER -DSTM32G431xx)
 file(GLOB_RECURSE SOURCES "Core/*.*" "Middlewares/*.*" "Drivers/*.*" "UserLib/*.*" "UserTasks/*.*")
 
 # 查找 UserLib 下的所有源文件
-file(GLOB_RECURSE USERLIB_SOURCES "UserLib/*.*" "UserLib/*.*" "UserTasks/*.*" "UserTasks/*.*")
+file(GLOB_RECURSE USERLIB_SOURCES "UserLib/*.*" "UserTasks/*.*")
 
 # 为每个 UserLib 源文件添加编译选项 -include public.h
 foreach (SRC ${USERLIB_SOURCES})
