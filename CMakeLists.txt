@@ -33,6 +33,7 @@ add_compile_options(-ffunction-sections -fdata-sections -fno-common -fmessage-le
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-fno-exceptions -fno-rtti")
 # 添加自己的库目录为子目录
 add_subdirectory(UserLib/FOC)
+add_subdirectory(UserLib/PID)
 
 # uncomment to mitigate c++17 absolute addresses warnings
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register")
@@ -57,15 +58,15 @@ endif ()
 include_directories(Core/Inc Drivers/STM32G4xx_HAL_Driver/Inc Drivers/STM32G4xx_HAL_Driver/Inc/Legacy Drivers/CMSIS/Device/ST/STM32G4xx/Include Drivers/CMSIS/Include Middlewares/Third_Party/FreeRTOS/Source/include Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F
                     UserLib/
                     UserLib/Storage
-                    UserLib/PID
-                    UserTasks/Inc)
+                    UserTasks/Inc
+                    BSP)
 
 add_definitions(-DDEBUG -DUSE_HAL_DRIVER -DSTM32G431xx)
 
 file(GLOB_RECURSE SOURCES "Core/*.*" "Middlewares/*.*" "Drivers/*.*"
-        "UserLib/PID/*.*"
         "UserLib/sys_public.h"
-        "UserTasks/*.*")
+        "UserTasks/*.*"
+        "BSP/*.*")
 
 # 查找 UserLib 下的所有源文件
 file(GLOB_RECURSE USERLIB_SOURCES "UserLib/*.*" "UserTasks/*.*")
@@ -83,7 +84,9 @@ add_link_options(-T ${LINKER_SCRIPT})
 
 add_executable(${PROJECT_NAME}.elf ${SOURCES} ${LINKER_SCRIPT})
 
-target_link_libraries(${PROJECT_NAME}.elf foc)
+target_link_libraries(${PROJECT_NAME}.elf
+        foc
+        pid)
 
 set(HEX_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.hex)
 set(BIN_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.bin)
