@@ -16,7 +16,6 @@
 #include <numbers>
 #include <numeric>
 #include "FOC.h"
-#include "main.h"
 
 using namespace std;
 
@@ -241,10 +240,6 @@ void FOC::UpdateCurrent(const float iu, const float iv) {
  * */
 __attribute__((section(".ccmram_func")))
 void FOC::SetPhaseVoltage(float uq, float ud, const float ElectricalAngle) {
-    /**1.检查输入参数**/
-    assert_param(Uq <= 1 && Uq >= -1);
-    assert_param(Ud <= 1 && Ud >= -1);
-
     // TODO：临时方案有待改进
     // Uu,Uv,Uw不能设置到最大值1,为了防止电流采样时候MOS对电机有驱动,影响采样
     // 表现为某一相Ux=0时候(堵转测试),电流采样值偶尔出现尖峰,电机异常抽搐
@@ -252,7 +247,7 @@ void FOC::SetPhaseVoltage(float uq, float ud, const float ElectricalAngle) {
     uq *= 0.99f;
     ud *= 0.99f;
 
-    /*2.保存电压值*/
+    /**1.保存电压值**/
     Uq = uq;
     Ud = ud;
 

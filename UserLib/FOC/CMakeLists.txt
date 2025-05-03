@@ -4,10 +4,9 @@ project(foc)
 
 add_library(foc INTERFACE)
 
-target_sources(foc INTERFACE core/FOC.cpp Stroage_EmbeddedFlash.cpp)
+target_sources(foc INTERFACE FOC.cpp)
 
 target_include_directories(foc INTERFACE
         ./
-        core
-        core/base_classes
+        ./base_classes
 )
