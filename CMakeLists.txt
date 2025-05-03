@@ -30,7 +30,9 @@ add_compile_options(-mcpu=cortex-m4 -mthumb -mthumb-interwork)
 add_compile_options(-ffunction-sections -fdata-sections -fno-common -fmessage-length=0)
 
 # 失能异常和RTTI
-add_compile_options(-fno-exceptions -fno-rtti)
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-fno-exceptions -fno-rtti")
+# 添加自己的库目录为子目录
+add_subdirectory(UserLib/FOC)
 
 # uncomment to mitigate c++17 absolute addresses warnings
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register")
@@ -56,17 +58,17 @@ include_directories(Core/Inc Drivers/STM32G4xx_HAL_Driver/Inc Drivers/STM32G4xx_
                     UserLib/
                     UserLib/Storage
                     UserLib/PID
-                    UserLib/FOC
-                    UserLib/FOC/core
-                    UserLib/FOC/core/base_classes
                     UserTasks/Inc)
 
 add_definitions(-DDEBUG -DUSE_HAL_DRIVER -DSTM32G431xx)
 
-file(GLOB_RECURSE SOURCES "Core/*.*" "Middlewares/*.*" "Drivers/*.*" "UserLib/*.*" "UserTasks/*.*")
+file(GLOB_RECURSE SOURCES "Core/*.*" "Middlewares/*.*" "Drivers/*.*"
+        "UserLib/PID/*.*"
+        "UserLib/sys_public.h"
+        "UserTasks/*.*")
 
 # 查找 UserLib 下的所有源文件
-file(GLOB_RECURSE USERLIB_SOURCES "UserLib/*.*" "UserLib/*.*" "UserTasks/*.*" "UserTasks/*.*")
+file(GLOB_RECURSE USERLIB_SOURCES "UserLib/*.*" "UserTasks/*.*")
 
 # 为每个 UserLib 源文件添加编译选项 -include public.h
 foreach (SRC ${USERLIB_SOURCES})
@@ -80,6 +82,8 @@ add_link_options(-mcpu=cortex-m4 -mthumb -mthumb-interwork)
 add_link_options(-T ${LINKER_SCRIPT})
 
 add_executable(${PROJECT_NAME}.elf ${SOURCES} ${LINKER_SCRIPT})
+
+target_link_libraries(${PROJECT_NAME}.elf foc)
 
 set(HEX_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.hex)
 set(BIN_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.bin)
