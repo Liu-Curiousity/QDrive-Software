@@ -1,5 +1,5 @@
 #include "task_public.h"
-#include "../../UserLib/FOC/FOC.h"
+#include "FOC.h"
 
 extern FOC foc;
 
