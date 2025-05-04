@@ -24,7 +24,7 @@ void App_DebugTask(void *argument) {
 
     // foc.Ctrl(FOC::CtrlType::PositionCtrl, M_PI_2); //设置目标位置
     // foc.Ctrl(FOC::CtrlType::SpeedCtrl, 30);
-    foc.Ctrl(FOC::CtrlType::CurrentCtrl, 35);
+    foc.Ctrl(FOC::CtrlType::CurrentCtrl, 0.03);
     for (;;) {
         delay(1000);
     }

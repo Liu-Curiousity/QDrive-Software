@@ -23,15 +23,15 @@ __attribute__((section(".ccmram")))
 FOC foc(14, 1000, 20000,
         CurrentQFilter, CurrentDFilter, SpeedFilter,
         bldc_driver, bldc_encoder, storage, current_sensor,
-        PID(PID::delta_type, 8e-3f, 8e-4f, 0, 0, 0, 1.0f, -1.0f),
-        PID(PID::delta_type, 8e-3f, 8e-4f, 0, 0, 0, 1.0f, -1.0f),
-        PID(PID::position_type, 4.0f/*最大6,不能再大了*/, 0.02f, 0, 5e3f, -5e3f),
+        PID(PID::delta_type, 10, 1, 0, 0, 0, 1.0f, -1.0f),
+        PID(PID::delta_type, 10, 1, 0, 0, 0, 1.0f, -1.0f),
+        PID(PID::position_type, 3.2234e-3f, 1.6117e-5f, 0, 5e3f, -5e3f),
         PID(PID::delta_type, 1200.0f, 0, 0));
 
 void StartFOCTask(void *argument) {
-    HAL_TIM_Base_Start_IT(&htim6); // 开启速度环位置环中断控制
+    HAL_TIM_Base_Start_IT(&htim6);            // 开启速度环位置环中断控制
     HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_4); //开启PWM输出,用于触发ADC采样
-    foc.init(); // 初始化FOC
+    foc.init();                               // 初始化FOC
     while (true) {
         if (!LL_ADC_REG_IsConversionOngoing(hadc1.Instance)) {
             LL_ADC_REG_StartConversion(hadc1.Instance);
@@ -45,9 +45,7 @@ void StartFOCTask(void *argument) {
 __attribute__((section(".ccmram_func")))
 void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc) {
     if (&hadc1 == hadc) {
-        const float Iu = static_cast<float>(hadc2.Instance->JDR1) - 2046.0f;
-        const float Iv = (static_cast<float>(hadc1.Instance->JDR1) - 2044.5f) * 1.03f;
-        current_sensor.update(Iu, Iv);
+        current_sensor.update();
         foc.loopCtrl();
     }
 }

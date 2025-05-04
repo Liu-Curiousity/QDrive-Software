@@ -150,13 +150,13 @@ private:
     float Uq{0}; //切向电压
     float Ud{0}; //法向电压
 
-    float Iu{0}; //U相电流
-    float Iv{0}; //V相电流
-    float Iw{0}; //W相电流
-    float Ia{0}; //A轴电流
-    float Ib{0}; //B轴电流
-    float Iq{0}; //切向电流
-    float Id{0}; //法向电流
+    float Iu{0}; //U相电流,单位A
+    float Iv{0}; //V相电流,单位A
+    float Iw{0}; //W相电流,单位A
+    float Ia{0}; //A轴电流,单位A
+    float Ib{0}; //B轴电流,单位A
+    float Iq{0}; //Q轴电流,单位A
+    float Id{0}; //D轴电流,单位A
 
     float Vbus{1}; //母线电压
 

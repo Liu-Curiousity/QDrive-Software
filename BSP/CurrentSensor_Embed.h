@@ -31,9 +31,16 @@ public:
         enabled = false;
     }
 
-    void update(const float iu, const float iv) {
-        this->iu = iu;
-        this->iv = iv;
+    void update() {
+        static constexpr float V_REF = 3.3f;              // ADC基准电压,单位:V
+        static constexpr float ADC_REVOLUTION = 4096 - 1; // ADC分辨率
+        static constexpr float OP_AMP_GAIN = 20.0f;       // 差分运放电压增益,单位:V/V
+        static constexpr float R_SENSE = 0.05f;           // 采样电阻阻值,单位:Ω
+
+        const float iu = static_cast<float>(hadc2->Instance->JDR1) - 2046.0f;
+        this->iu = iu / ADC_REVOLUTION * V_REF / OP_AMP_GAIN / R_SENSE;
+        const float iv = (static_cast<float>(hadc1->Instance->JDR1) - 2044.5f) * 1.03f;
+        this->iv = iv / ADC_REVOLUTION * V_REF / OP_AMP_GAIN / R_SENSE;
         this->iw = -(iu + iv);
     };
 
