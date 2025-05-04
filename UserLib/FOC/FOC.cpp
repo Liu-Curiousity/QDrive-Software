@@ -11,12 +11,15 @@
  *		    v2.0.0修改于2024-7-10,添加d轴电流PID控制
  *		    V3.0.0修改于2025-4-12,中间漏了好多版本
  *		    V4.0.0修改于2025-5-4,添加CurrentSensor类,后将续从current_sensor中获取电流
+ *		    V4.1.0修改于2025-5-5,重命名PolePairs为pole_pairs,添加电流偏置校准和相电阻测量,并在电角度校准时自动调整硬拖电压
  * */
 
 
+#include <algorithm>
 #include <numbers>
 #include <numeric>
 #include "FOC.h"
+#include "FOC_config.h"
 
 using namespace std;
 
@@ -45,7 +48,11 @@ void FOC::load_storage_calibration() {
     if ((storage_status & 0xF0) == STORAGE_BASE_OK) {
         // 如果基础校准数据正常,则读取
         storage.read(0x100, reinterpret_cast<uint8_t *>(&encoder_direction), sizeof(encoder_direction));
-        storage.read(0x200, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
+        storage.read(0x120, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
+        storage.read(0x140, reinterpret_cast<uint8_t *>(&iu_offset), sizeof(iu_offset));
+        storage.read(0x160, reinterpret_cast<uint8_t *>(&iv_offset), sizeof(iv_offset));
+        storage.read(0x180, reinterpret_cast<uint8_t *>(&phase_resistance), sizeof(phase_resistance));
+        storage.read(0x1A0, reinterpret_cast<uint8_t *>(&phase_inductance), sizeof(phase_inductance));
         calibrated = true;
     }
     if ((storage_status & 0x0F) == STORAGE_ANTICOGGING_OK) {
@@ -65,7 +72,15 @@ void FOC::freeze_storage_calibration(const bool calibration_data_type) {
         // 储存编码器方向
         storage.write(0x100, reinterpret_cast<uint8_t *>(&encoder_direction), sizeof(encoder_direction));
         // 储存零电角度
-        storage.write(0x200, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
+        storage.write(0x120, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
+        // 储存u相电流偏置
+        storage.write(0x140, reinterpret_cast<uint8_t *>(&iu_offset), sizeof(iu_offset));
+        // 储存v相电流偏置
+        storage.write(0x160, reinterpret_cast<uint8_t *>(&iv_offset), sizeof(iv_offset));
+        // 储存相电阻
+        storage.write(0x180, reinterpret_cast<uint8_t *>(&phase_resistance), sizeof(phase_resistance));
+        // 储存相电感
+        storage.write(0x1A0, reinterpret_cast<uint8_t *>(&phase_inductance), sizeof(phase_inductance));
 
         // 更新储存状态
         storage_status = static_cast<StorageStatus>((storage_status & 0x0F) | STORAGE_BASE_OK);
@@ -120,8 +135,34 @@ void FOC::calibration() {
     if (!initialized) return; // 如果没有初始化,则不能校准
     if (started) return;      // 如果已经启动,则不能校准
 
-    /*1.校准编码器正方向,使其与q轴正方向相同*/
-    SetPhaseVoltage(0, 0.5f, 0);
+    /*1.校准电流*/
+    SetPhaseVoltage(0, 0, 0); // 设置电压为0
+    iu_offset = iv_offset = 0;
+    for (int i = 0; i < 200; ++i) {
+        // 读取电流值,200次平均
+        iu_offset += current_sensor.iu / 200;
+        iv_offset += current_sensor.iv / 200;
+        delay(1);
+    }
+
+    /*2.测量相电阻,确定后续校准使用电压*/
+    bldc_driver.set_duty(0, 0, 0);
+    float uu = 0;
+    for (uu = 0; uu < 0.8f && current_sensor.iu < FOC_MAX_CURRENT * 0.9;) {
+        uu += 0.002f;
+        bldc_driver.set_duty(uu, 0, 0);
+        delay(1);
+    }
+    phase_resistance = 0;
+    for (int i = 0; i < 100; ++i) {
+        phase_resistance += uu * Vbus / (current_sensor.iu - iu_offset) / 3 * 4 / 100;
+        delay(1);
+    }
+    SetPhaseVoltage(0, 0, 0); // 设置电压为0
+    const float voltage_align = clamp(uu * 4 / 3, -1.0f, 1.0f);
+
+    /*3.校准编码器正方向,使其与q轴正方向相同*/
+    SetPhaseVoltage(0, voltage_align * 0.6f, 0);
     // 读取电机角度,100次平均
     delay(100);
     float begin_angle = 0;
@@ -131,7 +172,7 @@ void FOC::calibration() {
     // 按q轴正方向硬拖2pi电角度
     for (int i = 0; i < 500; ++i) {
         const float angle = 2 * numbers::pi_v<float> * i / 500.0f;
-        SetPhaseVoltage(0, 0.5f, angle);
+        SetPhaseVoltage(0, voltage_align * 0.6f, angle);
         delay(1);
     }
     // 读取电机角度,100次平均
@@ -147,16 +188,16 @@ void FOC::calibration() {
         encoder_direction = false;
     }
 
-    /*2.校准电角度零点*/
+    /*4.校准电角度零点*/
     float sum_offset_angle = 0;
-    for (int i = 0; i < PolePairs; ++i) {
+    for (int i = 0; i < pole_pairs; ++i) {
         // 按q轴正方向硬拖2pi电角度
         for (int j = 0; j < 250; ++j) {
             const float angle = 2 * numbers::pi_v<float> * j / 250.0f;
-            SetPhaseVoltage(0, 0.5f, angle);
+            SetPhaseVoltage(0, voltage_align * 0.6f, angle);
             delay(1);
         }
-        SetPhaseVoltage(0, 0.9f, 0);
+        SetPhaseVoltage(0, voltage_align, 0);
         delay(300);
         for (int j = 0; j < 100; ++j) {
             if (encoder_direction)
@@ -167,9 +208,9 @@ void FOC::calibration() {
         }
     }
     SetPhaseVoltage(0, 0, 0);
-    zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (PolePairs - 1)) / PolePairs;
+    zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (pole_pairs - 1)) / pole_pairs;
 
-    /*3.校准完成*/
+    /*5.校准完成*/
     freeze_storage_calibration(false); // 保存基础校准数据
     calibrated = true;
 }
@@ -182,12 +223,12 @@ void FOC::anticogging_calibration() {
     anticogging_calibrating = true; // 开始校准,即开始闭环控制
     delay(5);
     // 读取电角度零点校准后的电机角度,并确定补偿表开始索引
-    auto index = static_cast<uint16_t>(Angle / numbers::pi_v<float> / 2 * map_len);
+    auto index = static_cast<uint16_t>(Angle * numbers::inv_pi_v<float> * 0.5f * map_len);
     Ctrl(CtrlType::PositionCtrl, numbers::pi_v<float> * 2 * index / map_len); // 先定位到前一个点,并延时做准备
     delay(20);
     float angle_ = 0, iq_ = 0;
-    // 采集初期几个点不可信任,多采集5个点将其覆盖
-    for (int i = 0; i < map_len + 5; ++i) {
+    // 采集初期几个点不可信任,多采集30个点将其覆盖
+    for (int i = 0; i < map_len + 30; ++i) {
         index = (index + 1) % map_len;
         Ctrl(CtrlType::PositionCtrl, numbers::pi_v<float> * 2 * index / map_len);
         float speed_ = 0.5;
@@ -262,15 +303,15 @@ void FOC::SetPhaseVoltage(float uq, float ud, const float ElectricalAngle) {
     /**2.帕克逆变换**/
     const float cos_angle = cosf(ElectricalAngle);
     const float sin_angle = sinf(ElectricalAngle);
-    Ua = (-Uq * sin_angle + Ud * cos_angle) / 2; // 除以2将Ua范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
-    Ub = (Uq * cos_angle + Ud * sin_angle) / 2;  // 除以2将Ub范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
+    Ua = (-Uq * sin_angle + Ud * cos_angle) * 0.5f; // 除以2将Ua范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
+    Ub = (Uq * cos_angle + Ud * sin_angle) * 0.5f;  // 除以2将Ub范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
 
     /**3.克拉克逆变换**/
     Uu = Ua + 0.5f; //加0.5使得Uu均值为0.5,在[0,1]之间变化
-    Uv = -Ua / 2 + Ub * numbers::sqrt3_v<float> / 2 + 0.5f;
+    Uv = -Ua * 0.5f + Ub * numbers::sqrt3_v<float> * 0.5f + 0.5f;
 
     // 原公式:
-    // float Uw = -Ua / 2 - Ub * M_SQRT3_F / 2 + 0.5f;
+    // float Uw = -Ua * 0.5f - Ub * M_SQRT3_F * 0.5f + 0.5f;
     // 使用Uu,Uv计算得来,减少运算量(其实运算量大头在sin和cos):
     Uw = 1.5f - Uu - Uv;
 
@@ -322,7 +363,7 @@ void FOC::Ctrl_ISR() {
             /*齿槽转矩补偿*/
             if (anticogging_enabled && anticogging_calibrated) {
                 const uint16_t index =
-                    static_cast<uint16_t>(Angle * map_len / 2 / numbers::pi_v<float> + 0.5f) % map_len;
+                    static_cast<uint16_t>(Angle * map_len * 0.5f * numbers::inv_pi_v<float> + 0.5f) % map_len;
                 PID_CurrentQ.SetTarget(target_iq + anticogging_map[index]);
             } else {
                 PID_CurrentQ.SetTarget(target_iq);
@@ -334,30 +375,33 @@ void FOC::Ctrl_ISR() {
 /*CCMRAM加速运行*/
 __attribute__((section(".ccmram_func")))
 void FOC::loopCtrl() {
-    if (!started && !anticogging_calibrating) return;
-
     static float temp;
-    /**1.电流变换**/
-    UpdateCurrent(current_sensor.iu, current_sensor.iv, current_sensor.iw);
+    if (initialized && calibrated) {
+        /**1.电流变换**/
+        UpdateCurrent(current_sensor.iu - iu_offset,
+                      current_sensor.iv - iv_offset,
+                      current_sensor.iw + iu_offset + iv_offset);
 
-    /**2.读取编码器角度**/
-    if (encoder_direction)
-        temp = bldc_encoder.get_angle() + zero_electric_angle;
-    else
-        temp = 2 * numbers::pi_v<float> - bldc_encoder.get_angle() + zero_electric_angle;
-    Angle = temp > 2 * numbers::pi_v<float> ? temp - 2 * numbers::pi_v<float> :
-            temp < 0 ? temp + 2 * numbers::pi_v<float> : temp;
-    ElectricalAngle = Angle * PolePairs;
+        /**2.读取编码器角度**/
+        if (encoder_direction)
+            temp = bldc_encoder.get_angle() + zero_electric_angle;
+        else
+            temp = 2 * numbers::pi_v<float> - bldc_encoder.get_angle() + zero_electric_angle;
+        Angle = temp > 2 * numbers::pi_v<float> ? temp - 2 * numbers::pi_v<float> :
+                temp < 0 ? temp + 2 * numbers::pi_v<float> : temp;
+        ElectricalAngle = Angle * pole_pairs;
 
-    /**3.计算转速**/
-    temp = Angle - PreviousAngle;
-    if (PreviousAngle - Angle > numbers::pi_v<float>) temp += numbers::pi_v<float> * 2;
-    else if (PreviousAngle - Angle < -numbers::pi_v<float>) temp -= numbers::pi_v<float> * 2;
-    Speed = SpeedFilter(temp * 60 * CurrentCtrlFrequency / (numbers::pi_v<float> * 2));
-    PreviousAngle = Angle;
-
-    /**4.电流闭环控制**/
-    const float uq = PID_CurrentQ.clac(Iq);
-    const float ud = PID_CurrentD.clac(Id);
-    SetPhaseVoltage(uq, ud, ElectricalAngle);
+        /**3.计算转速**/
+        temp = Angle - PreviousAngle;
+        if (PreviousAngle - Angle > numbers::pi_v<float>) temp += numbers::pi_v<float> * 2;
+        else if (PreviousAngle - Angle < -numbers::pi_v<float>) temp -= numbers::pi_v<float> * 2;
+        Speed = SpeedFilter(temp * 60 * CurrentCtrlFrequency * numbers::inv_pi_v<float> * 0.5f);
+        PreviousAngle = Angle;
+    }
+    if (started || anticogging_calibrating) {
+        /**4.电流闭环控制**/
+        const float uq = PID_CurrentQ.clac(Iq);
+        const float ud = PID_CurrentD.clac(Id);
+        SetPhaseVoltage(uq, ud, ElectricalAngle);
+    }
 }

@@ -11,6 +11,7 @@
  *		    v2.0.0修改于2024-7-10,添加d轴电流PID控制
  *		    V3.0.0修改于2025-4-12,中间漏了好多版本
  *		    V4.0.0修改于2025-5-4,添加CurrentSensor类,后将续从current_sensor中获取电流
+ *		    V4.1.0修改于2025-5-5,重命名PolePairs为pole_pairs,添加电流偏置校准和相电阻测量,并在电角度校准时自动调整硬拖电压
  * */
 
 
@@ -45,7 +46,7 @@ public:
 
     /**
      * @brief 初始化
-     * @param PolePairs 极对数
+     * @param pole_pairs 极对数
      * @param CtrlFrequency 控制频率,用于计算转速
      * @param CurrentCtrlFrequency 电流控制频率,单位Hz
      * @param CurrentQFilter Q轴电流采样滤波器系数
@@ -60,11 +61,11 @@ public:
      * @param PID_Speed 速度PID
      * @param PID_Position 位置PID
      */
-    FOC(uint8_t PolePairs, uint16_t CtrlFrequency, uint16_t CurrentCtrlFrequency,
+    FOC(uint8_t pole_pairs, uint16_t CtrlFrequency, uint16_t CurrentCtrlFrequency,
         LowPassFilter& CurrentQFilter, LowPassFilter& CurrentDFilter, LowPassFilter& SpeedFilter,
         BLDC_Driver& driver, Encoder& encoder, Storage& storage, CurrentSensor& current_sensor,
         const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Position):
-        PolePairs(PolePairs), CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
+        pole_pairs(pole_pairs), CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
         PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Position(PID_Position),
         storage(storage), bldc_driver(driver), bldc_encoder(encoder), current_sensor(current_sensor),
         CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter) {}
@@ -100,7 +101,7 @@ public:
     void updateVbus(float vbus);
 
     // 初始化配置项
-    const uint8_t PolePairs;             // 极对数
+    const uint8_t pole_pairs;            // 极对数
     const uint16_t CtrlFrequency;        // 控制频率(速度环、位置环),单位Hz
     const uint16_t CurrentCtrlFrequency; // 控制频率(电流环),单位Hz
 
@@ -131,6 +132,10 @@ private:
 
     // 校准参数
     bool encoder_direction{true};            // true if the encoder is in the same direction as the motor(Uq)
+    float phase_resistance{NAN};             // 相电阻,单位Ω
+    float phase_inductance{NAN};             // 相电感,单位H
+    float iu_offset{0};                      // U相电流偏置,单位A
+    float iv_offset{0};                      // V相电流偏置,单位A
     float zero_electric_angle{0};            // 电机零点电角度,单位rad
     static constexpr uint16_t map_len{2000}; // 齿槽转矩校准点数
     float anticogging_map[map_len]{};        // 齿槽转矩补偿表

@@ -25,7 +25,7 @@ FOC foc(14, 1000, 20000,
         bldc_driver, bldc_encoder, storage, current_sensor,
         PID(PID::delta_type, 10, 1, 0, 0, 0, 1.0f, -1.0f),
         PID(PID::delta_type, 10, 1, 0, 0, 0, 1.0f, -1.0f),
-        PID(PID::position_type, 3.2234e-3f, 1.6117e-5f, 0, 5e3f, -5e3f),
+        PID(PID::position_type, 3e-3f, 4.5e-5f, 0, 2e3f, -2e3f),
         PID(PID::delta_type, 1200.0f, 0, 0));
 
 void StartFOCTask(void *argument) {

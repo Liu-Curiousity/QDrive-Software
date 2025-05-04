@@ -41,7 +41,7 @@ public:
         this->iu = iu / ADC_REVOLUTION * V_REF / OP_AMP_GAIN / R_SENSE;
         const float iv = (static_cast<float>(hadc1->Instance->JDR1) - 2044.5f) * 1.03f;
         this->iv = iv / ADC_REVOLUTION * V_REF / OP_AMP_GAIN / R_SENSE;
-        this->iw = -(iu + iv);
+        this->iw = -(this->iu + this->iv);
     };
 
 private:

@@ -21,10 +21,9 @@ void App_DebugTask(void *argument) {
 
     delay(2000);
     foc.start(); // 启动FOC
-
     // foc.Ctrl(FOC::CtrlType::PositionCtrl, M_PI_2); //设置目标位置
     // foc.Ctrl(FOC::CtrlType::SpeedCtrl, 30);
-    foc.Ctrl(FOC::CtrlType::CurrentCtrl, 0.03);
+    foc.Ctrl(FOC::CtrlType::CurrentCtrl, 0.026);
     for (;;) {
         delay(1000);
     }
