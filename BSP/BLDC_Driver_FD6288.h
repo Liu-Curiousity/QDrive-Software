@@ -13,6 +13,7 @@
 		    V1.0.0 on 2024-5-12
 		    V2.0.0 on 2025-1-20,refactor by C++
 		    V3.0.0 on 2025-4-8,redesign refer to SimpleFOC
+		    V3.0.1 on 2025-5-4,optimize enable() and disable() process
  * */
 
 #ifndef BLED_Driver_DRV8300_H
@@ -32,7 +33,6 @@ public:
     void init() override { initialized = true; }
 
     void enable() override {
-        enabled = true;
         //打开所有PWM通道输出
         HAL_TIM_PWM_Start(htim, TIM_CHANNEL_1);
         HAL_TIM_PWM_Start(htim, TIM_CHANNEL_2);
@@ -40,10 +40,10 @@ public:
         HAL_TIMEx_PWMN_Start(htim, TIM_CHANNEL_1);
         HAL_TIMEx_PWMN_Start(htim, TIM_CHANNEL_2);
         HAL_TIMEx_PWMN_Start(htim, TIM_CHANNEL_3);
+        enabled = true;
     }
 
     void disable() override {
-        enabled = false;
         // 设置占空比为0
         set_duty(0, 0, 0);
         // 关闭所有PWM通道输出
@@ -53,6 +53,7 @@ public:
         HAL_TIMEx_PWMN_Stop(htim, TIM_CHANNEL_1);
         HAL_TIMEx_PWMN_Stop(htim, TIM_CHANNEL_2);
         HAL_TIMEx_PWMN_Stop(htim, TIM_CHANNEL_3);
+        enabled = false;
     }
 
     void set_duty(float u, float v, float w) override {

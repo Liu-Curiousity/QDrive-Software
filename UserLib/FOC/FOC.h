@@ -9,6 +9,9 @@
  * @par     历史版本:
  * 		    V1.0.0创建于2024-7-3
  *		    v2.0.0修改于2024-7-10,添加d轴电流PID控制
+ *		    V3.0.0修改于2025-4-12,中间漏了好多版本
+ *		    V4.0.0修改于2025-5-4,添加CurrentSensor类,后将续从current_sensor中获取电流
+ *		    V4.1.0修改于2025-5-5,重命名PolePairs为pole_pairs,添加电流偏置校准和相电阻测量,并在电角度校准时自动调整硬拖电压
  * */
 
 
@@ -17,6 +20,7 @@
 
 #include "cstdint"
 #include "BLDC_Driver.h"
+#include "CurrentSensor.h"
 #include "Encoder.h"
 #include "LowPassFilter.h"
 #include "Storage.h"
@@ -42,7 +46,7 @@ public:
 
     /**
      * @brief 初始化
-     * @param PolePairs 极对数
+     * @param pole_pairs 极对数
      * @param CtrlFrequency 控制频率,用于计算转速
      * @param CurrentCtrlFrequency 电流控制频率,单位Hz
      * @param CurrentQFilter Q轴电流采样滤波器系数
@@ -51,19 +55,20 @@ public:
      * @param driver BLDC驱动
      * @param encoder 编码器驱动
      * @param storage 存储器
+     * @param current_sensor 电流传感器
      * @param PID_CurrentQ Q轴电流PID
      * @param PID_CurrentD D轴电流PID
      * @param PID_Speed 速度PID
      * @param PID_Position 位置PID
      */
-    FOC(uint8_t PolePairs, uint16_t CtrlFrequency, uint16_t CurrentCtrlFrequency,
+    FOC(uint8_t pole_pairs, uint16_t CtrlFrequency, uint16_t CurrentCtrlFrequency,
         LowPassFilter& CurrentQFilter, LowPassFilter& CurrentDFilter, LowPassFilter& SpeedFilter,
-        BLDC_Driver& driver, Encoder& encoder, Storage& storage,
+        BLDC_Driver& driver, Encoder& encoder, Storage& storage, CurrentSensor& current_sensor,
         const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Position):
-        storage(storage), bldc_driver(driver), bldc_encoder(encoder), PolePairs(PolePairs),
-        CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
-        CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter),
-        PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Position(PID_Position) {}
+        pole_pairs(pole_pairs), CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
+        PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Position(PID_Position),
+        storage(storage), bldc_driver(driver), bldc_encoder(encoder), current_sensor(current_sensor),
+        CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter) {}
 
     [[nodiscard]] float speed() const { return Speed; }
     [[nodiscard]] float angle() const { return Angle; }
@@ -90,15 +95,13 @@ public:
 
     /**
      * @brief FOC电流闭环控制中断服务函数
-     * @param iu U相电流
-     * @param iv V相电流
      * */
-    void loopCtrl(float iu, float iv);
+    void loopCtrl();
 
     void updateVbus(float vbus);
 
     // 初始化配置项
-    const uint8_t PolePairs;             // 极对数
+    const uint8_t pole_pairs;            // 极对数
     const uint16_t CtrlFrequency;        // 控制频率(速度环、位置环),单位Hz
     const uint16_t CurrentCtrlFrequency; // 控制频率(电流环),单位Hz
 
@@ -122,12 +125,17 @@ private:
     Storage& storage;              //存储器
     BLDC_Driver& bldc_driver;      //驱动器
     Encoder& bldc_encoder;         //编码器
+    CurrentSensor& current_sensor; //电流传感器
     LowPassFilter& CurrentQFilter; //Q轴电流低通滤波器
     LowPassFilter& CurrentDFilter; //D轴电流低通滤波器
     LowPassFilter& SpeedFilter;    //速度低通滤波器
 
     // 校准参数
     bool encoder_direction{true};            // true if the encoder is in the same direction as the motor(Uq)
+    float phase_resistance{NAN};             // 相电阻,单位Ω
+    float phase_inductance{NAN};             // 相电感,单位H
+    float iu_offset{0};                      // U相电流偏置,单位A
+    float iv_offset{0};                      // V相电流偏置,单位A
     float zero_electric_angle{0};            // 电机零点电角度,单位rad
     static constexpr uint16_t map_len{2000}; // 齿槽转矩校准点数
     float anticogging_map[map_len]{};        // 齿槽转矩补偿表
@@ -147,19 +155,19 @@ private:
     float Uq{0}; //切向电压
     float Ud{0}; //法向电压
 
-    float Iu{0}; //U相电流
-    float Iv{0}; //V相电流
-    float Iw{0}; //W相电流
-    float Ia{0}; //A轴电流
-    float Ib{0}; //B轴电流
-    float Iq{0}; //切向电流
-    float Id{0}; //法向电流
+    float Iu{0}; //U相电流,单位A
+    float Iv{0}; //V相电流,单位A
+    float Iw{0}; //W相电流,单位A
+    float Ia{0}; //A轴电流,单位A
+    float Ib{0}; //B轴电流,单位A
+    float Iq{0}; //Q轴电流,单位A
+    float Id{0}; //D轴电流,单位A
 
     float Vbus{1}; //母线电压
 
     void load_storage_calibration();
     void freeze_storage_calibration(bool calibration_data_type);
-    void UpdateCurrent(float iu, float iv);
+    void UpdateCurrent(float iu, float iv, float iw);
     void SetPhaseVoltage(float uq, float ud, float ElectricalAngle);
 };
 
