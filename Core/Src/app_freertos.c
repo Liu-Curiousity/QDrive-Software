@@ -58,7 +58,7 @@ const osThreadAttr_t DebugTask_attributes = {
 osThreadId_t FOCTaskHandle;
 const osThreadAttr_t FOCTask_attributes = {
   .name = "FOCTask",
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityRealtime,
   .stack_size = 512 * 4
 };
 

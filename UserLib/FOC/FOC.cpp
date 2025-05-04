@@ -7,9 +7,10 @@
  * @note    此库为中间层库,与硬件完全解耦
  * @warning 无
  * @par     历史版本:
-		    V1.0.0创建于2024-7-3
-		    v2.0.0修改于2024-7-10,添加d轴电流PID控制
-		    V3.0.0修改于2025-4-12,中间漏了好多版本
+ *		    V1.0.0创建于2024-7-3
+ *		    v2.0.0修改于2024-7-10,添加d轴电流PID控制
+ *		    V3.0.0修改于2025-4-12,中间漏了好多版本
+ *		    V4.0.0修改于2025-5-4,添加CurrentSensor类,后将续从current_sensor中获取电流
  * */
 
 
@@ -26,12 +27,15 @@ void FOC::init() {
     // 2.初始化编码器
     if (!bldc_encoder.initialized)
         bldc_encoder.init();
-    // 3.初始化flash
+    // 3.初始化电流传感器
+    if (!current_sensor.initialized)
+        current_sensor.init();
+    // 4.初始化flash
     if (!storage.initialized)
         storage.init();
-    // 4.从flash中读取校准数据
+    // 5.从flash中读取校准数据
     load_storage_calibration();
-    // 5.完成初始化
+    // 6.完成初始化
     initialized = true;
 }
 
@@ -86,6 +90,9 @@ void FOC::enable() {
         bldc_encoder.enable();
         bldc_driver.set_duty(0, 0, 0);
     }
+    // 3.启动电流传感器
+    if (!current_sensor.enabled)
+        current_sensor.enable();
     enabled = true;
 }
 
@@ -213,13 +220,14 @@ void FOC::anticogging_calibration() {
  * @brief FOC电流变换
  * @param iu U相电流
  * @param iv V相电流
+ * @param iw W相电流
  * */
 __attribute__((section(".ccmram_func")))
-void FOC::UpdateCurrent(const float iu, const float iv) {
+void FOC::UpdateCurrent(const float iu, const float iv, const float iw) {
     /**1.保存电流值**/
     Iu = iu;
     Iv = iv;
-    Iw = -Iu - Iv;
+    Iw = iw;
 
     /**2.克拉克变换**/
     Ia = Iu;
@@ -271,6 +279,7 @@ void FOC::SetPhaseVoltage(float uq, float ud, const float ElectricalAngle) {
 }
 
 void FOC::updateVbus(float vbus) {
+    if (vbus == 0) return;
     PID_CurrentQ.kp *= Vbus / vbus;
     PID_CurrentD.kp *= Vbus / vbus;
     PID_CurrentQ.ki *= Vbus / vbus;
@@ -324,12 +333,12 @@ void FOC::Ctrl_ISR() {
 
 /*CCMRAM加速运行*/
 __attribute__((section(".ccmram_func")))
-void FOC::loopCtrl(float iu, float iv) {
+void FOC::loopCtrl() {
     if (!started && !anticogging_calibrating) return;
 
     static float temp;
     /**1.电流变换**/
-    UpdateCurrent(iu, iv);
+    UpdateCurrent(current_sensor.iu, current_sensor.iv, current_sensor.iw);
 
     /**2.读取编码器角度**/
     if (encoder_direction)

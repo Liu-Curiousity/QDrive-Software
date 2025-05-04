@@ -9,6 +9,8 @@
  * @par     历史版本:
  * 		    V1.0.0创建于2024-7-3
  *		    v2.0.0修改于2024-7-10,添加d轴电流PID控制
+ *		    V3.0.0修改于2025-4-12,中间漏了好多版本
+ *		    V4.0.0修改于2025-5-4,添加CurrentSensor类,后将续从current_sensor中获取电流
  * */
 
 
@@ -17,6 +19,7 @@
 
 #include "cstdint"
 #include "BLDC_Driver.h"
+#include "CurrentSensor.h"
 #include "Encoder.h"
 #include "LowPassFilter.h"
 #include "Storage.h"
@@ -51,6 +54,7 @@ public:
      * @param driver BLDC驱动
      * @param encoder 编码器驱动
      * @param storage 存储器
+     * @param current_sensor 电流传感器
      * @param PID_CurrentQ Q轴电流PID
      * @param PID_CurrentD D轴电流PID
      * @param PID_Speed 速度PID
@@ -58,12 +62,12 @@ public:
      */
     FOC(uint8_t PolePairs, uint16_t CtrlFrequency, uint16_t CurrentCtrlFrequency,
         LowPassFilter& CurrentQFilter, LowPassFilter& CurrentDFilter, LowPassFilter& SpeedFilter,
-        BLDC_Driver& driver, Encoder& encoder, Storage& storage,
+        BLDC_Driver& driver, Encoder& encoder, Storage& storage, CurrentSensor& current_sensor,
         const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Position):
-        storage(storage), bldc_driver(driver), bldc_encoder(encoder), PolePairs(PolePairs),
-        CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
-        CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter),
-        PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Position(PID_Position) {}
+        PolePairs(PolePairs), CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
+        PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Position(PID_Position),
+        storage(storage), bldc_driver(driver), bldc_encoder(encoder), current_sensor(current_sensor),
+        CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter) {}
 
     [[nodiscard]] float speed() const { return Speed; }
     [[nodiscard]] float angle() const { return Angle; }
@@ -90,10 +94,8 @@ public:
 
     /**
      * @brief FOC电流闭环控制中断服务函数
-     * @param iu U相电流
-     * @param iv V相电流
      * */
-    void loopCtrl(float iu, float iv);
+    void loopCtrl();
 
     void updateVbus(float vbus);
 
@@ -122,6 +124,7 @@ private:
     Storage& storage;              //存储器
     BLDC_Driver& bldc_driver;      //驱动器
     Encoder& bldc_encoder;         //编码器
+    CurrentSensor& current_sensor; //电流传感器
     LowPassFilter& CurrentQFilter; //Q轴电流低通滤波器
     LowPassFilter& CurrentDFilter; //D轴电流低通滤波器
     LowPassFilter& SpeedFilter;    //速度低通滤波器
@@ -159,7 +162,7 @@ private:
 
     void load_storage_calibration();
     void freeze_storage_calibration(bool calibration_data_type);
-    void UpdateCurrent(float iu, float iv);
+    void UpdateCurrent(float iu, float iv, float iw);
     void SetPhaseVoltage(float uq, float ud, float ElectricalAngle);
 };
 
