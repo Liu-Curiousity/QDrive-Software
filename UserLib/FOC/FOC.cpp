@@ -12,6 +12,7 @@
  *		    V3.0.0修改于2025-4-12,中间漏了好多版本
  *		    V4.0.0修改于2025-5-4,添加CurrentSensor类,后将续从current_sensor中获取电流
  *		    V4.1.0修改于2025-5-5,重命名PolePairs为pole_pairs,添加电流偏置校准和相电阻测量,并在电角度校准时自动调整硬拖电压
+ *		    V4.1.1修改于2025-5-6,校准相电流偏置前等待30ms,修复测量相电阻时忘记应用电流偏置校准导致相电阻测量误差的问题
  * */
 
 
@@ -137,6 +138,7 @@ void FOC::calibration() {
 
     /*1.校准电流*/
     SetPhaseVoltage(0, 0, 0); // 设置电压为0
+    delay(30);
     iu_offset = iv_offset = 0;
     for (int i = 0; i < 200; ++i) {
         // 读取电流值,200次平均
@@ -148,8 +150,8 @@ void FOC::calibration() {
     /*2.测量相电阻,确定后续校准使用电压*/
     bldc_driver.set_duty(0, 0, 0);
     float uu = 0;
-    for (uu = 0; uu < 0.8f && current_sensor.iu < FOC_MAX_CURRENT * 0.9;) {
-        uu += 0.002f;
+    for (uu = 0; uu < 0.8f && current_sensor.iu - iu_offset < FOC_MAX_CURRENT * 0.9;) {
+        uu += 0.001f;
         bldc_driver.set_duty(uu, 0, 0);
         delay(1);
     }
