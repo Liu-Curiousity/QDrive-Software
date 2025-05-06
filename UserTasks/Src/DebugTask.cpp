@@ -11,11 +11,11 @@ void App_DebugTask(void *argument) {
     foc.enable(); // 启动FOC
     // 2.基础校准
     if (!foc.calibrated) {
-        foc.calibration(); // 校准FOC
+        foc.calibrate(); // 校准FOC
     }
     // 3.齿槽转矩校准
     if (!foc.anticogging_calibrated) {
-        foc.anticogging_calibration(); // 齿槽转矩校准
+        foc.anticogging_calibrate(); // 齿槽转矩校准
     }
     foc.anticogging_enabled = true;
 
