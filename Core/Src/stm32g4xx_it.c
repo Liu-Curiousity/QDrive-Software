@@ -228,6 +228,7 @@ void FDCAN1_IT1_IRQHandler(void)
 
   /* USER CODE END FDCAN1_IT1_IRQn 1 */
 }
+
 /**
   * @brief This function handles TIM6 global interrupt, DAC1 and DAC3 channel underrun error interrupts.
   */

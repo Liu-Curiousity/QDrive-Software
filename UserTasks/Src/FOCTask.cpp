@@ -10,7 +10,6 @@
 #include "CurrentSensor_Embed.h"
 #include "filters.h"
 
-Storage_EmbeddedFlash storage;
 BLDC_Driver_DRV8300 bldc_driver(&htim8, 2125);
 Encoder_AS5047P bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2);
 CurrentSensor_Embed current_sensor(&hadc1, &hadc2);

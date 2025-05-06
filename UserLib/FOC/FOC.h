@@ -75,6 +75,7 @@ public:
 
     [[nodiscard]] float speed() const { return Speed; }
     [[nodiscard]] float angle() const { return Angle; }
+    [[nodiscard]] float current() const { return Iq; }
 
     void init();
     void enable();

@@ -52,14 +52,21 @@ osThreadId_t DebugTaskHandle;
 const osThreadAttr_t DebugTask_attributes = {
   .name = "DebugTask",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 512 * 4
+  .stack_size = 128 * 4
 };
 /* Definitions for FOCTask */
 osThreadId_t FOCTaskHandle;
 const osThreadAttr_t FOCTask_attributes = {
   .name = "FOCTask",
   .priority = (osPriority_t) osPriorityRealtime,
-  .stack_size = 512 * 4
+  .stack_size = 256 * 4
+};
+/* Definitions for CommunicateTask */
+osThreadId_t CommunicateTaskHandle;
+const osThreadAttr_t CommunicateTask_attributes = {
+  .name = "CommunicateTask",
+  .priority = (osPriority_t) osPriorityAboveNormal,
+  .stack_size = 256 * 4
 };
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,6 +76,7 @@ const osThreadAttr_t FOCTask_attributes = {
 
 void App_DebugTask(void *argument);
 extern void StartFOCTask(void *argument);
+extern void StartCommunicateTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -104,6 +112,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of FOCTask */
   FOCTaskHandle = osThreadNew(StartFOCTask, NULL, &FOCTask_attributes);
+
+  /* creation of CommunicateTask */
+  CommunicateTaskHandle = osThreadNew(StartCommunicateTask, NULL, &CommunicateTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
