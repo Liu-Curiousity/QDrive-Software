@@ -237,7 +237,7 @@ void FOC::anticogging_calibrate() {
     for (int i = 0; i < map_len + 30; ++i) {
         index = (index + 1) % map_len;
         Ctrl(CtrlType::PositionCtrl, numbers::pi_v<float> * 2 * index / map_len);
-        float speed_ = 0.5;
+        float speed_ = 0.3;
         while (abs(angle_ - numbers::pi_v<float> * 2 * index / map_len) > numbers::pi_v<float> * 2 / map_len / 10 ||
                abs(speed_) > 0.08) {
             // 0度2pi度溢出补偿
@@ -246,8 +246,8 @@ void FOC::anticogging_calibrate() {
             if (numbers::pi_v<float> * 2 * index / map_len < 0.1 && tmp > 6.2) tmp -= numbers::pi_v<float> * 2;
             // 过个低通
             angle_ = angle_ * 0.8f + tmp * 0.2f;
-            speed_ = speed_ * 0.99f + Speed * 0.01f;
-            iq_ = iq_ * 0.97f + Iq * 0.03f;
+            speed_ = speed_ * 0.97f + Speed * 0.03f;
+            iq_ = iq_ * 0.80f + Iq * 0.20f;
             delay(1);
         }
         anticogging_map[index] = iq_;
