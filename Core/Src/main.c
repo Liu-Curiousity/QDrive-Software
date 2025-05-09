@@ -20,7 +20,6 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "adc.h"
-#include "cordic.h"
 #include "fdcan.h"
 #include "spi.h"
 #include "tim.h"
@@ -95,7 +94,6 @@ int main(void)
   MX_GPIO_Init();
   MX_ADC1_Init();
   MX_TIM6_Init();
-  MX_CORDIC_Init();
   MX_ADC2_Init();
   MX_FDCAN1_Init();
   MX_SPI2_Init();
