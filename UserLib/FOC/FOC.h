@@ -12,6 +12,9 @@
  *		    V3.0.0修改于2025-4-12,中间漏了好多版本
  *		    V4.0.0修改于2025-5-4,添加CurrentSensor类,后将续从current_sensor中获取电流
  *		    V4.1.0修改于2025-5-5,重命名PolePairs为pole_pairs,添加电流偏置校准和相电阻测量,并在电角度校准时自动调整硬拖电压
+ *		    V4.1.1修改于2025-5-6,校准相电流偏置前等待30ms,修复测量相电阻时忘记应用电流偏置校准导致相电阻测量误差的问题
+ *		    V4.1.2修改于2025-5-6,优化操作逻辑,开始校准前清除已校准标志
+ *		    V4.1.3修改于2025-5-6,更改校准函数名
  * */
 
 
@@ -78,8 +81,8 @@ public:
     void disable();
     void start();
     void stop();
-    void calibration();
-    void anticogging_calibration();
+    void calibrate();
+    void anticogging_calibrate();
 
     /**
      * @brief FOC控制设置函数
