@@ -36,4 +36,6 @@ private:
     static void write_page_bytes(uint32_t page, uint32_t addr, const uint8_t *pdata, uint32_t count);
 };
 
+extern Storage_EmbeddedFlash storage;
+
 #endif //STORAGE_EMBEDDEDFLASH_H

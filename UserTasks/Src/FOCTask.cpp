@@ -4,20 +4,19 @@
 #include "spi.h"
 #include "adc.h"
 #include "cmsis_os2.h"
-#include "Encoder_AS5047P.h"
+#include "Encoder_MT6825.h"
 #include "BLDC_Driver_FD6288.h"
 #include "Storage_EmbeddedFlash.h"
 #include "CurrentSensor_Embed.h"
 #include "filters.h"
 
-Storage_EmbeddedFlash storage;
 BLDC_Driver_DRV8300 bldc_driver(&htim8, 2125);
-Encoder_AS5047P bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2);
+Encoder_MT6825 bldc_encoder(SPI2_CSn_GPIO_Port, SPI2_CSn_Pin, &hspi2);
 CurrentSensor_Embed current_sensor(&hadc1, &hadc2);
 
 LowPassFilter_2_Order CurrentQFilter(0.00005f, 1500); // 20kHz
 LowPassFilter_2_Order CurrentDFilter(0.00005f, 1500); // 20kHz
-LowPassFilter_2_Order SpeedFilter(0.00005f, 160);     // 20kHz
+LowPassFilter_2_Order SpeedFilter(0.00005f, 300);     // 20kHz
 
 __attribute__((section(".ccmram")))
 FOC foc(14, 1000, 20000,
@@ -25,7 +24,7 @@ FOC foc(14, 1000, 20000,
         bldc_driver, bldc_encoder, storage, current_sensor,
         PID(PID::delta_type, 10, 1, 0, 0, 0, 1.0f, -1.0f),
         PID(PID::delta_type, 10, 1, 0, 0, 0, 1.0f, -1.0f),
-        PID(PID::position_type, 3e-3f, 4.5e-5f, 0, 2e3f, -2e3f),
+        PID(PID::position_type, 3e-3f, 3.9e-4f, 0, 2e3f, -2e3f),
         PID(PID::delta_type, 1200.0f, 0, 0));
 
 void StartFOCTask(void *argument) {

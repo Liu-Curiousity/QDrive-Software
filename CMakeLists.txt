@@ -54,6 +54,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
         # Add user sources here
         UserTasks/Src/DebugTask.cpp
         UserTasks/Src/FOCTask.cpp
+        UserTasks/Src/CommunicateTask.cpp
         BSP/Storage_EmbeddedFlash.cpp
 )
 
