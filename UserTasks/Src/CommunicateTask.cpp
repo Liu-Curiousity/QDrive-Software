@@ -46,9 +46,12 @@ void StartCommunicateTask(void *argument) {
                 break;
             case 0x01: // 使能指令
                 foc.start();
+                if (foc.started)
+                    HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
                 break;
             case 0x02: // 失能指令
                 foc.stop();
+                HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
                 break;
             case 0x03: // 基础校准
                 foc.calibrate();
