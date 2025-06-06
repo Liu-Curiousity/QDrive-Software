@@ -23,7 +23,7 @@
 #include "fdcan.h"
 #include "spi.h"
 #include "tim.h"
-#include "usb.h"
+#include "usb_device.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -99,7 +99,6 @@ int main(void)
   MX_FDCAN1_Init();
   MX_SPI1_Init();
   MX_TIM1_Init();
-  MX_USB_PCD_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */

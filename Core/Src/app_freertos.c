@@ -23,6 +23,8 @@
 #include "main.h"
 #include "cmsis_os.h"
 
+#include "usb_device.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "task_public.h"
@@ -135,6 +137,8 @@ void MX_FREERTOS_Init(void) {
 /* USER CODE END Header_App_DebugTask */
 __weak void App_DebugTask(void *argument)
 {
+  /* init code for USB_Device */
+  MX_USB_Device_Init();
   /* USER CODE BEGIN App_DebugTask */
     for (;;){
 
