@@ -55,19 +55,29 @@ ENTRY(Reset_Handler)
 /* Highest address of the user mode stack */
 _estack = ORIGIN(RAM) + LENGTH(RAM);    /* end of RAM */
 /* Generate a link error if heap and stack don't fit into RAM */
-_Min_Heap_Size = 0x200;      /* required amount of heap  */
-_Min_Stack_Size = 0x400; /* required amount of stack */
+_Min_Heap_Size = 0x400;      /* required amount of heap  */
+_Min_Stack_Size = 0x800; /* required amount of stack */
 
 /* Specify the memory areas */
 MEMORY
 {
-RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 32K
-FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 128K
+  RAM       (xrw)   : ORIGIN = 0x20000000,    LENGTH = 22K
+  CCMRAM    (xrw)   : ORIGIN = 0x10000000,    LENGTH = 10K
+  FLASH     (rx)    : ORIGIN = 0x08000000,    LENGTH = 116K
+  FLASH_DATA(rx)    : ORIGIN = 0x0801D000,    LENGTH = 12K
 }
 
 /* Define output sections */
 SECTIONS
 {
+  .flash_data :
+  {
+    . = ALIGN(4);
+    KEEP(*(.flash_data))    /* .flash_data sections (code) */
+    KEEP(*(.flash_data*))   /* .flash_data* sections (code) */
+    . = ALIGN(4);
+  } >FLASH_DATA AT>FLASH_DATA
+
   /* The startup code goes first into FLASH */
   .isr_vector :
   {
@@ -202,6 +212,23 @@ SECTIONS
     libgcc.a ( * )
   }
 
+
+  /* Used by the startup to initialize data */
+  _siccmram = LOADADDR(.ccmram);
+  /* CCMRAM section, used to accelerate FOC calculate */
+  .ccmram :
+  {
+      . = ALIGN(4);
+      _sccmram = .;        /* create a global symbol at ccmram start */
+      *(.ccmram)
+      *(.ccmram*)
+      *(.ccmram_func)
+       *(.ccmram_func*)
+      . = ALIGN(4);
+      _eccmram = .;        /* create a global symbol at ccmram end */
+  } >CCMRAM AT> FLASH
+
+  .ARM.attributes 0 : { *(.ARM.attributes) }
 }
 
 
