@@ -37,9 +37,9 @@ public:
         static constexpr float OP_AMP_GAIN = 20.0f;       // 差分运放电压增益,单位:V/V
         static constexpr float R_SENSE = 0.05f;           // 采样电阻阻值,单位:Ω
 
-        const float iu = static_cast<float>(hadc2->Instance->JDR1) - 2046.0f;
+        const float iu = 2048 - static_cast<float>(hadc2->Instance->JDR1);
         this->iu = iu / ADC_REVOLUTION * V_REF / OP_AMP_GAIN / R_SENSE;
-        const float iv = (static_cast<float>(hadc1->Instance->JDR1) - 2044.5f) * 1.03f;
+        const float iv = static_cast<float>(hadc1->Instance->JDR1) - 2048;
         this->iv = iv / ADC_REVOLUTION * V_REF / OP_AMP_GAIN / R_SENSE;
         this->iw = -(this->iu + this->iv);
     };
