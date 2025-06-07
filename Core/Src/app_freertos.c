@@ -61,14 +61,14 @@ osThreadId_t FOCTaskHandle;
 const osThreadAttr_t FOCTask_attributes = {
   .name = "FOCTask",
   .priority = (osPriority_t) osPriorityRealtime,
-  .stack_size = 256 * 4
+  .stack_size = 128 * 4
 };
 /* Definitions for CommunicateTask */
 osThreadId_t CommunicateTaskHandle;
 const osThreadAttr_t CommunicateTask_attributes = {
   .name = "CommunicateTask",
   .priority = (osPriority_t) osPriorityAboveNormal,
-  .stack_size = 256 * 4
+  .stack_size = 128 * 4
 };
 
 /* Private function prototypes -----------------------------------------------*/
