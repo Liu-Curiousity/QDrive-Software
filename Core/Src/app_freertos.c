@@ -54,7 +54,7 @@ osThreadId_t DebugTaskHandle;
 const osThreadAttr_t DebugTask_attributes = {
   .name = "DebugTask",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 128 * 4
+  .stack_size = 64 * 4
 };
 /* Definitions for FOCTask */
 osThreadId_t FOCTaskHandle;
@@ -70,15 +70,23 @@ const osThreadAttr_t CommunicateTask_attributes = {
   .priority = (osPriority_t) osPriorityAboveNormal,
   .stack_size = 128 * 4
 };
+/* Definitions for StartShell */
+osThreadId_t StartShellHandle;
+const osThreadAttr_t StartShell_attributes = {
+  .name = "StartShell",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 64 * 4
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 
 /* USER CODE END FunctionPrototypes */
 
-void App_DebugTask(void *argument);
+void StartDebugTask(void *argument);
 extern void StartFOCTask(void *argument);
 extern void StartCommunicateTask(void *argument);
+extern void StartStartShell(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -110,13 +118,16 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* creation of DebugTask */
-  DebugTaskHandle = osThreadNew(App_DebugTask, NULL, &DebugTask_attributes);
+  DebugTaskHandle = osThreadNew(StartDebugTask, NULL, &DebugTask_attributes);
 
   /* creation of FOCTask */
   FOCTaskHandle = osThreadNew(StartFOCTask, NULL, &FOCTask_attributes);
 
   /* creation of CommunicateTask */
   CommunicateTaskHandle = osThreadNew(StartCommunicateTask, NULL, &CommunicateTask_attributes);
+
+  /* creation of StartShell */
+  StartShellHandle = osThreadNew(StartStartShell, NULL, &StartShell_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
@@ -128,22 +139,24 @@ void MX_FREERTOS_Init(void) {
 
 }
 
-/* USER CODE BEGIN Header_App_DebugTask */
+/* USER CODE BEGIN Header_StartDebugTask */
 /**
   * @brief  Function implementing the DebugTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_App_DebugTask */
-__weak void App_DebugTask(void *argument)
+/* USER CODE END Header_StartDebugTask */
+__weak void StartDebugTask(void *argument)
 {
   /* init code for USB_Device */
   MX_USB_Device_Init();
-  /* USER CODE BEGIN App_DebugTask */
-    for (;;){
-
-    }
-  /* USER CODE END App_DebugTask */
+  /* USER CODE BEGIN StartDebugTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartDebugTask */
 }
 
 /* Private application code --------------------------------------------------*/
