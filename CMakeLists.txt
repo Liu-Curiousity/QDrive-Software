@@ -43,6 +43,7 @@ add_subdirectory(cmake/stm32cubemx)
 
 add_subdirectory(UserLib/FOC)
 add_subdirectory(UserLib/PID)
+add_subdirectory(UserLib/Shell)
 
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
@@ -77,6 +78,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         # Add user defined libraries
         foc
         pid
+        letter_shell
 )
 
 # 查找 UserLib 下的所有源文件

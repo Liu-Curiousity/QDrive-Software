@@ -23,7 +23,6 @@
 #include <numeric>
 #include "FOC.h"
 #include "FOC_config.h"
-#include "usbd_cdc_if.h"
 
 using namespace std;
 
@@ -382,11 +381,6 @@ void FOC::Ctrl_ISR() {
 /*CCMRAM加速运行*/
 __attribute__((section(".ccmram_func")))
 void FOC::loopCtrl() {
-    static uint8_t tx_data[12] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x7F};
-    *reinterpret_cast<float *>(tx_data) = Iq;
-    *reinterpret_cast<float *>(tx_data + 4) = Id;
-    CDC_Transmit_FS(tx_data, 12);
-
     static float temp;
     if (initialized && calibrated) {
         /**1.电流变换**/
