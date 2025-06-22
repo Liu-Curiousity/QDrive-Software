@@ -43,25 +43,27 @@ add_subdirectory(cmake/stm32cubemx)
 
 add_subdirectory(UserLib/FOC)
 add_subdirectory(UserLib/PID)
+add_subdirectory(UserLib/LetterShell)
 
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
         # Add user defined library search paths
 )
 
+file(GLOB_RECURSE APPLICATION_SOURCES "./Applications/*.c" "./Applications/*.cpp")
+file(GLOB_RECURSE BSP_SOURCES "./BSP/*.c" "./BSP/*.cpp")
+
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
         # Add user sources here
-        UserTasks/Src/DebugTask.cpp
-        UserTasks/Src/FOCTask.cpp
-        UserTasks/Src/CommunicateTask.cpp
-        BSP/Storage_EmbeddedFlash.cpp
+        ${APPLICATION_SOURCES}
+        ${BSP_SOURCES}
 )
 
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
         # Add user defined include paths
-        UserTasks/Inc/
+        Applications/Inc/
         BSP/
 )
 
@@ -77,10 +79,11 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         # Add user defined libraries
         foc
         pid
+        letter_shell
 )
 
 # 查找 UserLib 下的所有源文件
-file(GLOB_RECURSE USERLIB_SOURCES "UserLib/*.*" "UserTasks/*.*" "BSP/*.*")
+file(GLOB_RECURSE USERLIB_SOURCES "UserLib/*.*" "Applications/*.*" "BSP/*.*")
 
 # 为每个 UserLib 源文件添加编译选项 -include public.h
 foreach (SRC ${USERLIB_SOURCES})

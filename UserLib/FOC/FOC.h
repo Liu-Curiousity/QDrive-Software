@@ -67,7 +67,7 @@ public:
     FOC(uint8_t pole_pairs, uint16_t CtrlFrequency, uint16_t CurrentCtrlFrequency,
         LowPassFilter& CurrentQFilter, LowPassFilter& CurrentDFilter, LowPassFilter& SpeedFilter,
         BLDC_Driver& driver, Encoder& encoder, Storage& storage, CurrentSensor& current_sensor,
-        const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Position):
+        const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Position) :
         pole_pairs(pole_pairs), CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
         PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Position(PID_Position),
         storage(storage), bldc_driver(driver), bldc_encoder(encoder), current_sensor(current_sensor),
@@ -76,6 +76,7 @@ public:
     [[nodiscard]] float speed() const { return Speed; }
     [[nodiscard]] float angle() const { return Angle; }
     [[nodiscard]] float current() const { return Iq; }
+    [[nodiscard]] float vbus() const { return Vbus; }
 
     void init();
     void enable();
