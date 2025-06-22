@@ -7,7 +7,7 @@ extern "C" {
 
 #define USE_TinyPrintf 1
 
-#define STDIO_SUPPORT 0
+#define STDIO_SUPPORT 1
 
 #include "stm32g4xx_hal.h"
 #include <sys/stat.h>

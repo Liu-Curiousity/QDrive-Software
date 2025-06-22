@@ -42,7 +42,7 @@ signed short shellRead(char *data, unsigned short len) {
 signed short shellWrite(char *data, unsigned short len) {
     const uint32_t start_tick = HAL_GetTick();
     while (HAL_OK != CDC_Transmit_FS(reinterpret_cast<uint8_t *>(data), len))
-        if (HAL_GetTick() - start_tick > 100) break;
+        if (HAL_GetTick() - start_tick > 100) return -1;
     return 0;
 }
 
@@ -55,11 +55,9 @@ void _putchar(char character) {
 
 #if STDIO_SUPPORT == 1
 int _write(int fd, char *ptr, int len) {
-    HAL_StatusTypeDef hstatus = HAL_OK;
-
     if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
-        hstatus = HAL_UART_Transmit(gHuart, (uint8_t *) ptr, len, HAL_MAX_DELAY);
-        if (hstatus == HAL_OK)
+        shellWrite(ptr, len);
+        if (shellWrite(ptr, len) == 0)
             return len;
         else
             return EIO;
@@ -69,11 +67,9 @@ int _write(int fd, char *ptr, int len) {
 }
 
 int _read(int fd, char *ptr, int len) {
-    HAL_StatusTypeDef hstatus;
-
     if (fd == STDIN_FILENO) {
-        hstatus = HAL_UART_Receive(gHuart, (uint8_t *) ptr, 1, HAL_MAX_DELAY);
-        if (hstatus == HAL_OK)
+        shellRead(ptr, 1);
+        if (shellRead(ptr, 1) == 0)
             return 1;
         else
             return EIO;
@@ -109,9 +105,9 @@ int _isatty(int fd) {
 }
 
 int _lseek(int fd, int ptr, int dir) {
-    (void) fd;
-    (void) ptr;
-    (void) dir;
+    (void)fd;
+    (void)ptr;
+    (void)dir;
 
     errno = EBADF;
     return -1;

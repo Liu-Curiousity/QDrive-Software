@@ -1,5 +1,6 @@
 #include "task_public.h"
 #include "FOC.h"
+#include "FOC_config.h"
 #include "tim.h"
 #include "spi.h"
 #include "adc.h"
@@ -19,7 +20,7 @@ LowPassFilter_2_Order CurrentDFilter(0.00005f, 1500); // 20kHz
 LowPassFilter_2_Order SpeedFilter(0.00005f, 300);     // 20kHz
 
 __attribute__((section(".ccmram")))
-FOC foc(14, 1000, 20000,
+FOC foc(FOC_POLE_PAIRS, 1000, 20000,
         CurrentQFilter, CurrentDFilter, SpeedFilter,
         bldc_driver, bldc_encoder, storage, current_sensor,
         PID(PID::delta_type, 10, 1, 0, 0, 0, 1.0f, -1.0f),
