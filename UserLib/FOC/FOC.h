@@ -1,13 +1,13 @@
 /**
- * @brief   FOC驱动库
+* @brief   FOC驱动库
  * @details
- * @author  Haoqi Liu
+ * @author  LiuHaoqi
  * @date    2024-7-10
- * @version V2.0.0
+ * @version V3.0.0
  * @note    此库为中间层库,与硬件完全解耦
  * @warning 无
  * @par     历史版本:
- * 		    V1.0.0创建于2024-7-3
+ *		    V1.0.0创建于2024-7-3
  *		    v2.0.0修改于2024-7-10,添加d轴电流PID控制
  *		    V3.0.0修改于2025-4-12,中间漏了好多版本
  *		    V4.0.0修改于2025-5-4,添加CurrentSensor类,后将续从current_sensor中获取电流
@@ -15,6 +15,8 @@
  *		    V4.1.1修改于2025-5-6,校准相电流偏置前等待30ms,修复测量相电阻时忘记应用电流偏置校准导致相电阻测量误差的问题
  *		    V4.1.2修改于2025-5-6,优化操作逻辑,开始校准前清除已校准标志
  *		    V4.1.3修改于2025-5-6,更改校准函数名
+ *		    V5.0.0修改于2025-6-26,调整initialize,enable,start三层实现逻辑细节
+ *		    V5.0.0调整SetPhaseVoltage()参数顺序
  * */
 
 
@@ -103,6 +105,10 @@ public:
      * */
     void loopCtrl();
 
+    /**
+     * @brief 更新母线电压,用于调整控制回路增益
+     * @param vbus 母线电压,单位V
+     */
     void updateVbus(float vbus);
 
     // 初始化配置项
@@ -173,7 +179,7 @@ private:
     void load_storage_calibration();
     void freeze_storage_calibration(bool calibration_data_type);
     void UpdateCurrent(float iu, float iv, float iw);
-    void SetPhaseVoltage(float uq, float ud, float ElectricalAngle);
+    void SetPhaseVoltage(float ud, float uq, float ElectricalAngle);
 };
 
 #endif //FOC_H

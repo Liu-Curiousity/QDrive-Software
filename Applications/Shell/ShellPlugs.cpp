@@ -2,7 +2,7 @@
 #include "usbd_cdc_if.h"
 #include "retarget/retarget.h"
 #include "FOC.h"
-#include "../Inc/FOC_config.h"
+#include "FOC_config.h"
 
 extern FOC foc;
 
