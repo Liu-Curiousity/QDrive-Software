@@ -15,6 +15,8 @@
  *		    V4.1.1修改于2025-5-6,校准相电流偏置前等待30ms,修复测量相电阻时忘记应用电流偏置校准导致相电阻测量误差的问题
  *		    V4.1.2修改于2025-5-6,优化操作逻辑,开始校准前清除已校准标志
  *		    V4.1.3修改于2025-5-6,更改校准函数名
+ *		    V5.0.0修改于2025-6-26,调整initialize,enable,start三层实现逻辑细节
+ *		    V5.0.0调整SetPhaseVoltage()参数顺序
  * */
 
 
@@ -221,7 +223,7 @@ void FOC::calibrate() {
 }
 
 void FOC::anticogging_calibrate() {
-    if (!initialized) return;       // 如果没有初始化,则不能校准
+    if (!enabled) return;           // 如果没有使能,则不能校准
     if (started) return;            // 如果已经启动,则不能校准
     anticogging_calibrated = false; // 标记为未校准
 
@@ -289,22 +291,22 @@ void FOC::UpdateCurrent(const float iu, const float iv, const float iw) {
 
 /**
  * @brief FOC控制函数
- * @param uq 切向力矩,必须在0~1之间!
  * @param ud 法向力矩,必须在0~1之间!
+ * @param uq 切向力矩,必须在0~1之间!
  * @param ElectricalAngle 电机电角度,单位弧度
  * */
 __attribute__((section(".ccmram_func")))
-void FOC::SetPhaseVoltage(float uq, float ud, const float ElectricalAngle) {
+void FOC::SetPhaseVoltage(float ud, float uq, const float ElectricalAngle) {
     // TODO：临时方案有待改进
     // Uu,Uv,Uw不能设置到最大值1,为了防止电流采样时候MOS对电机有驱动,影响采样
     // 表现为某一相Ux=0时候(堵转测试),电流采样值偶尔出现尖峰,电机异常抽搐
     // *0.99f为临时解决方案,缺点是牺牲功率密度
-    uq *= 0.99f;
     ud *= 0.99f;
+    uq *= 0.99f;
 
     /**1.保存电压值**/
-    Uq = uq;
     Ud = ud;
+    Uq = uq;
 
     /**2.帕克逆变换**/
     const float cos_angle = cosf(ElectricalAngle);
@@ -404,10 +406,16 @@ void FOC::loopCtrl() {
         Speed = SpeedFilter(temp * 60 * CurrentCtrlFrequency * numbers::inv_pi_v<float> * 0.5f);
         PreviousAngle = Angle;
     }
-    if (started || anticogging_calibrating) {
-        /**4.电流闭环控制**/
-        const float uq = PID_CurrentQ.clac(Iq);
-        const float ud = PID_CurrentD.clac(Id);
-        SetPhaseVoltage(uq, ud, ElectricalAngle);
+    if (enabled) {
+        static float ud = 0;
+        static float uq = 0;
+        if (started || anticogging_calibrating) {
+            /**4.电流闭环控制**/
+            ud = PID_CurrentD.clac(Id);
+            uq = PID_CurrentQ.clac(Iq);
+        } else {
+            ud = uq = 0;
+        }
+        SetPhaseVoltage(ud, uq, ElectricalAngle);
     }
 }
