@@ -35,7 +35,7 @@ void StartFOCTask(void *argument) {
     while (true) {
         if (!LL_ADC_REG_IsConversionOngoing(hadc1.Instance)) {
             LL_ADC_REG_StartConversion(hadc1.Instance);
-            foc.updateVbus(hadc1.Instance->DR / 4095.0f * 3.3f / 2 * 17);
+            foc.updateVoltage(hadc1.Instance->DR / 4095.0f * 3.3f / 2 * 17);
             LL_ADC_REG_StopConversion(hadc1.Instance);
         }
         delay(1);

@@ -17,6 +17,7 @@
  *		    V4.1.3修改于2025-5-6,更改校准函数名
  *		    V5.0.0修改于2025-6-26,调整initialize,enable,start三层实现逻辑细节
  *		    V5.0.0调整SetPhaseVoltage()参数顺序
+ *		    V5.1.0修改于2025-7-3,修复calibrate()函数致命问题,重新调整init,enable,start三层实现逻辑细节,为后续无感算法铺路,调整更新电压函数接口名称
  * */
 
 
@@ -103,13 +104,13 @@ void FOC::freeze_storage_calibration(const bool calibration_data_type) {
 void FOC::enable() {
     if (!initialized) return; // 如果没有初始化,则不能使能
     //1.启动BLDC驱动
-    if (!bldc_driver.enabled)
+    if (!bldc_driver.enabled) {
         bldc_driver.enable();
-    //2.启动编码器
-    if (!bldc_encoder.enabled) {
-        bldc_encoder.enable();
         bldc_driver.set_duty(0, 0, 0);
     }
+    //2.启动编码器
+    if (!bldc_encoder.enabled)
+        bldc_encoder.enable();
     // 3.启动电流传感器
     if (!current_sensor.enabled)
         current_sensor.enable();
@@ -137,9 +138,9 @@ void FOC::stop() {
 }
 
 void FOC::calibrate() {
-    if (!initialized) return; // 如果没有初始化,则不能校准
-    if (started) return;      // 如果已经启动,则不能校准
-    calibrated = false;       // 标记为未校准
+    if (!enabled) return; // 如果没有使能,则不能校准
+    if (started) return;  // 如果已经启动,则不能校准
+    calibrated = false;   // 标记为未校准
 
     /*1.校准电流*/
     SetPhaseVoltage(0, 0, 0); // 设置电压为0
@@ -162,14 +163,14 @@ void FOC::calibrate() {
     }
     phase_resistance = 0;
     for (int i = 0; i < 100; ++i) {
-        phase_resistance += uu * Vbus / (current_sensor.iu - iu_offset) / 3 * 4 / 100;
+        phase_resistance += uu * Voltage / (current_sensor.iu - iu_offset) / 3 * 4 / 100;
         delay(1);
     }
     SetPhaseVoltage(0, 0, 0); // 设置电压为0
     const float voltage_align = clamp(uu * 4 / 3, -1.0f, 1.0f);
 
     /*3.校准编码器正方向,使其与q轴正方向相同*/
-    SetPhaseVoltage(0, voltage_align * 0.6f, 0);
+    SetPhaseVoltage(voltage_align * 0.6f, 0, 0);
     // 读取电机角度,100次平均
     delay(100);
     float begin_angle = 0;
@@ -179,7 +180,7 @@ void FOC::calibrate() {
     // 按q轴正方向硬拖2pi电角度
     for (int i = 0; i < 500; ++i) {
         const float angle = 2 * numbers::pi_v<float> * i / 500.0f;
-        SetPhaseVoltage(0, voltage_align * 0.6f, angle);
+        SetPhaseVoltage(voltage_align * 0.6f, 0, angle);
         delay(1);
     }
     // 读取电机角度,100次平均
@@ -201,10 +202,10 @@ void FOC::calibrate() {
         // 按q轴正方向硬拖2pi电角度
         for (int j = 0; j < 250; ++j) {
             const float angle = 2 * numbers::pi_v<float> * j / 250.0f;
-            SetPhaseVoltage(0, voltage_align * 0.6f, angle);
+            SetPhaseVoltage(voltage_align * 0.6f, 0, angle);
             delay(1);
         }
-        SetPhaseVoltage(0, voltage_align, 0);
+        SetPhaseVoltage(voltage_align, 0, 0);
         delay(300);
         for (int j = 0; j < 100; ++j) {
             if (encoder_direction)
@@ -224,6 +225,7 @@ void FOC::calibrate() {
 
 void FOC::anticogging_calibrate() {
     if (!enabled) return;           // 如果没有使能,则不能校准
+    if (!calibrated) return;        // 如果没有基础校准,则不能校准
     if (started) return;            // 如果已经启动,则不能校准
     anticogging_calibrated = false; // 标记为未校准
 
@@ -327,13 +329,13 @@ void FOC::SetPhaseVoltage(float ud, float uq, const float ElectricalAngle) {
     bldc_driver.set_duty(Uu, Uv, Uw);
 }
 
-void FOC::updateVbus(float vbus) {
-    if (vbus == 0) return;
-    PID_CurrentQ.kp *= Vbus / vbus;
-    PID_CurrentD.kp *= Vbus / vbus;
-    PID_CurrentQ.ki *= Vbus / vbus;
-    PID_CurrentD.ki *= Vbus / vbus;
-    Vbus = vbus;
+void FOC::updateVoltage(const float voltage) {
+    if (voltage == 0) return;
+    PID_CurrentQ.kp *= Voltage / voltage;
+    PID_CurrentD.kp *= Voltage / voltage;
+    PID_CurrentQ.ki *= Voltage / voltage;
+    PID_CurrentD.ki *= Voltage / voltage;
+    Voltage = voltage;
 }
 
 void FOC::Ctrl(const CtrlType ctrl_type, const float value) {
@@ -384,38 +386,38 @@ void FOC::Ctrl_ISR() {
 __attribute__((section(".ccmram_func")))
 void FOC::loopCtrl() {
     static float temp;
-    if (initialized && calibrated) {
-        /**1.电流变换**/
-        UpdateCurrent(current_sensor.iu - iu_offset,
-                      current_sensor.iv - iv_offset,
-                      current_sensor.iw + iu_offset + iv_offset);
+    if (!enabled) return;    // 如果没有使能,则不能运行
+    if (!calibrated) return; // 如果没有校准,则不能运行
 
-        /**2.读取编码器角度**/
-        if (encoder_direction)
-            temp = bldc_encoder.get_angle() + zero_electric_angle;
-        else
-            temp = 2 * numbers::pi_v<float> - bldc_encoder.get_angle() + zero_electric_angle;
-        Angle = temp > 2 * numbers::pi_v<float> ? temp - 2 * numbers::pi_v<float> :
-                temp < 0 ? temp + 2 * numbers::pi_v<float> : temp;
-        ElectricalAngle = Angle * pole_pairs;
+    /**1.电流变换**/
+    UpdateCurrent(current_sensor.iu - iu_offset,
+                  current_sensor.iv - iv_offset,
+                  current_sensor.iw + iu_offset + iv_offset);
 
-        /**3.计算转速**/
-        temp = Angle - PreviousAngle;
-        if (PreviousAngle - Angle > numbers::pi_v<float>) temp += numbers::pi_v<float> * 2;
-        else if (PreviousAngle - Angle < -numbers::pi_v<float>) temp -= numbers::pi_v<float> * 2;
-        Speed = SpeedFilter(temp * 60 * CurrentCtrlFrequency * numbers::inv_pi_v<float> * 0.5f);
-        PreviousAngle = Angle;
+    /**2.读取编码器角度**/
+    if (encoder_direction)
+        temp = bldc_encoder.get_angle() + zero_electric_angle;
+    else
+        temp = 2 * numbers::pi_v<float> - bldc_encoder.get_angle() + zero_electric_angle;
+    Angle = temp > 2 * numbers::pi_v<float> ? temp - 2 * numbers::pi_v<float> :
+            temp < 0 ? temp + 2 * numbers::pi_v<float> : temp;
+    ElectricalAngle = Angle * pole_pairs;
+
+    /**3.计算转速**/
+    temp = Angle - PreviousAngle;
+    if (PreviousAngle - Angle > numbers::pi_v<float>) temp += numbers::pi_v<float> * 2;
+    else if (PreviousAngle - Angle < -numbers::pi_v<float>) temp -= numbers::pi_v<float> * 2;
+    Speed = SpeedFilter(temp * 60 * CurrentCtrlFrequency * numbers::inv_pi_v<float> * 0.5f);
+    PreviousAngle = Angle;
+
+    static float ud = 0;
+    static float uq = 0;
+    if (started || anticogging_calibrating) {
+        /**4.电流闭环控制**/
+        ud = PID_CurrentD.clac(Id);
+        uq = PID_CurrentQ.clac(Iq);
+    } else {
+        ud = uq = 0;
     }
-    if (enabled) {
-        static float ud = 0;
-        static float uq = 0;
-        if (started || anticogging_calibrating) {
-            /**4.电流闭环控制**/
-            ud = PID_CurrentD.clac(Id);
-            uq = PID_CurrentQ.clac(Iq);
-        } else {
-            ud = uq = 0;
-        }
-        SetPhaseVoltage(ud, uq, ElectricalAngle);
-    }
+    SetPhaseVoltage(ud, uq, ElectricalAngle);
 }

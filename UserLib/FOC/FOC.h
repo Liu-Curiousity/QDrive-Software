@@ -17,6 +17,7 @@
  *		    V4.1.3修改于2025-5-6,更改校准函数名
  *		    V5.0.0修改于2025-6-26,调整initialize,enable,start三层实现逻辑细节
  *		    V5.0.0调整SetPhaseVoltage()参数顺序
+ *		    V5.1.0修改于2025-7-3,修复calibrate()函数致命问题,重新调整init,enable,start三层实现逻辑细节,为后续无感算法铺路,调整更新电压函数接口名称
  * */
 
 
@@ -40,13 +41,6 @@ public:
         CurrentCtrl = 0,
         SpeedCtrl = 1,
         PositionCtrl = 2,
-    };
-
-    enum StorageStatus:uint8_t {
-        STORAGE_BASE_OK = 0xA0,
-        STORAGE_ANTICOGGING_OK = 0x05,
-        STORAGE_ALL_OK = STORAGE_BASE_OK | STORAGE_ANTICOGGING_OK,
-        STORAGE_ERROR = 0xEE,
     };
 
     /**
@@ -75,10 +69,10 @@ public:
         storage(storage), bldc_driver(driver), bldc_encoder(encoder), current_sensor(current_sensor),
         CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter) {}
 
-    [[nodiscard]] float speed() const { return Speed; }
-    [[nodiscard]] float angle() const { return Angle; }
-    [[nodiscard]] float current() const { return Iq; }
-    [[nodiscard]] float vbus() const { return Vbus; }
+    [[nodiscard]] float speed() const { return Speed; }     // 获取电机转速,单位rpm
+    [[nodiscard]] float angle() const { return Angle; }     // 获取电机角度,单位rad
+    [[nodiscard]] float current() const { return Iq; }      // 获取Q轴电流,单位A
+    [[nodiscard]] float voltage() const { return Voltage; } // 获取母线电压,单位V
 
     void init();
     void enable();
@@ -107,9 +101,9 @@ public:
 
     /**
      * @brief 更新母线电压,用于调整控制回路增益
-     * @param vbus 母线电压,单位V
+     * @param voltage 母线电压,单位V
      */
-    void updateVbus(float vbus);
+    void updateVoltage(float voltage);
 
     // 初始化配置项
     const uint8_t pole_pairs;            // 极对数
@@ -124,6 +118,13 @@ public:
     bool anticogging_calibrated{false}; // 是否校准过齿槽转矩
 
 private:
+    enum StorageStatus:uint8_t {
+        STORAGE_BASE_OK = 0xA0,
+        STORAGE_ANTICOGGING_OK = 0x05,
+        STORAGE_ALL_OK = STORAGE_BASE_OK | STORAGE_ANTICOGGING_OK,
+        STORAGE_ERROR = 0xEE,
+    };
+
     CtrlType ctrl_type{CtrlType::CurrentCtrl}; //当前控制类型
 
     //PID类
@@ -174,7 +175,7 @@ private:
     float Iq{0}; //Q轴电流,单位A
     float Id{0}; //D轴电流,单位A
 
-    float Vbus{1}; //母线电压
+    float Voltage{1}; //母线电压
 
     void load_storage_calibration();
     void freeze_storage_calibration(bool calibration_data_type);
