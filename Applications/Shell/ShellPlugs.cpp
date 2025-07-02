@@ -47,7 +47,7 @@ void foc_status() {
     PRINT("  Current      : %.2f A", foc.current());
     PRINT("  Speed        : %.2f rpm", foc.speed());
     PRINT("  Angle        : %.2f rad", foc.angle());
-    PRINT("  Voltage      : %.2f V", foc.vbus());
+    PRINT("  Voltage      : %.2f V", foc.voltage());
 }
 
 void foc_config_help() {
