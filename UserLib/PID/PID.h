@@ -70,7 +70,7 @@ public:
      * @param input PID观测值
      * @return PID计算结果
      * */
-    [[nodiscard]] float clac(float input);
+    [[nodiscard]] float calc(float input);
 
     /*设置参数*/
     float target{0};   //目标值
@@ -90,7 +90,7 @@ private:
     float output{0};    //PID输出值
 };
 
-inline float PID::clac(const float input) {
+inline float PID::calc(const float input) {
     const float error_ = target - input;
     if (PID_type == position_type) {
         /***位置式PID公式:u=Kpe(t)+Ki*e(t)的积分+Kd[e(t)-e(t-1)]***/

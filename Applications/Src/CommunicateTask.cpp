@@ -70,7 +70,7 @@ void StartCommunicateTask(void *argument) {
                                  *(int16_t *)(RxBuffer + 2) * 5000.0f / INT16_MAX);
                         break;
                     case 0x02: // 角度控制
-                        foc.Ctrl(FOC::CtrlType::PositionCtrl,
+                        foc.Ctrl(FOC::CtrlType::AngleCtrl,
                                  *(int16_t *)(RxBuffer + 2) * 2 * numbers::pi_v<float> / UINT16_MAX);
                         break;
                     default:

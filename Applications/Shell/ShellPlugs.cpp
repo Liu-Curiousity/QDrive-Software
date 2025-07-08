@@ -144,7 +144,7 @@ void foc_ctrl(int argc, char *argv[]) {
             // TODO
         } else if (strcmp(key, "angle") == 0) {
             PRINT("Setting angle = %.2f deg", valf);
-            foc.Ctrl(FOC::CtrlType::PositionCtrl, valf);
+            foc.Ctrl(FOC::CtrlType::AngleCtrl, valf);
             // TODO
         } else {
             PRINT("Unknown ctrl target: %s", key);
