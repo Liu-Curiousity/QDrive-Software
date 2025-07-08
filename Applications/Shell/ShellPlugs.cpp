@@ -57,16 +57,16 @@ void foc_status() {
 }
 
 void foc_config_help() {
-    // TODO:调整命令格式
     PRINT("Usage: QDrive config [--list | PARAM_PATH VALUE | key=value]");
     PRINT("");
     PRINT("Examples:");
     PRINT("  QDrive config --help");
     PRINT("  QDrive config --list");
     PRINT("  QDrive config pid.speed.kp 0.1");
-    PRINT("  QDrive config limit.speed 100");
-    PRINT("  QDrive config can.baud_rate 100000");
-    PRINT("  QDrive config pid.speed.kp=0.1");
+    // TODO:部分不可调
+    // PRINT("  QDrive config limit.speed 100");
+    // PRINT("  QDrive config can.baud_rate 100000");
+    PRINT("  QDrive config pid.speed.ki=0.1");
 }
 
 void foc_config(int argc, char *argv[]) {
@@ -77,12 +77,30 @@ void foc_config(int argc, char *argv[]) {
 
     if (strcmp(argv[1], "--list") == 0) {
         PRINT("Current Configuration:");
-        PRINT("pid.speed.kp = %.2e", foc.PID_Speed.kp);
-        PRINT("pid.speed.ki = %.2e", foc.PID_Speed.ki);
-        PRINT("pid.speed.kd = %.2e", foc.PID_Speed.kd);
-        PRINT("pid.angle.kp = %.2e", foc.PID_Angle.kp);
-        PRINT("pid.angle.ki = %.2e", foc.PID_Angle.ki);
-        PRINT("pid.angle.kd = %.2e", foc.PID_Angle.kd);
+        if (foc.PID_Speed.kp == 0)
+            PRINT("pid.speed.kp = 0.000");
+        else
+            PRINT("pid.speed.kp = %.3g", foc.PID_Speed.kp);
+        if (foc.PID_Speed.ki == 0)
+            PRINT("pid.speed.ki = 0.000");
+        else
+            PRINT("pid.speed.ki = %.3g", foc.PID_Speed.ki);
+        if (foc.PID_Speed.kd == 0)
+            PRINT("pid.speed.kd = 0.000");
+        else
+            PRINT("pid.speed.kd = %.3g", foc.PID_Speed.kd);
+        if (foc.PID_Angle.kp == 0)
+            PRINT("pid.angle.kp = 0.000");
+        else
+            PRINT("pid.angle.kp = %.3g", foc.PID_Angle.kp);
+        if (foc.PID_Angle.ki == 0)
+            PRINT("pid.angle.ki = 0.000");
+        else
+            PRINT("pid.angle.ki = %.3g", foc.PID_Angle.ki);
+        if (foc.PID_Angle.kd == 0)
+            PRINT("pid.angle.kd = 0.000");
+        else
+            PRINT("pid.angle.kd = %.3g", foc.PID_Angle.kd);
         // TODO: 波特率不可更改
         PRINT("can.baud_rate = 1'000'000");
         return;
@@ -181,6 +199,26 @@ void foc_disable() {
     PRINT("QDrive disabled");
 }
 
+void foc_calibrate() {
+    if (foc.calibrated) {
+        PRINT("QDrive already calibrated,do you want to re-calibrate? (y/n)");
+        char response;
+        while (!shellRead(&response, 1)) {
+            delay(1);
+        }
+        if (response != 'y' && response != 'Y') {
+            PRINT("Calibration aborted");
+            return;
+        }
+    }
+    PRINT("QDrive calibration started, please wait...");
+    foc.calibrate();
+    if (foc.calibrated)
+        PRINT("QDrive calibration completed");
+    else
+        PRINT("QDrive calibration failed");
+}
+
 int shell_foc(int argc, char *argv[]) {
     if (argc < 2) {
         print_help();
@@ -206,7 +244,7 @@ int shell_foc(int argc, char *argv[]) {
     } else if (strcmp(cmd, "ctrl") == 0) {
         foc_ctrl(argc, argv + 1);
     } else if (strcmp(cmd, "calibrate") == 0) {
-        // TODO: 添加校准功能
+        foc_calibrate();
     } else {
         PRINT("Unknown command: %s", cmd);
         print_help();

@@ -1225,9 +1225,9 @@ int shellSetVar(char *name, int value)
     }
     return shellSetVarValue(shell, command, value);
 }
-SHELL_EXPORT_CMD(
-SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-setVar, shellSetVar, set var);
+// SHELL_EXPORT_CMD(
+// SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+// setVar, shellSetVar, set var);
 
 
 /**
@@ -1906,9 +1906,9 @@ void shellUsers(void)
         shellListUser(shell);
     }
 }
-SHELL_EXPORT_CMD(
-SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-users, shellUsers, list all user);
+// SHELL_EXPORT_CMD(
+// SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+// users, shellUsers, list all user);
 
 
 /**
@@ -1922,9 +1922,9 @@ void shellCmds(void)
         shellListCommand(shell);
     }
 }
-SHELL_EXPORT_CMD(
-SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-cmds, shellCmds, list all cmd);
+// SHELL_EXPORT_CMD(
+// SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+// cmds, shellCmds, list all cmd);
 
 
 /**
@@ -1938,9 +1938,9 @@ void shellVars(void)
         shellListVar(shell);
     }
 }
-SHELL_EXPORT_CMD(
-SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-vars, shellVars, list all var);
+// SHELL_EXPORT_CMD(
+// SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+// vars, shellVars, list all var);
 
 
 /**
@@ -1954,9 +1954,9 @@ void shellKeys(void)
         shellListKey(shell);
     }
 }
-SHELL_EXPORT_CMD(
-SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
-keys, shellKeys, list all key);
+// SHELL_EXPORT_CMD(
+// SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_FUNC)|SHELL_CMD_DISABLE_RETURN,
+// keys, shellKeys, list all key);
 
 
 /**
