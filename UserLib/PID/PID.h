@@ -96,13 +96,13 @@ inline float PID::calc(const float input) {
         /***位置式PID公式:u=Kpe(t)+Ki*e(t)的积分+Kd[e(t)-e(t-1)]***/
         sum_error += error_;
         /*积分限幅*/
-        if (sum_error_limit_p != NAN)
+        if (!std::isnan(sum_error_limit_p))
             if (sum_error >= sum_error_limit_p) sum_error = sum_error_limit_p;
-        if (sum_error_limit_n != NAN)
+        if (!std::isnan(sum_error_limit_n))
             if (sum_error <= sum_error_limit_n) sum_error = sum_error_limit_n;
         output = kp * error_ +
-            ki * sum_error +
-            kd * (error_ - error);
+                 ki * sum_error +
+                 kd * (error_ - error);
         error = error_;
     } else if (PID_type == delta_type) {
         /***增量式PID公式:du=Kp[e(t)-e(t-1)]+Kie(t)+Kd[e(t)-2e(t-1)+e(t-2)]***/
@@ -113,9 +113,9 @@ inline float PID::calc(const float input) {
         error = error_;
     }
     /*输出限幅*/
-    if (output_limit_p != NAN)
+    if (!std::isnan(output_limit_p))
         if (output >= output_limit_p) output = output_limit_p;
-    if (output_limit_n != NAN)
+    if (!std::isnan(output_limit_n))
         if (output <= output_limit_n) output = output_limit_n;
 
     return output;

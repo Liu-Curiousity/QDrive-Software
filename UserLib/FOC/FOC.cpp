@@ -365,12 +365,12 @@ void FOC::updateVoltage(const float voltage) {
 
 void FOC::updatePID(const float pid_speed_kp, const float pid_speed_ki, const float pid_speed_kd,
                     const float pid_angle_kp, const float pid_angle_ki, const float pid_angle_kd) {
-    if (pid_speed_kp != NAN) PID_Speed.kp = pid_speed_kp;
-    if (pid_speed_ki != NAN) PID_Speed.ki = pid_speed_ki;
-    if (pid_speed_kd != NAN) PID_Speed.kd = pid_speed_kd;
-    if (pid_angle_kp != NAN) PID_Angle.kp = pid_angle_kp;
-    if (pid_angle_ki != NAN) PID_Angle.ki = pid_angle_ki;
-    if (pid_angle_kd != NAN) PID_Angle.kd = pid_angle_kd;
+    if (!isnan(pid_speed_kp)) PID_Speed.kp = pid_speed_kp;
+    if (!isnan(pid_speed_ki)) PID_Speed.ki = pid_speed_ki;
+    if (!isnan(pid_speed_kd)) PID_Speed.kd = pid_speed_kd;
+    if (!isnan(pid_angle_kp)) PID_Angle.kp = pid_angle_kp;
+    if (!isnan(pid_angle_ki)) PID_Angle.ki = pid_angle_ki;
+    if (!isnan(pid_angle_kd)) PID_Angle.kd = pid_angle_kd;
 }
 
 void FOC::storagePID() {

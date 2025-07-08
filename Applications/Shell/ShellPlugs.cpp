@@ -14,7 +14,7 @@ extern FOC foc;
     } while (0)
 
 void print_help() {
-    PRINT("Usage: foc [COMMAND] [ARGS...]");
+    PRINT("Usage: QDrive [COMMAND] [ARGS...]");
     PRINT("");
     PRINT("Main commands:");
     PRINT("  info               Show hardware information");
@@ -24,9 +24,10 @@ void print_help() {
     PRINT("  calibrate          Calibrate FOC system");
     PRINT("  config             Configure system parameters");
     PRINT("  ctrl               Set control targets");
+    PRINT("  restore            Factory restore");
+    PRINT("  store              Store configurations");
     PRINT("  --help             Show this help message");
     PRINT("  -v, --version      Show version info");
-    // TODO:添加储存储存配置和恢复出厂设置
 }
 
 void print_version() {
@@ -69,6 +70,36 @@ void foc_config_help() {
     PRINT("  QDrive config pid.speed.ki=0.1");
 }
 
+void foc_config_list() {
+    PRINT("Current Configuration:");
+    if (foc.PID_Speed.kp == 0)
+        PRINT("pid.speed.kp = 0.000");
+    else
+        PRINT("pid.speed.kp = %.3g", foc.PID_Speed.kp);
+    if (foc.PID_Speed.ki == 0)
+        PRINT("pid.speed.ki = 0.000");
+    else
+        PRINT("pid.speed.ki = %.3g", foc.PID_Speed.ki);
+    if (foc.PID_Speed.kd == 0)
+        PRINT("pid.speed.kd = 0.000");
+    else
+        PRINT("pid.speed.kd = %.3g", foc.PID_Speed.kd);
+    if (foc.PID_Angle.kp == 0)
+        PRINT("pid.angle.kp = 0.000");
+    else
+        PRINT("pid.angle.kp = %.3g", foc.PID_Angle.kp);
+    if (foc.PID_Angle.ki == 0)
+        PRINT("pid.angle.ki = 0.000");
+    else
+        PRINT("pid.angle.ki = %.3g", foc.PID_Angle.ki);
+    if (foc.PID_Angle.kd == 0)
+        PRINT("pid.angle.kd = 0.000");
+    else
+        PRINT("pid.angle.kd = %.3g", foc.PID_Angle.kd);
+    // TODO: 波特率不可更改
+    PRINT("can.baud_rate = 1'000'000");
+}
+
 void foc_config(int argc, char *argv[]) {
     if (argc < 2 || strcmp(argv[1], "--help") == 0) {
         foc_config_help();
@@ -76,33 +107,7 @@ void foc_config(int argc, char *argv[]) {
     }
 
     if (strcmp(argv[1], "--list") == 0) {
-        PRINT("Current Configuration:");
-        if (foc.PID_Speed.kp == 0)
-            PRINT("pid.speed.kp = 0.000");
-        else
-            PRINT("pid.speed.kp = %.3g", foc.PID_Speed.kp);
-        if (foc.PID_Speed.ki == 0)
-            PRINT("pid.speed.ki = 0.000");
-        else
-            PRINT("pid.speed.ki = %.3g", foc.PID_Speed.ki);
-        if (foc.PID_Speed.kd == 0)
-            PRINT("pid.speed.kd = 0.000");
-        else
-            PRINT("pid.speed.kd = %.3g", foc.PID_Speed.kd);
-        if (foc.PID_Angle.kp == 0)
-            PRINT("pid.angle.kp = 0.000");
-        else
-            PRINT("pid.angle.kp = %.3g", foc.PID_Angle.kp);
-        if (foc.PID_Angle.ki == 0)
-            PRINT("pid.angle.ki = 0.000");
-        else
-            PRINT("pid.angle.ki = %.3g", foc.PID_Angle.ki);
-        if (foc.PID_Angle.kd == 0)
-            PRINT("pid.angle.kd = 0.000");
-        else
-            PRINT("pid.angle.kd = %.3g", foc.PID_Angle.kd);
-        // TODO: 波特率不可更改
-        PRINT("can.baud_rate = 1'000'000");
+        foc_config_list();
         return;
     }
 
@@ -119,14 +124,32 @@ void foc_config(int argc, char *argv[]) {
         *eq = '\0';
         key = keybuf;
         value = eq + 1;
-    } else if (argc >= 4) {
+    } else if (argc >= 3) {
         value = argv[2];
     }
 
     if (value) {
         float valf = atof(value);
-        PRINT("Setting config [%s] = %.3f", key, valf);
-        // TODO: 设置参数
+        do {
+            if (strcmp(key, "pid.speed.kp") == 0) {
+                foc.updatePID(valf,NAN,NAN,NAN,NAN,NAN);
+            } else if (strcmp(key, "pid.speed.ki") == 0) {
+                foc.updatePID(NAN, valf,NAN,NAN,NAN,NAN);
+            } else if (strcmp(key, "pid.speed.kd") == 0) {
+                foc.updatePID(NAN,NAN, valf,NAN,NAN,NAN);
+            } else if (strcmp(key, "pid.angle.kp") == 0) {
+                foc.updatePID(NAN,NAN,NAN, valf,NAN,NAN);
+            } else if (strcmp(key, "pid.angle.ki") == 0) {
+                foc.updatePID(NAN,NAN,NAN, NAN, valf,NAN);
+            } else if (strcmp(key, "pid.angle.kd") == 0) {
+                foc.updatePID(NAN,NAN,NAN, NAN,NAN, valf);
+            } else {
+                PRINT("Unknown config target: %s", key);
+                break;
+            }
+            PRINT("Setting config [%s] = %.3g", key, valf);
+        } while (false);
+        // TODO: 设置limit参数
     } else {
         PRINT("Missing value for config [%s]", key);
     }
@@ -162,7 +185,7 @@ void foc_ctrl(int argc, char *argv[]) {
         *eq = '\0';
         key = keybuf;
         value = eq + 1;
-    } else if (argc >= 4) {
+    } else if (argc >= 3) {
         value = argv[2];
     }
 
@@ -219,6 +242,41 @@ void foc_calibrate() {
         PRINT("QDrive calibration failed");
 }
 
+void foc_restore() {
+    PRINT("Are you sure you want to restore factory settings? (y/n)");
+    char response;
+    while (!shellRead(&response, 1)) {
+        delay(1);
+    }
+    if (response != 'y' && response != 'Y') {
+        PRINT("Factory restore cancelled");
+        return;
+    }
+    foc.updatePID(FOC_SPEED_KP, FOC_SPEED_KI, FOC_SPEED_KD,
+                  FOC_ANGLE_KP, FOC_ANGLE_KI, FOC_ANGLE_KD);
+    // TODO:恢复limit
+    foc.freeze_storage_calibration(FOC::STORAGE_PID_PARAMETER_OK); //储存PID参数
+    foc.freeze_storage_calibration(FOC::STORAGE_LIMIT_OK);         //储存限制参数
+    PRINT("QDrive factory restore completed");
+    foc_config_list();
+}
+
+void foc_store() {
+    foc_config_list();
+    PRINT("Are you sure you want to store configurations? (y/n)");
+    char response;
+    while (!shellRead(&response, 1)) {
+        delay(1);
+    }
+    if (response != 'y' && response != 'Y') {
+        PRINT("Store operation cancelled");
+        return;
+    }
+    foc.freeze_storage_calibration(FOC::STORAGE_PID_PARAMETER_OK); //储存PID参数
+    foc.freeze_storage_calibration(FOC::STORAGE_LIMIT_OK);         //储存限制参数
+    PRINT("Store configuration completed");
+}
+
 int shell_foc(int argc, char *argv[]) {
     if (argc < 2) {
         print_help();
@@ -240,11 +298,15 @@ int shell_foc(int argc, char *argv[]) {
     } else if (strcmp(cmd, "status") == 0) {
         foc_status();
     } else if (strcmp(cmd, "config") == 0) {
-        foc_config(argc, argv + 1);
+        foc_config(argc - 1, argv + 1);
     } else if (strcmp(cmd, "ctrl") == 0) {
-        foc_ctrl(argc, argv + 1);
+        foc_ctrl(argc - 1, argv + 1);
     } else if (strcmp(cmd, "calibrate") == 0) {
         foc_calibrate();
+    } else if (strcmp(cmd, "restore") == 0) {
+        foc_restore();
+    } else if (strcmp(cmd, "store") == 0) {
+        foc_store();
     } else {
         PRINT("Unknown command: %s", cmd);
         print_help();

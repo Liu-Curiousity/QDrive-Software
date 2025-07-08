@@ -70,10 +70,10 @@ public:
         CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter) {}
 
     [[nodiscard]] CtrlType getCtrlType() const { return ctrl_type; } // 获取控制模式
-    [[nodiscard]] float getSpeed() const { return Speed; }              // 获取电机转速,单位rpm
-    [[nodiscard]] float getAngle() const { return Angle; }              // 获取电机角度,单位rad
-    [[nodiscard]] float getCurrent() const { return Iq; }               // 获取Q轴电流,单位A
-    [[nodiscard]] float getVoltage() const { return Voltage; }          // 获取母线电压,单位V
+    [[nodiscard]] float getSpeed() const { return Speed; }           // 获取电机转速,单位rpm
+    [[nodiscard]] float getAngle() const { return Angle; }           // 获取电机角度,单位rad
+    [[nodiscard]] float getCurrent() const { return Iq; }            // 获取Q轴电流,单位A
+    [[nodiscard]] float getVoltage() const { return Voltage; }       // 获取母线电压,单位V
 
     void init();
     void enable();
@@ -136,7 +136,9 @@ public:
     bool anticogging_calibrated{false}; // 是否校准过齿槽转矩
 
 private:
-    friend void foc_config(int argc, char *argv[]);
+    friend void foc_config_list();
+    friend void foc_store();
+    friend void foc_restore();
 
     enum StorageStatus:uint8_t {
         STORAGE_BASE_CALIBRATE_OK = 0x80,
