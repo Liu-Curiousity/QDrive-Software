@@ -250,6 +250,10 @@ void foc_disable() {
 }
 
 void foc_calibrate() {
+    if (foc.started) {
+        PRINT("QDrive is running, please disable it first");
+        return;
+    }
     if (foc.calibrated) {
         PRINT("QDrive already calibrated,do you want to re-calibrate? (y/n)");
         char response;

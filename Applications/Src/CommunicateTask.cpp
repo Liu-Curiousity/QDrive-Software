@@ -22,7 +22,7 @@ void FeedBackSend();
 xQueueHandle xQueue1;
 
 void StartCommunicateTask(void *argument) {
-    xQueue1 = xQueueCreate(5, 8);
+    xQueue1 = xQueueCreate(5, 3);
     // 1.等待foc初始化
     while (!foc.initialized)
         delay(100);
@@ -37,7 +37,7 @@ void StartCommunicateTask(void *argument) {
     // 3.初始化CAN并开启CAN接收
     FDCAN_Filter_INIT(&hfdcan1);
 
-    uint8_t RxBuffer[8];
+    uint8_t RxBuffer[3];
     while (true) {
         xQueueReceive(xQueue1, &RxBuffer, portMAX_DELAY);
 
@@ -53,35 +53,17 @@ void StartCommunicateTask(void *argument) {
                 foc.stop();
                 HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
                 break;
-            case 0x03: // 基础校准
-                foc.calibrate();
+            case 0x03: // 电流控制
+                foc.Ctrl(FOC::CtrlType::CurrentCtrl,
+                         *(int16_t *)(RxBuffer + 1) * 10.0f / INT16_MAX);
                 break;
-            case 0x04: // 齿槽转矩校准
-                foc.anticogging_calibrate();
+            case 0x04: // 速度控制
+                foc.Ctrl(FOC::CtrlType::SpeedCtrl,
+                         *(int16_t *)(RxBuffer + 1) * 5000.0f / INT16_MAX);
                 break;
-            case 0x05: // 运动控制
-                switch (RxBuffer[1]) {
-                    case 0x00: // 电流控制
-                        foc.Ctrl(FOC::CtrlType::CurrentCtrl,
-                                 *(int16_t *)(RxBuffer + 2) * 10.0f / INT16_MAX);
-                        break;
-                    case 0x01: // 速度控制
-                        foc.Ctrl(FOC::CtrlType::SpeedCtrl,
-                                 *(int16_t *)(RxBuffer + 2) * 5000.0f / INT16_MAX);
-                        break;
-                    case 0x02: // 角度控制
-                        foc.Ctrl(FOC::CtrlType::AngleCtrl,
-                                 *(int16_t *)(RxBuffer + 2) * 2 * numbers::pi_v<float> / UINT16_MAX);
-                        break;
-                    default:
-                        break;
-                }
-                break;
-            case 0x06: // 设置ID
-                ID = RxBuffer[7];
-                storage.write(0x720, &ID, sizeof(ID));
-                storage_status = 0xAA;
-                storage.write(0x700, &storage_status, sizeof(storage_status));
+            case 0x05: // 角度控制
+                foc.Ctrl(FOC::CtrlType::AngleCtrl,
+                         *(int16_t *)(RxBuffer + 1) * 2 * numbers::pi_v<float> / UINT16_MAX);
                 break;
             default:
                 break;
@@ -118,12 +100,12 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     BaseType_t xHigherPriorityTaskWoken;
     if (hfdcan == &hfdcan1) {
         FDCAN_RxHeaderTypeDef RxHeader;
-        uint8_t FDCAN_RxData[8];
+        uint8_t FDCAN_RxData[3];
         /*如果FIFO中有数据*/
         if (HAL_FDCAN_GetRxFifoFillLevel(hfdcan, FDCAN_RX_FIFO0)) {
             /*读取数据*/
             HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, FDCAN_RxData);
-            if (RxHeader.Identifier == 0x400 + ID && RxHeader.DataLength == 8) {
+            if (RxHeader.Identifier == 0x400 + ID && RxHeader.DataLength == 3) {
                 // 如果是自己ID的报文,进行处理
                 xQueueSendToBackFromISR(xQueue1, FDCAN_RxData, &xHigherPriorityTaskWoken);
                 if (xHigherPriorityTaskWoken) {
@@ -148,10 +130,7 @@ void CAN_Transmit(uint8_t length, uint8_t *pdata) {
 void FeedBackSend() {
     static uint8_t FeedBackDataBuffer[8] = {0};
     // 电机状态
-    FeedBackDataBuffer[0] = foc.started |
-                            foc.calibrated << 1 |
-                            foc.anticogging_calibrated << 2 |
-                            foc.anticogging_enabled << 3;
+    FeedBackDataBuffer[0] = foc.started;
     // 错误码(预留)
     FeedBackDataBuffer[1] = 0x00;
     // Q轴电流
