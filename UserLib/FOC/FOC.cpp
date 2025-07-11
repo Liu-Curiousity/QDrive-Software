@@ -18,7 +18,7 @@
  *		    V5.0.0修改于2025-6-26,调整initialize,enable,start三层实现逻辑细节
  *		    V5.0.0调整SetPhaseVoltage()参数顺序
  *		    V5.1.0修改于2025-7-3,修复calibrate()函数致命问题,重新调整init,enable,start三层实现逻辑细节,为后续无感算法铺路,调整更新电压函数接口名称
- * */
+ */
 
 
 #include <algorithm>
@@ -51,53 +51,89 @@ void FOC::init() {
 void FOC::load_storage_calibration() {
     StorageStatus storage_status;
     storage.read(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
-    if ((storage_status & 0xF0) == STORAGE_BASE_OK) {
+    if ((storage_status & 0xC0) == STORAGE_BASE_CALIBRATE_OK) {
         // 如果基础校准数据正常,则读取
         storage.read(0x100, reinterpret_cast<uint8_t *>(&encoder_direction), sizeof(encoder_direction));
-        storage.read(0x120, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
-        storage.read(0x140, reinterpret_cast<uint8_t *>(&iu_offset), sizeof(iu_offset));
-        storage.read(0x160, reinterpret_cast<uint8_t *>(&iv_offset), sizeof(iv_offset));
-        storage.read(0x180, reinterpret_cast<uint8_t *>(&phase_resistance), sizeof(phase_resistance));
-        storage.read(0x1A0, reinterpret_cast<uint8_t *>(&phase_inductance), sizeof(phase_inductance));
+        storage.read(0x110, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
+        storage.read(0x120, reinterpret_cast<uint8_t *>(&iu_offset), sizeof(iu_offset));
+        storage.read(0x130, reinterpret_cast<uint8_t *>(&iv_offset), sizeof(iv_offset));
+        storage.read(0x140, reinterpret_cast<uint8_t *>(&phase_resistance), sizeof(phase_resistance));
+        storage.read(0x150, reinterpret_cast<uint8_t *>(&phase_inductance), sizeof(phase_inductance));
         calibrated = true;
     }
-    if ((storage_status & 0x0F) == STORAGE_ANTICOGGING_OK) {
+    if ((storage_status & 0x30) == STORAGE_ANTICOGGING_CALIBRATE_OK) {
         storage.read(0x800, reinterpret_cast<uint8_t *>(anticogging_map), sizeof(anticogging_map));
         anticogging_calibrated = true;
+    }
+    if ((storage_status & 0x0C) == STORAGE_PID_PARAMETER_OK) {
+        storage.read(0x160, reinterpret_cast<uint8_t *>(&PID_Speed.kp), sizeof(PID_Speed.kp));
+        storage.read(0x170, reinterpret_cast<uint8_t *>(&PID_Speed.ki), sizeof(PID_Speed.ki));
+        storage.read(0x180, reinterpret_cast<uint8_t *>(&PID_Speed.kd), sizeof(PID_Speed.kd));
+        storage.read(0x190, reinterpret_cast<uint8_t *>(&PID_Angle.kp), sizeof(PID_Angle.kp));
+        storage.read(0x1A0, reinterpret_cast<uint8_t *>(&PID_Angle.ki), sizeof(PID_Angle.ki));
+        storage.read(0x1B0, reinterpret_cast<uint8_t *>(&PID_Angle.kd), sizeof(PID_Angle.kd));
+    }
+    if ((storage_status & 0x03) == STORAGE_LIMIT_OK) {
+        storage.read(0x1C0, reinterpret_cast<uint8_t *>(&PID_Angle.output_limit_p), sizeof(PID_Angle.output_limit_p));
+        PID_Angle.output_limit_n = -PID_Angle.output_limit_p;
+        storage.read(0x1D0, reinterpret_cast<uint8_t *>(&PID_Speed.output_limit_p), sizeof(PID_Speed.output_limit_p));
+        PID_Speed.output_limit_n = -PID_Speed.output_limit_p;
     }
 }
 
 /**
  * @brief 储存校准数据
- * @param calibration_data_type false:基础校准数据, true:齿槽转矩补偿表
+ * @param storage_type 储存数据类型
  */
-void FOC::freeze_storage_calibration(const bool calibration_data_type) {
+void FOC::freeze_storage_calibration(const StorageStatus storage_type) {
     StorageStatus storage_status;
     storage.read(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
-    if (calibration_data_type == false) {
-        // 储存编码器方向
-        storage.write(0x100, reinterpret_cast<uint8_t *>(&encoder_direction), sizeof(encoder_direction));
-        // 储存零电角度
-        storage.write(0x120, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
-        // 储存u相电流偏置
-        storage.write(0x140, reinterpret_cast<uint8_t *>(&iu_offset), sizeof(iu_offset));
-        // 储存v相电流偏置
-        storage.write(0x160, reinterpret_cast<uint8_t *>(&iv_offset), sizeof(iv_offset));
-        // 储存相电阻
-        storage.write(0x180, reinterpret_cast<uint8_t *>(&phase_resistance), sizeof(phase_resistance));
-        // 储存相电感
-        storage.write(0x1A0, reinterpret_cast<uint8_t *>(&phase_inductance), sizeof(phase_inductance));
+    switch (storage_type) {
+        case STORAGE_BASE_CALIBRATE_OK:
+            // 储存基础校准数据
+            storage.write(0x100, reinterpret_cast<uint8_t *>(&encoder_direction), sizeof(encoder_direction));
+            storage.write(0x110, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
+            storage.write(0x120, reinterpret_cast<uint8_t *>(&iu_offset), sizeof(iu_offset));
+            storage.write(0x130, reinterpret_cast<uint8_t *>(&iv_offset), sizeof(iv_offset));
+            storage.write(0x140, reinterpret_cast<uint8_t *>(&phase_resistance), sizeof(phase_resistance));
+            storage.write(0x150, reinterpret_cast<uint8_t *>(&phase_inductance), sizeof(phase_inductance));
 
-        // 更新储存状态
-        storage_status = static_cast<StorageStatus>((storage_status & 0x0F) | STORAGE_BASE_OK);
-        storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
-    } else {
-        // 储存齿槽转矩补偿表
-        storage.write(0x800, reinterpret_cast<uint8_t *>(anticogging_map), sizeof(anticogging_map));
+            // 更新储存状态
+            storage_status = static_cast<StorageStatus>((storage_status & 0x3F) | STORAGE_BASE_CALIBRATE_OK);
+            storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+            break;
+        case STORAGE_ANTICOGGING_CALIBRATE_OK:
+            // 储存齿槽转矩补偿表
+            storage.write(0x800, reinterpret_cast<uint8_t *>(anticogging_map), sizeof(anticogging_map));
 
-        // 更新储存状态
-        storage_status = static_cast<StorageStatus>((storage_status & 0xF0) | STORAGE_ANTICOGGING_OK);
-        storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+            // 更新储存状态
+            storage_status = static_cast<StorageStatus>((storage_status & 0xCF) | STORAGE_ANTICOGGING_CALIBRATE_OK);
+            storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+            break;
+        case STORAGE_PID_PARAMETER_OK:
+            // 储存PID参数
+            storage.write(0x160, reinterpret_cast<uint8_t *>(&PID_Speed.kp), sizeof(PID_Speed.kp));
+            storage.write(0x170, reinterpret_cast<uint8_t *>(&PID_Speed.ki), sizeof(PID_Speed.ki));
+            storage.write(0x180, reinterpret_cast<uint8_t *>(&PID_Speed.kd), sizeof(PID_Speed.kd));
+            storage.write(0x190, reinterpret_cast<uint8_t *>(&PID_Angle.kp), sizeof(PID_Angle.kp));
+            storage.write(0x1A0, reinterpret_cast<uint8_t *>(&PID_Angle.ki), sizeof(PID_Angle.ki));
+            storage.write(0x1B0, reinterpret_cast<uint8_t *>(&PID_Angle.kd), sizeof(PID_Angle.kd));
+
+            // 更新储存状态
+            storage_status = static_cast<StorageStatus>((storage_status & 0xF3) | STORAGE_PID_PARAMETER_OK);
+            storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+            break;
+        case STORAGE_LIMIT_OK:
+            storage.write(0x1C0, reinterpret_cast<uint8_t *>(&PID_Angle.output_limit_p),
+                         sizeof(PID_Angle.output_limit_p));
+            storage.write(0x1D0, reinterpret_cast<uint8_t *>(&PID_Speed.output_limit_p),
+                         sizeof(PID_Speed.output_limit_p));
+
+            // 更新储存状态
+            storage_status = static_cast<StorageStatus>((storage_status & 0xFC) | STORAGE_LIMIT_OK);
+            storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+            break;
+        default: ;
     }
 }
 
@@ -219,7 +255,7 @@ void FOC::calibrate() {
     zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (pole_pairs - 1)) / pole_pairs;
 
     /*5.校准完成*/
-    freeze_storage_calibration(false); // 保存基础校准数据
+    freeze_storage_calibration(STORAGE_BASE_CALIBRATE_OK); // 保存基础校准数据
     calibrated = true;
 }
 
@@ -234,13 +270,13 @@ void FOC::anticogging_calibrate() {
     delay(5);
     // 读取电角度零点校准后的电机角度,并确定补偿表开始索引
     auto index = static_cast<uint16_t>(Angle * numbers::inv_pi_v<float> * 0.5f * map_len);
-    Ctrl(CtrlType::PositionCtrl, numbers::pi_v<float> * 2 * index / map_len); // 先定位到前一个点,并延时做准备
+    Ctrl(CtrlType::AngleCtrl, numbers::pi_v<float> * 2 * index / map_len); // 先定位到前一个点,并延时做准备
     delay(20);
     float angle_ = 0, iq_ = 0;
     // 采集初期几个点不可信任,多采集30个点将其覆盖
     for (int i = 0; i < map_len + 30; ++i) {
         index = (index + 1) % map_len;
-        Ctrl(CtrlType::PositionCtrl, numbers::pi_v<float> * 2 * index / map_len);
+        Ctrl(CtrlType::AngleCtrl, numbers::pi_v<float> * 2 * index / map_len);
         float speed_ = 0.3;
         while (abs(angle_ - numbers::pi_v<float> * 2 * index / map_len) > numbers::pi_v<float> * 2 / map_len / 10 ||
                abs(speed_) > 0.08) {
@@ -263,7 +299,7 @@ void FOC::anticogging_calibrate() {
     for (auto& anticogging : anticogging_map) {
         anticogging -= anticogging_avg;
     }
-    freeze_storage_calibration(true); // 保存基础校准数据
+    freeze_storage_calibration(STORAGE_ANTICOGGING_CALIBRATE_OK); // 保存基础校准数据
     anticogging_calibrated = true;
 }
 
@@ -272,7 +308,7 @@ void FOC::anticogging_calibrate() {
  * @param iu U相电流
  * @param iv V相电流
  * @param iw W相电流
- * */
+ */
 __attribute__((section(".ccmram_func")))
 void FOC::UpdateCurrent(const float iu, const float iv, const float iw) {
     /**1.保存电流值**/
@@ -295,14 +331,12 @@ void FOC::UpdateCurrent(const float iu, const float iv, const float iw) {
  * @brief FOC控制函数
  * @param ud 法向力矩,必须在0~1之间!
  * @param uq 切向力矩,必须在0~1之间!
- * @param ElectricalAngle 电机电角度,单位弧度
- * */
+ * @param electrical_angle 电机电角度,单位弧度
+ */
 __attribute__((section(".ccmram_func")))
-void FOC::SetPhaseVoltage(float ud, float uq, const float ElectricalAngle) {
-    // TODO：临时方案有待改进
+void FOC::SetPhaseVoltage(float ud, float uq, const float electrical_angle) {
     // Uu,Uv,Uw不能设置到最大值1,为了防止电流采样时候MOS对电机有驱动,影响采样
     // 表现为某一相Ux=0时候(堵转测试),电流采样值偶尔出现尖峰,电机异常抽搐
-    // *0.99f为临时解决方案,缺点是牺牲功率密度
     ud *= 0.99f;
     uq *= 0.99f;
 
@@ -311,8 +345,8 @@ void FOC::SetPhaseVoltage(float ud, float uq, const float ElectricalAngle) {
     Uq = uq;
 
     /**2.帕克逆变换**/
-    const float cos_angle = cosf(ElectricalAngle);
-    const float sin_angle = sinf(ElectricalAngle);
+    const float cos_angle = cosf(electrical_angle);
+    const float sin_angle = sinf(electrical_angle);
     Ua = (-Uq * sin_angle + Ud * cos_angle) * 0.5f; // 除以2将Ua范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
     Ub = (Uq * cos_angle + Ud * sin_angle) * 0.5f;  // 除以2将Ub范围限制在[-0.5,0.5],使后续Uu,Uv,Uw范围在[0,1]
 
@@ -338,15 +372,42 @@ void FOC::updateVoltage(const float voltage) {
     Voltage = voltage;
 }
 
-void FOC::Ctrl(const CtrlType ctrl_type, const float value) {
+void FOC::setPID(const float pid_speed_kp, const float pid_speed_ki, const float pid_speed_kd,
+                 const float pid_angle_kp, const float pid_angle_ki, const float pid_angle_kd) {
+    if (!isnan(pid_speed_kp)) PID_Speed.kp = pid_speed_kp;
+    if (!isnan(pid_speed_ki)) PID_Speed.ki = pid_speed_ki;
+    if (!isnan(pid_speed_kd)) PID_Speed.kd = pid_speed_kd;
+    if (!isnan(pid_angle_kp)) PID_Angle.kp = pid_angle_kp;
+    if (!isnan(pid_angle_ki)) PID_Angle.ki = pid_angle_ki;
+    if (!isnan(pid_angle_kd)) PID_Angle.kd = pid_angle_kd;
+}
+
+void FOC::setLimit(const float speed_limit, const float current_limit) {
+    if (!isnan(speed_limit)) {
+        PID_Angle.output_limit_p = speed_limit;
+        PID_Angle.output_limit_n = -speed_limit;
+    }
+    if (!isnan(current_limit)) {
+        PID_Speed.output_limit_p = current_limit;
+        PID_Speed.output_limit_n = -current_limit;
+    }
+}
+
+void FOC::storagePID() {
+    freeze_storage_calibration(STORAGE_PID_PARAMETER_OK);
+}
+
+void FOC::Ctrl(const CtrlType ctrl_type, float value) {
     switch (ctrl_type) {
-        case CtrlType::PositionCtrl:
-            PID_Position.SetTarget(value);
+        case CtrlType::AngleCtrl:
+            PID_Angle.SetTarget(value);
             break;
         case CtrlType::SpeedCtrl:
+            value = clamp(value, PID_Speed.output_limit_n, PID_Speed.output_limit_p); // 限制最大速度
             PID_Speed.SetTarget(value);
             break;
         case CtrlType::CurrentCtrl:
+            value = clamp(value, PID_CurrentQ.output_limit_n, PID_CurrentQ.output_limit_p); // 限制最大电流
             target_iq = value;
             break;
     }
@@ -359,16 +420,16 @@ void FOC::Ctrl_ISR() {
 
     /**1.速度闭环控制**/
     switch (ctrl_type) {
-        case CtrlType::PositionCtrl:
+        case CtrlType::AngleCtrl:
             //使电机始终沿差值小于pi的方向转动
-            if (Angle - PID_Position.target > numbers::pi_v<float>)
-                PID_Speed.SetTarget(PID_Position.clac(Angle - 2 * numbers::pi_v<float>));
-            else if (Angle - PID_Position.target < -numbers::pi_v<float>)
-                PID_Speed.SetTarget(PID_Position.clac(Angle + 2 * numbers::pi_v<float>));
+            if (Angle - PID_Angle.target > numbers::pi_v<float>)
+                PID_Speed.SetTarget(PID_Angle.calc(Angle - 2 * numbers::pi_v<float>));
+            else if (Angle - PID_Angle.target < -numbers::pi_v<float>)
+                PID_Speed.SetTarget(PID_Angle.calc(Angle + 2 * numbers::pi_v<float>));
             else
-                PID_Speed.SetTarget(PID_Position.clac(Angle));
+                PID_Speed.SetTarget(PID_Angle.calc(Angle));
         case CtrlType::SpeedCtrl:
-            target_iq = PID_Speed.clac(Speed);
+            target_iq = PID_Speed.calc(Speed);
         case CtrlType::CurrentCtrl:
             /*齿槽转矩补偿*/
             if (anticogging_enabled && anticogging_calibrated) {
@@ -414,8 +475,8 @@ void FOC::loopCtrl() {
     static float uq = 0;
     if (started || anticogging_calibrating) {
         /**4.电流闭环控制**/
-        ud = PID_CurrentD.clac(Id);
-        uq = PID_CurrentQ.clac(Iq);
+        ud = PID_CurrentD.calc(Id);
+        uq = PID_CurrentQ.calc(Iq);
     } else {
         ud = uq = 0;
     }

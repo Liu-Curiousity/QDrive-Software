@@ -4,7 +4,7 @@ project(pid)
 
 add_library(pid INTERFACE)
 
-target_sources(pid INTERFACE PID.cpp)
+target_sources(pid INTERFACE)
 
 target_include_directories(pid INTERFACE
         ./

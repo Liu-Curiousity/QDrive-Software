@@ -18,7 +18,7 @@
  *		    V5.0.0修改于2025-6-26,调整initialize,enable,start三层实现逻辑细节
  *		    V5.0.0调整SetPhaseVoltage()参数顺序
  *		    V5.1.0修改于2025-7-3,修复calibrate()函数致命问题,重新调整init,enable,start三层实现逻辑细节,为后续无感算法铺路,调整更新电压函数接口名称
- * */
+ */
 
 
 #ifndef FOC_H
@@ -34,13 +34,13 @@
 
 /**
  * @brief FOC句柄结构体
- * */
+ */
 class FOC {
 public:
     enum class CtrlType {
         CurrentCtrl = 0,
         SpeedCtrl = 1,
-        PositionCtrl = 2,
+        AngleCtrl = 2,
     };
 
     /**
@@ -58,21 +58,22 @@ public:
      * @param PID_CurrentQ Q轴电流PID
      * @param PID_CurrentD D轴电流PID
      * @param PID_Speed 速度PID
-     * @param PID_Position 位置PID
+     * @param PID_Angle 角度PID
      */
-    FOC(uint8_t pole_pairs, uint16_t CtrlFrequency, uint16_t CurrentCtrlFrequency,
+    FOC(const uint8_t pole_pairs, const uint16_t CtrlFrequency, const uint16_t CurrentCtrlFrequency,
         LowPassFilter& CurrentQFilter, LowPassFilter& CurrentDFilter, LowPassFilter& SpeedFilter,
         BLDC_Driver& driver, Encoder& encoder, Storage& storage, CurrentSensor& current_sensor,
-        const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Position) :
+        const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Angle) :
         pole_pairs(pole_pairs), CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
-        PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Position(PID_Position),
+        PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Angle(PID_Angle),
         storage(storage), bldc_driver(driver), bldc_encoder(encoder), current_sensor(current_sensor),
         CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter) {}
 
-    [[nodiscard]] float speed() const { return Speed; }     // 获取电机转速,单位rpm
-    [[nodiscard]] float angle() const { return Angle; }     // 获取电机角度,单位rad
-    [[nodiscard]] float current() const { return Iq; }      // 获取Q轴电流,单位A
-    [[nodiscard]] float voltage() const { return Voltage; } // 获取母线电压,单位V
+    [[nodiscard]] CtrlType getCtrlType() const { return ctrl_type; } // 获取控制模式
+    [[nodiscard]] float getSpeed() const { return Speed; }           // 获取电机转速,单位rpm
+    [[nodiscard]] float getAngle() const { return Angle; }           // 获取电机角度,单位rad
+    [[nodiscard]] float getCurrent() const { return Iq; }            // 获取Q轴电流,单位A
+    [[nodiscard]] float getVoltage() const { return Voltage; }       // 获取母线电压,单位V
 
     void init();
     void enable();
@@ -86,17 +87,17 @@ public:
      * @brief FOC控制设置函数
      * @param ctrl_type 控制类型
      * @param value 控制值
-     * */
+     */
     void Ctrl(CtrlType ctrl_type, float value);
 
     /**
-     * @brief FOC控制(速度环、位置环)中断服务函数
-     * */
+     * @brief FOC控制(速度环、角度环)中断服务函数
+     */
     void Ctrl_ISR();
 
     /**
      * @brief FOC电流闭环控制中断服务函数
-     * */
+     */
     void loopCtrl();
 
     /**
@@ -105,24 +106,57 @@ public:
      */
     void updateVoltage(float voltage);
 
+    /**
+     * @brief 设置PID参数
+     * @param pid_speed_kp 速度环比例系数,若为NAN则不更新
+     * @param pid_speed_ki 速度环积分系数,若为NAN则不更新
+     * @param pid_speed_kd 速度环微分系数,若为NAN则不更新
+     * @param pid_angle_kp 角度环比例系数,若为NAN则不更新
+     * @param pid_angle_ki 角度环积分系数,若为NAN则不更新
+     * @param pid_angle_kd 角度环微分系数,若为NAN则不更新
+     */
+    void setPID(float pid_speed_kp, float pid_speed_ki, float pid_speed_kd,
+                float pid_angle_kp, float pid_angle_ki, float pid_angle_kd);
+
+    /**
+     * @brief 设置速度和电流限制
+     * @param speed_limit 速度限制,单位rpm
+     * @param current_limit 电流限制,单位A
+     */
+    void setLimit(float speed_limit, float current_limit);
+
+    /**
+     * @brief 储存PID参数
+     */
+    void storagePID();
+
     // 初始化配置项
     const uint8_t pole_pairs;            // 极对数
-    const uint16_t CtrlFrequency;        // 控制频率(速度环、位置环),单位Hz
+    const uint16_t CtrlFrequency;        // 控制频率(速度环、角度环),单位Hz
     const uint16_t CurrentCtrlFrequency; // 控制频率(电流环),单位Hz
 
     bool initialized{false};            // 是否初始化
     bool enabled{false};                // 是否使能
     bool started{false};                // 是否启动
     bool calibrated{false};             // 是否校准过
-    bool anticogging_enabled{false};    // 是否使用齿槽转矩补偿
+    bool anticogging_enabled{false};    // 是否开启齿槽转矩补偿
     bool anticogging_calibrated{false}; // 是否校准过齿槽转矩
 
 private:
+    friend void foc_config_list();
+    friend void foc_store();
+    friend void foc_restore();
+
     enum StorageStatus:uint8_t {
-        STORAGE_BASE_OK = 0xA0,
-        STORAGE_ANTICOGGING_OK = 0x05,
-        STORAGE_ALL_OK = STORAGE_BASE_OK | STORAGE_ANTICOGGING_OK,
-        STORAGE_ERROR = 0xEE,
+        STORAGE_BASE_CALIBRATE_OK = 0x80,
+        STORAGE_ANTICOGGING_CALIBRATE_OK = 0x20,
+        STORAGE_PID_PARAMETER_OK = 0x08,
+        STORAGE_LIMIT_OK = 0x02,
+        STORAGE_ALL_OK = STORAGE_BASE_CALIBRATE_OK |
+                         STORAGE_ANTICOGGING_CALIBRATE_OK |
+                         STORAGE_PID_PARAMETER_OK |
+                         STORAGE_LIMIT_OK,
+        STORAGE_ERROR = 0x55,
     };
 
     CtrlType ctrl_type{CtrlType::CurrentCtrl}; //当前控制类型
@@ -131,7 +165,7 @@ private:
     PID PID_CurrentQ;      //Q轴电流PID
     PID PID_CurrentD;      //D轴电流PID
     PID PID_Speed;         //速度PID
-    PID PID_Position;      //位置PID
+    PID PID_Angle;         //角度PID
     float target_iq{0.0f}; //目标Q轴电流
 
     Storage& storage;              //存储器
@@ -155,7 +189,7 @@ private:
 
     // 运行时参数
     float Angle{0};           // 当前电机角度,单位rad
-    float PreviousAngle{0};   // 上一次电机角度(速度环、位置环更新中),单位rad
+    float PreviousAngle{0};   // 上一次电机角度(速度环、角度环更新中),单位rad
     float ElectricalAngle{0}; // 当前电机电角度,单位rad
     float Speed{0};           // 电机转速,单位rpm
 
@@ -178,9 +212,9 @@ private:
     float Voltage{1}; //母线电压
 
     void load_storage_calibration();
-    void freeze_storage_calibration(bool calibration_data_type);
+    void freeze_storage_calibration(StorageStatus storage_type);
     void UpdateCurrent(float iu, float iv, float iw);
-    void SetPhaseVoltage(float ud, float uq, float ElectricalAngle);
+    void SetPhaseVoltage(float ud, float uq, float electrical_angle);
 };
 
 #endif //FOC_H

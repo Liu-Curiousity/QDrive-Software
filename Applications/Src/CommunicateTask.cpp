@@ -70,7 +70,7 @@ void StartCommunicateTask(void *argument) {
                                  *(int16_t *)(RxBuffer + 2) * 5000.0f / INT16_MAX);
                         break;
                     case 0x02: // 角度控制
-                        foc.Ctrl(FOC::CtrlType::PositionCtrl,
+                        foc.Ctrl(FOC::CtrlType::AngleCtrl,
                                  *(int16_t *)(RxBuffer + 2) * 2 * numbers::pi_v<float> / UINT16_MAX);
                         break;
                     default:
@@ -155,10 +155,10 @@ void FeedBackSend() {
     // 错误码(预留)
     FeedBackDataBuffer[1] = 0x00;
     // Q轴电流
-    *(int16_t *)(FeedBackDataBuffer + 2) = foc.current() / 10 * INT16_MAX;
+    *(int16_t *)(FeedBackDataBuffer + 2) = foc.getCurrent() / 10 * INT16_MAX;
     // 电机转速
-    *(int16_t *)(FeedBackDataBuffer + 4) = foc.speed() / 5000 * INT16_MAX;
+    *(int16_t *)(FeedBackDataBuffer + 4) = foc.getSpeed() / 5000 * INT16_MAX;
     // 电机角度
-    *(int16_t *)(FeedBackDataBuffer + 6) = foc.angle() / (2 * numbers::pi_v<float>) * UINT16_MAX;
+    *(int16_t *)(FeedBackDataBuffer + 6) = foc.getAngle() / (2 * numbers::pi_v<float>) * UINT16_MAX;
     CAN_Transmit(8, FeedBackDataBuffer);
 }

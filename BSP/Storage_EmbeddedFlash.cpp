@@ -5,10 +5,10 @@
 #include "Storage_EmbeddedFlash.h"
 #include "main.h"
 
-#define STORAGE_ADDRESS_BASE 0x0801D000
+#define STORAGE_ADDRESS_BASE 0x0801D800
 
 //FLASH中存放数据的区域,也用于烧录时擦除这些数据,注意:只读!
-// __attribute__((section(".flash_data"))) uint8_t storage_buffer_to_erase[FLASH_PAGE_SIZE * 6];
+// __attribute__((section(".flash_data"))) uint8_t storage_buffer_to_erase[FLASH_PAGE_SIZE * 5];
 
 Storage_EmbeddedFlash storage;
 
