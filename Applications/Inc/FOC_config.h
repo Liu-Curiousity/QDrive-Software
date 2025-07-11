@@ -27,7 +27,7 @@
 #define FOC_MAX_CURRENT         1.65f   // 最大电流,单位A
 
 /*==========================配置参数==========================*/
-#define FOC_MAX_SPEED           1000    // 最大转速,单位rpm
+#define FOC_MAX_SPEED           1000.0f   // 最大转速,单位rpm
 
 #define FOC_CURRENT_KP          10.0f
 #define FOC_CURRENT_KI          1.0f

@@ -73,7 +73,12 @@ void FOC::load_storage_calibration() {
         storage.read(0x1A0, reinterpret_cast<uint8_t *>(&PID_Angle.ki), sizeof(PID_Angle.ki));
         storage.read(0x1B0, reinterpret_cast<uint8_t *>(&PID_Angle.kd), sizeof(PID_Angle.kd));
     }
-    if ((storage_status & 0x03) == STORAGE_LIMIT_OK) {}
+    if ((storage_status & 0x03) == STORAGE_LIMIT_OK) {
+        storage.read(0x1C0, reinterpret_cast<uint8_t *>(&PID_Angle.output_limit_p), sizeof(PID_Angle.output_limit_p));
+        PID_Angle.output_limit_n = -PID_Angle.output_limit_p;
+        storage.read(0x1D0, reinterpret_cast<uint8_t *>(&PID_Speed.output_limit_p), sizeof(PID_Speed.output_limit_p));
+        PID_Speed.output_limit_n = -PID_Speed.output_limit_p;
+    }
 }
 
 /**
@@ -119,6 +124,10 @@ void FOC::freeze_storage_calibration(const StorageStatus storage_type) {
             storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
             break;
         case STORAGE_LIMIT_OK:
+            storage.write(0x1C0, reinterpret_cast<uint8_t *>(&PID_Angle.output_limit_p),
+                         sizeof(PID_Angle.output_limit_p));
+            storage.write(0x1D0, reinterpret_cast<uint8_t *>(&PID_Speed.output_limit_p),
+                         sizeof(PID_Speed.output_limit_p));
 
             // 更新储存状态
             storage_status = static_cast<StorageStatus>((storage_status & 0xFC) | STORAGE_LIMIT_OK);
@@ -363,8 +372,8 @@ void FOC::updateVoltage(const float voltage) {
     Voltage = voltage;
 }
 
-void FOC::updatePID(const float pid_speed_kp, const float pid_speed_ki, const float pid_speed_kd,
-                    const float pid_angle_kp, const float pid_angle_ki, const float pid_angle_kd) {
+void FOC::setPID(const float pid_speed_kp, const float pid_speed_ki, const float pid_speed_kd,
+                 const float pid_angle_kp, const float pid_angle_ki, const float pid_angle_kd) {
     if (!isnan(pid_speed_kp)) PID_Speed.kp = pid_speed_kp;
     if (!isnan(pid_speed_ki)) PID_Speed.ki = pid_speed_ki;
     if (!isnan(pid_speed_kd)) PID_Speed.kd = pid_speed_kd;
@@ -373,19 +382,32 @@ void FOC::updatePID(const float pid_speed_kp, const float pid_speed_ki, const fl
     if (!isnan(pid_angle_kd)) PID_Angle.kd = pid_angle_kd;
 }
 
+void FOC::setLimit(const float speed_limit, const float current_limit) {
+    if (!isnan(speed_limit)) {
+        PID_Angle.output_limit_p = speed_limit;
+        PID_Angle.output_limit_n = -speed_limit;
+    }
+    if (!isnan(current_limit)) {
+        PID_Speed.output_limit_p = current_limit;
+        PID_Speed.output_limit_n = -current_limit;
+    }
+}
+
 void FOC::storagePID() {
     freeze_storage_calibration(STORAGE_PID_PARAMETER_OK);
 }
 
-void FOC::Ctrl(const CtrlType ctrl_type, const float value) {
+void FOC::Ctrl(const CtrlType ctrl_type, float value) {
     switch (ctrl_type) {
         case CtrlType::AngleCtrl:
             PID_Angle.SetTarget(value);
             break;
         case CtrlType::SpeedCtrl:
+            value = clamp(value, PID_Speed.output_limit_n, PID_Speed.output_limit_p); // 限制最大速度
             PID_Speed.SetTarget(value);
             break;
         case CtrlType::CurrentCtrl:
+            value = clamp(value, PID_CurrentQ.output_limit_n, PID_CurrentQ.output_limit_p); // 限制最大电流
             target_iq = value;
             break;
     }

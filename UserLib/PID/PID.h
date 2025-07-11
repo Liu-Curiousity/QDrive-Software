@@ -50,16 +50,6 @@ public:
     void SetTarget(const float Target) { target = Target; }
 
     /**
-     * @brief 设置PID限幅
-     * @param SumError_limit_p PID积分限幅上限
-     * @param SumError_limit_n PID积分限幅下限
-     * @param Output_limit_p 输出限幅上限
-     * @param Output_limit_n 输出限幅下限
-     * @note ${限幅值}无论正负,均将目标值限制在+-${限幅值}中,若${限幅值}为0,则不进行限幅
-     * */
-    void SetLimit(float SumError_limit_p, float SumError_limit_n, float Output_limit_p, float Output_limit_n);
-
-    /**
      * @brief 设置积分值,用于高自由度的积分限幅
      * @param sum_error PID积分值
      */
@@ -76,13 +66,13 @@ public:
     float target{0};   //目标值
     PID_type PID_type; //PID种类,位置式或增量式
     float kp, ki, kd;  //比例、积分、微分系数
-private:
+
     /*限幅参数*/
     float sum_error_limit_p{NAN}; //积分限幅上限,仅位置式有效
     float sum_error_limit_n{NAN}; //积分限幅下限,仅位置式有效
     float output_limit_p{NAN};    //输出限幅上限
     float output_limit_n{NAN};    //输出限幅下限
-
+private:
     /*中间(运行时)变量*/
     float error{0};     //上一次的偏差值
     float pre_error{0}; //上上一次的偏差值,仅增量式PID使用

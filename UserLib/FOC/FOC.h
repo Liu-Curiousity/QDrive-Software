@@ -107,7 +107,7 @@ public:
     void updateVoltage(float voltage);
 
     /**
-     * @brief 更新PID对象
+     * @brief 设置PID参数
      * @param pid_speed_kp 速度环比例系数,若为NAN则不更新
      * @param pid_speed_ki 速度环积分系数,若为NAN则不更新
      * @param pid_speed_kd 速度环微分系数,若为NAN则不更新
@@ -115,8 +115,15 @@ public:
      * @param pid_angle_ki 角度环积分系数,若为NAN则不更新
      * @param pid_angle_kd 角度环微分系数,若为NAN则不更新
      */
-    void updatePID(float pid_speed_kp, float pid_speed_ki, float pid_speed_kd,
-                   float pid_angle_kp, float pid_angle_ki, float pid_angle_kd);
+    void setPID(float pid_speed_kp, float pid_speed_ki, float pid_speed_kd,
+                float pid_angle_kp, float pid_angle_ki, float pid_angle_kd);
+
+    /**
+     * @brief 设置速度和电流限制
+     * @param speed_limit 速度限制,单位rpm
+     * @param current_limit 电流限制,单位A
+     */
+    void setLimit(float speed_limit, float current_limit);
 
     /**
      * @brief 储存PID参数

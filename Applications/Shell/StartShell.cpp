@@ -8,7 +8,7 @@
 Shell shell;
 char shellBuffer[256];
 
-void USB_Disconnected(void) {
+void USB_Disconnected() {
     __HAL_RCC_USB_FORCE_RESET();
     HAL_Delay(200);
     __HAL_RCC_USB_RELEASE_RESET();
