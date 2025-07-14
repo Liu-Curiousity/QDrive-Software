@@ -403,11 +403,11 @@ void FOC::Ctrl(const CtrlType ctrl_type, float value) {
             PID_Angle.SetTarget(value);
             break;
         case CtrlType::SpeedCtrl:
-            value = clamp(value, PID_Speed.output_limit_n, PID_Speed.output_limit_p); // 限制最大速度
+            value = clamp(value, PID_Angle.output_limit_n, PID_Angle.output_limit_p); // 限制最大速度
             PID_Speed.SetTarget(value);
             break;
         case CtrlType::CurrentCtrl:
-            value = clamp(value, PID_CurrentQ.output_limit_n, PID_CurrentQ.output_limit_p); // 限制最大电流
+            value = clamp(value, PID_Speed.output_limit_n, PID_Speed.output_limit_p); // 限制最大电流
             target_iq = value;
             break;
     }
