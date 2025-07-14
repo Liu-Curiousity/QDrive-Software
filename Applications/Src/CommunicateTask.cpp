@@ -27,7 +27,7 @@ void StartCommunicateTask(void *argument) {
     while (!foc.initialized)
         delay(100);
     foc.enable(); // 使能FOC
-    foc.anticogging_enabled = true;
+    foc.anticogging_enabled = false;
     // 2.从flash中读取ID
     storage.read(0x700, &storage_status, sizeof(storage_status));
     if (storage_status == 0xAA) {
