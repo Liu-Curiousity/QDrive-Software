@@ -41,6 +41,7 @@ public:
         CurrentCtrl = 0,
         SpeedCtrl = 1,
         AngleCtrl = 2,
+        LowSpeedCtrl = 3,
     };
 
     /**
@@ -215,6 +216,10 @@ private:
     void freeze_storage_calibration(StorageStatus storage_type);
     void UpdateCurrent(float iu, float iv, float iw);
     void SetPhaseVoltage(float ud, float uq, float electrical_angle);
+
+    // 极低速控制
+    float low_speed_angle; // 极低速控制角度,单位rad
+    float low_speed;       // 单位rpm
 };
 
 #endif //FOC_H

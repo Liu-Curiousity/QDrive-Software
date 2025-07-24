@@ -215,6 +215,9 @@ void foc_ctrl(int argc, char *argv[]) {
         } else if (strcmp(key, "angle") == 0) {
             PRINT("Setting angle = %.2f rad", valf);
             foc.Ctrl(FOC::CtrlType::AngleCtrl, valf);
+        } else if (strcmp(key, "low_speed") == 0) {
+            PRINT("Setting low_speed = %.2f rpm", valf);
+            foc.Ctrl(FOC::CtrlType::LowSpeedCtrl, valf);
         } else {
             PRINT("Unknown ctrl target: %s", key);
             foc_ctrl_help();
