@@ -6,30 +6,20 @@
 #include "main.h"
 
 extern FOC foc;
+extern Shell shell;
+
+
+signed short silent(char *data, unsigned short len) {
+    return 0;
+}
 
 // 打印单行
-#define PRINT(...)         \
-    do {                    \
-        printf(__VA_ARGS__); \
-        printf("\r\n");      \
+#define PRINT(...)                          \
+    do {                                    \
+        if (shell.write != silent) {        \
+        printf(__VA_ARGS__);                \
+        printf("\r\n");}                    \
     } while (0)
-
-void print_help() {
-    PRINT("Usage: QDrive [COMMAND] [ARGS...]");
-    PRINT("");
-    PRINT("Main commands:");
-    PRINT("  info               Show hardware information");
-    PRINT("  status             Show current motor status");
-    PRINT("  enable             Enable FOC control");
-    PRINT("  disable            Disable FOC control");
-    PRINT("  calibrate          Calibrate FOC system");
-    PRINT("  config             Configure system parameters");
-    PRINT("  ctrl               Set control targets");
-    PRINT("  restore            Factory restore");
-    PRINT("  store              Store configurations");
-    PRINT("  --help             Show this help message");
-    PRINT("  -v, --version      Show version info");
-}
 
 void print_version() {
     PRINT("QDrive version %s", FOC_VERSION);
@@ -309,57 +299,59 @@ void foc_store() {
     PRINT("Store configuration completed");
 }
 
-int shell_foc(int argc, char *argv[]) {
-    if (argc < 2) {
-        print_help();
-        return 0;
-    }
-
-    const char *cmd = argv[1];
-
-    if (strcmp(cmd, "--help") == 0 || strcmp(cmd, "help") == 0) {
-        print_help();
-    } else if (strcmp(cmd, "-v") == 0 || strcmp(cmd, "--version") == 0 || strcmp(cmd, "version") == 0) {
-        print_version();
-    } else if (strcmp(cmd, "enable") == 0) {
-        foc_enable();
-    } else if (strcmp(cmd, "disable") == 0) {
-        foc_disable();
-    } else if (strcmp(cmd, "info") == 0) {
-        foc_info();
-    } else if (strcmp(cmd, "status") == 0) {
-        foc_status();
-    } else if (strcmp(cmd, "config") == 0) {
-        foc_config(argc - 1, argv + 1);
-    } else if (strcmp(cmd, "ctrl") == 0) {
-        foc_ctrl(argc - 1, argv + 1);
-    } else if (strcmp(cmd, "calibrate") == 0) {
-        foc_calibrate();
-    } else if (strcmp(cmd, "restore") == 0) {
-        foc_restore();
-    } else if (strcmp(cmd, "store") == 0) {
-        foc_store();
-    } else {
-        PRINT("Unknown command: %s", cmd);
-        print_help();
-        return -1;
-    }
-
-    return 0;
-}
-
-int shell_reboot(int argc, char *argv[]) {
-    UNUSED(argc);
-    UNUSED(argv);
+void shell_reboot() {
     NVIC_SystemReset();
 }
 
+void shell_silent() {
+    shell.write = silent; // 禁止输出
+}
+
+SHELL_EXPORT_CMD(
+    SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+    silent, shell_silent, "Disable shell output, reboot to enable again"
+);
+SHELL_EXPORT_CMD(
+    SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+    version, print_version, Show version info
+);
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
     reboot, shell_reboot, reboot system
 );
-
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-    QDrive, shell_foc, QDrive command interface motor ctrl
+    store, foc_store, Store configurations
+);
+SHELL_EXPORT_CMD(
+    SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+    restore, foc_restore, Factory restore
+);
+SHELL_EXPORT_CMD(
+    SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+    ctrl, foc_ctrl, Set control targets
+);
+SHELL_EXPORT_CMD(
+    SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+    config, foc_config, Configure system parameters
+);
+SHELL_EXPORT_CMD(
+    SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+    calibrate, foc_calibrate, Calibrate FOC system
+);
+SHELL_EXPORT_CMD(
+    SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+    disable, foc_disable, Disable FOC control
+);
+SHELL_EXPORT_CMD(
+    SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+    enable, foc_enable, Enable FOC control
+);
+SHELL_EXPORT_CMD(
+    SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+    status, foc_status, Show current motor status
+);
+SHELL_EXPORT_CMD(
+    SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+    info, foc_info, Show hardware information
 );
