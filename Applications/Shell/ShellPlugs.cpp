@@ -6,12 +6,19 @@
 #include "main.h"
 
 extern FOC foc;
+extern Shell shell;
+
+
+signed short silent(char *data, unsigned short len) {
+    return 0;
+}
 
 // 打印单行
-#define PRINT(...)         \
-    do {                    \
-        printf(__VA_ARGS__); \
-        printf("\r\n");      \
+#define PRINT(...)                          \
+    do {                                    \
+        if (shell.write != silent) {        \
+        printf(__VA_ARGS__);                \
+        printf("\r\n");}                    \
     } while (0)
 
 void print_version() {
@@ -292,12 +299,18 @@ void foc_store() {
     PRINT("Store configuration completed");
 }
 
-int shell_reboot(int argc, char *argv[]) {
-    UNUSED(argc);
-    UNUSED(argv);
+void shell_reboot() {
     NVIC_SystemReset();
 }
 
+void shell_silent() {
+    shell.write = silent; // 禁止输出
+}
+
+SHELL_EXPORT_CMD(
+    SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+    silent, shell_silent, "Disable shell output, reboot to enable again"
+);
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
     version, print_version, Show version info
