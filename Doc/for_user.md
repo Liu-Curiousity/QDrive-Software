@@ -4,7 +4,7 @@
 
 1. **下载程序固件**：进入[Release](https://github.com/Liu-Curiousity/QDrive-Software/releases)页面，下载最新的固件文件(
    .bin、.hex或.elf文件)。
-2. **准备驱动板**：从此工程准备QDrive驱动板，并组装完成。
+2. **准备驱动板**：从[此工程](https://github.com/Liu-Curiousity/QDrive-Hardware)准备QDrive驱动板，并组装完成。
 3. **烧录固件**：使用STLink/JLink/DAPLink等编程器，将下载的固件烧录到QDrive驱动板上。可以使用STM32CubeProgrammer或其他支持的编程工具。
 
     - 烧录接口(hc0.8-4pin)位置如下图所示，注意线序(V:3.3V G:GND C:SWCLK D:SWDIO)：

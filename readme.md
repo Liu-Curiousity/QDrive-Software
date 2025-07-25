@@ -1,8 +1,8 @@
 # QDrive - 高性能轻量化FOC实例
 
----
+此为软件部分，硬件部分参见：[QDrive-硬件部分](https://github.com/Liu-Curiousity/QDrive-Hardware)
 
-![](.\Doc\Images\PCB正面.jpg "PCB正面")
+![ "PCB正面"](.\Doc\Images\PCB正面.jpg)
 
 [//]: # (![]&#40;.\Doc\Images\PCB渲染图.png "PCB渲染图"&#41;)
 
@@ -22,8 +22,6 @@ QDrive是一个基于STM32G431系列MCU的高性能FOC控制器，旨在提供�
 - **高精度**：采用18位编码器，可以实现0.005°的精细角度控制。
 - **ms级响应**：经测试，可在40ms内使电机转动半圈。
 - **丰富接口**：支持CAN总线通信、USB串口通信、支持shell交互。
-
----
 
 ## 使用方法
 
