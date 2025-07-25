@@ -27,4 +27,4 @@
 ### 后续使用
 
 1. 可使用USB串口控制QDrive，串口输入`help`命令查看可用命令列表。
-2. 可使用CAN总线控制QDrive，使用CAN总线发送相应的指令包：[QDrive CAN通信协议](Applications/Src/CommunicationProtocol.md)。
+2. 可使用CAN总线控制QDrive，使用CAN总线发送相应的指令包：[QDrive CAN通信协议](../Applications/Src/CommunicationProtocol.md)。
