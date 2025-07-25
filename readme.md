@@ -2,13 +2,13 @@
 
 此为软件部分，硬件部分参见：[QDrive-硬件部分](https://github.com/Liu-Curiousity/QDrive-Hardware)
 
-![ "PCB正面"](.\Doc\Images\PCB正面.jpg)
+![ "PCB正面"](./Doc/Images/PCB正面.jpg)
 
-[//]: # (![]&#40;.\Doc\Images\PCB渲染图.png "PCB渲染图"&#41;)
+[//]: # (![]&#40;./Doc/Images/PCB渲染图.png "PCB渲染图"&#41;)
 
 [//]: # ()
 
-[//]: # (![]&#40;.\Doc\Images\电机渲染图.png "电机渲染图"&#41;)
+[//]: # (![]&#40;./Doc/Images/电机渲染图.png "电机渲染图"&#41;)
 
 ## 简介
 
