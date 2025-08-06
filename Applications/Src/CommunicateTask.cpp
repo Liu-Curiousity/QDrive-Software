@@ -59,11 +59,15 @@ void StartCommunicateTask(void *argument) {
                 break;
             case 0x04: // 速度控制
                 foc.Ctrl(FOC::CtrlType::SpeedCtrl,
-                         *(int16_t *)(RxBuffer + 1) * 5000.0f / INT16_MAX);
+                         *(int16_t *)(RxBuffer + 1) * 1000.0f / INT16_MAX);
                 break;
             case 0x05: // 角度控制
                 foc.Ctrl(FOC::CtrlType::AngleCtrl,
                          *(int16_t *)(RxBuffer + 1) * 2 * numbers::pi_v<float> / UINT16_MAX);
+                break;
+            case 0x06: // 角度控制
+                foc.Ctrl(FOC::CtrlType::LowSpeedCtrl,
+                         *(int16_t *)(RxBuffer + 1) * 1000.0f / INT16_MAX);
                 break;
             default:
                 break;
