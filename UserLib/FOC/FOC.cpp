@@ -29,23 +29,12 @@
 
 using namespace std;
 
-void FOC::init() {
-    // 1.初始化BLDC驱动
-    if (!bldc_driver.initialized)
-        bldc_driver.init();
-    // 2.初始化编码器
-    if (!bldc_encoder.initialized)
-        bldc_encoder.init();
-    // 3.初始化电流传感器
-    if (!current_sensor.initialized)
-        current_sensor.init();
-    // 4.初始化flash
-    if (!storage.initialized)
-        storage.init();
-    // 5.从flash中读取校准数据
-    load_storage_calibration();
-    // 6.完成初始化
-    initialized = true;
+float FOC::wrap(float value, const float min, const float max) {
+    value = std::fmod(value - min, max - min);
+    if (value < 0) {
+        value += max - min;
+    }
+    return value + min;
 }
 
 void FOC::load_storage_calibration() {
@@ -135,6 +124,25 @@ void FOC::freeze_storage_calibration(const StorageStatus storage_type) {
             break;
         default: ;
     }
+}
+
+void FOC::init() {
+    // 1.初始化BLDC驱动
+    if (!bldc_driver.initialized)
+        bldc_driver.init();
+    // 2.初始化编码器
+    if (!bldc_encoder.initialized)
+        bldc_encoder.init();
+    // 3.初始化电流传感器
+    if (!current_sensor.initialized)
+        current_sensor.init();
+    // 4.初始化flash
+    if (!storage.initialized)
+        storage.init();
+    // 5.从flash中读取校准数据
+    load_storage_calibration();
+    // 6.完成初始化
+    initialized = true;
 }
 
 void FOC::enable() {
@@ -466,13 +474,10 @@ void FOC::loopCtrl() {
                   current_sensor.iw + iu_offset + iv_offset);
 
     /**2.读取编码器角度**/
-    if (encoder_direction)
-        temp = bldc_encoder.get_angle() + zero_electric_angle;
-    else
-        temp = 2 * numbers::pi_v<float> - bldc_encoder.get_angle() + zero_electric_angle;
-    Angle = temp > 2 * numbers::pi_v<float> ? temp - 2 * numbers::pi_v<float> :
-            temp < 0 ? temp + 2 * numbers::pi_v<float> : temp;
-    ElectricalAngle = Angle * pole_pairs;
+    Angle = encoder_direction ?
+            wrap(zero_electric_angle + bldc_encoder.get_angle(), 0, 2 * numbers::pi_v<float>) :
+            wrap(zero_electric_angle - bldc_encoder.get_angle(), 0, 2 * numbers::pi_v<float>);
+    ElectricalAngle = wrap(Angle * pole_pairs, 0, 2 * numbers::pi_v<float>);
 
     /**3.计算转速**/
     temp = Angle - PreviousAngle;
