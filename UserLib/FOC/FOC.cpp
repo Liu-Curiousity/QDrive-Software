@@ -39,7 +39,7 @@ float FOC::wrap(float value, const float min, const float max) {
 
 void FOC::load_storage_calibration() {
     StorageStatus storage_status;
-    storage.read(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
+    storage.read(0x000, reinterpret_cast<uint8_t *>(&storage_status), sizeof(storage_status));
     if ((storage_status & 0xC0) == STORAGE_BASE_CALIBRATE_OK) {
         // 如果基础校准数据正常,则读取
         storage.read(0x100, reinterpret_cast<uint8_t *>(&encoder_direction), sizeof(encoder_direction));
@@ -68,6 +68,8 @@ void FOC::load_storage_calibration() {
         storage.read(0x1D0, reinterpret_cast<uint8_t *>(&PID_Speed.output_limit_p), sizeof(PID_Speed.output_limit_p));
         PID_Speed.output_limit_n = -PID_Speed.output_limit_p;
     }
+
+    storage.read(0x1E0, &ID, sizeof(ID));
 }
 
 /**
@@ -124,6 +126,7 @@ void FOC::freeze_storage_calibration(const StorageStatus storage_type) {
             break;
         default: ;
     }
+    storage.write(0x1E0, &ID, sizeof(ID));
 }
 
 void FOC::init() {

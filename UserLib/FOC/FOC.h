@@ -136,6 +136,7 @@ public:
     const uint16_t CtrlFrequency;        // 控制频率(速度环、角度环),单位Hz
     const uint16_t CurrentCtrlFrequency; // 控制频率(电流环),单位Hz
 
+    uint8_t ID{0};                      // 电机ID
     bool initialized{false};            // 是否初始化
     bool enabled{false};                // 是否使能
     bool started{false};                // 是否启动

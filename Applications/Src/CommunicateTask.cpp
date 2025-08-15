@@ -5,15 +5,12 @@
 #include "task_public.h"
 #include "fdcan.h"
 #include "FOC.h"
-#include "Storage_EmbeddedFlash.h"
 #include "queue.h"
 #include "task.h"
 
 using namespace std;
 
 extern FOC foc;
-uint8_t ID = 0;
-uint8_t storage_status;
 
 void FDCAN_Filter_INIT(FDCAN_HandleTypeDef *hfdcan);
 void CAN_Transmit(uint8_t length, uint8_t *pdata);
@@ -28,13 +25,7 @@ void StartCommunicateTask(void *argument) {
         delay(100);
     foc.enable(); // 使能FOC
     foc.anticogging_enabled = false;
-    // 2.从flash中读取ID
-    storage.read(0x700, &storage_status, sizeof(storage_status));
-    if (storage_status == 0xAA) {
-        // 0xAA 表示ID已经储存
-        storage.read(0x720, &ID, sizeof(ID));
-    }
-    // 3.初始化CAN并开启CAN接收
+    // 2.初始化CAN并开启CAN接收
     FDCAN_Filter_INIT(&hfdcan1);
 
     uint8_t RxBuffer[3];
@@ -109,7 +100,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
         if (HAL_FDCAN_GetRxFifoFillLevel(hfdcan, FDCAN_RX_FIFO0)) {
             /*读取数据*/
             HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, FDCAN_RxData);
-            if (RxHeader.Identifier == 0x400 + ID && RxHeader.DataLength == 3) {
+            if (RxHeader.Identifier == 0x400 + foc.ID && RxHeader.DataLength == 3) {
                 // 如果是自己ID的报文,进行处理
                 xQueueSendToBackFromISR(xQueue1, FDCAN_RxData, &xHigherPriorityTaskWoken);
                 if (xHigherPriorityTaskWoken) {
@@ -126,7 +117,7 @@ void CAN_Transmit(uint8_t length, uint8_t *pdata) {
         0x500, FDCAN_STANDARD_ID, FDCAN_DATA_FRAME, FDCAN_DLC_BYTES_8, FDCAN_ESI_ACTIVE,
         FDCAN_BRS_OFF,FDCAN_CLASSIC_CAN, FDCAN_NO_TX_EVENTS, 0
     };
-    TxHeader.Identifier = 0x500 + ID;
+    TxHeader.Identifier = 0x500 + foc.ID;
     TxHeader.DataLength = length;
     HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, pdata);
 }
