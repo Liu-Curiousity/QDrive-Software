@@ -16,7 +16,7 @@
 #ifndef FILTERS_H
 #define FILTERS_H
 
-#include "LowPassFilter.h"
+#include "Filter.h"
 #include <cstring>
 #include <numbers>
 
@@ -25,7 +25,7 @@ using namespace std;
 /**
  * @brief one-order low pass filter
  */
-class LowPassFilter_1_Order final : public LowPassFilter {
+class LowPassFilter_1_Order final : public Filter {
 public:
     /**
      * @brief constructor
@@ -35,7 +35,7 @@ public:
     LowPassFilter_1_Order(const float Ts, const float Fc) :
         Ts(Ts), Fc(Fc), a(2 * numbers::pi_v<float> * Fc * Ts / (2 * numbers::pi_v<float> * Fc * Ts + 1)) {}
 
-    float Fc; //!< Low pass filter cut-off frequency
+    float getFc() override { return Fc; }
 
     float operator()(const float value) override {
         this->value = a * value + (1 - a) * this->value;
@@ -44,14 +44,15 @@ public:
 
 private:
     const float Ts;
+    float Fc; //!< Low pass filter cut-off frequency
     float value{0};
-    float a; //filter coefficient,default 1(no filter)
+    float a; // filter coefficient,default 1(no filter)
 };
 
 /**
  * @brief two-order low pass filter
  */
-class LowPassFilter_2_Order final : public LowPassFilter {
+class LowPassFilter_2_Order final : public Filter {
 public:
     /**
      * @brief constructor
@@ -59,11 +60,11 @@ public:
      * @param Fc Low pass filter cut-off frequency,unit Hz
      */
     LowPassFilter_2_Order(const float Ts, const float Fc) :
-        Fc(Fc), Ts(Ts), wc(2 * numbers::pi_v<float> * Fc), b0(wc * wc * Ts * Ts),
+        Ts(Ts), Fc(Fc), wc(2 * numbers::pi_v<float> * Fc), b0(wc * wc * Ts * Ts),
         a0(4 + 4 * dampingRatio * wc * Ts + b0),
         a1(-8 + 2 * b0), a2(b0 + 4 - 4 * dampingRatio * wc * Ts) {}
 
-    float Fc; //!< Low pass filter cut-off frequency
+    float getFc() override { return Fc; }
 
     float operator()(const float x) override {
         xin[2] = x;
@@ -78,6 +79,7 @@ public:
 
 private:
     const float Ts;                   // 采样周期
+    float Fc;                         //!< Low pass filter cut-off frequency
     const float dampingRatio = 0.707; // 阻尼比
     float wc{0};
 
@@ -93,7 +95,7 @@ private:
 /**
  * @brief one-order Kalman filter
  */
-class KalmanFilter_1_Order final : public LowPassFilter {
+class KalmanFilter_1_Order final : public Filter {
 public:
     /**
      * @brief constructor
@@ -118,7 +120,7 @@ private:
     float R{0};
 };
 
-class MovingAverageFilter final : public LowPassFilter {
+class MovingAverageFilter final : public Filter {
 public:
     /**
      * @brief constructor

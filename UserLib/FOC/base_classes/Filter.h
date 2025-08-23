@@ -1,5 +1,5 @@
 /**
- * @brief   LowPassFilter base class
+ * @brief   Filter base class
  * @details User should override the pure virtual functions to implement the driver.
  * @author  LiuHaoqi
  * @date    2025-4-11
@@ -10,16 +10,16 @@
             V1.0.0 on 2025-4-11
  * */
 
-#ifndef LOWPASSFILTER_H
-#define LOWPASSFILTER_H
+#ifndef FILTER_H
+#define FILTER_H
 
-class LowPassFilter {
+class Filter {
 public:
-    virtual ~LowPassFilter() = default;
+    virtual ~Filter() = default;
     // user should define constructor self, just to assign the member variables.
 
-    float Fc{}; //!< Low pass filter cut-off frequency
+    virtual float getFc() = 0; //!< Return low pass filter cut-off frequency
     virtual float operator()(float x) = 0;
 };
 
-#endif //LOWPASSFILTER_H
+#endif //FILTER_H
