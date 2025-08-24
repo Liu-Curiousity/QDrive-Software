@@ -136,6 +136,7 @@ public:
     const uint16_t CtrlFrequency;        // 控制频率(速度环、角度环),单位Hz
     const uint16_t CurrentCtrlFrequency; // 控制频率(电流环),单位Hz
 
+    uint8_t ID{0};                      // 电机ID
     bool initialized{false};            // 是否初始化
     bool enabled{false};                // 是否使能
     bool started{false};                // 是否启动
@@ -193,6 +194,9 @@ private:
     float PreviousAngle{0};   // 上一次电机角度(速度环、角度环更新中),单位rad
     float ElectricalAngle{0}; // 当前电机电角度,单位rad
     float Speed{0};           // 电机转速,单位rpm
+    // 极低速控制
+    float low_speed_angle{0}; // 极低速控制角度,单位rad
+    float low_speed{0};       // 单位rpm
 
     float Uu{0}; //U相电压
     float Uv{0}; //V相电压
@@ -212,14 +216,11 @@ private:
 
     float Voltage{1}; //母线电压
 
+    static float wrap(float value, float min, float max);
     void load_storage_calibration();
     void freeze_storage_calibration(StorageStatus storage_type);
     void UpdateCurrent(float iu, float iv, float iw);
     void SetPhaseVoltage(float ud, float uq, float electrical_angle);
-
-    // 极低速控制
-    float low_speed_angle; // 极低速控制角度,单位rad
-    float low_speed;       // 单位rpm
 };
 
 #endif //FOC_H

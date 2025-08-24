@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "shell_cpp.h"
 #include "usbd_cdc_if.h"
 #include "retarget/retarget.h"
@@ -22,7 +24,8 @@ signed short silent(char *data, unsigned short len) {
     } while (0)
 
 void print_version() {
-    PRINT("QDrive version %s", FOC_VERSION);
+    PRINT("Hardware version %s", FOC_HARDWARE_VERSION);
+    PRINT("Software version %s", FOC_SOFTWARE_VERSION);
 }
 
 void foc_info() {
@@ -38,6 +41,7 @@ void foc_info() {
 
 void foc_status() {
     PRINT("Motor Status:");
+    PRINT("  CAN ID       : %03d", foc.ID);
     PRINT("  Status       : %s", foc.started ? "enabled" : "disabled");
     PRINT("  CtrlMode     : %s",
           foc.getCtrlType() == FOC::CtrlType::CurrentCtrl ? "CurrentCtrl" :
@@ -66,6 +70,7 @@ void foc_config_help() {
     PRINT("  pid.angle.kd       : Angle PID derivative gain");
     PRINT("  limit.speed        : Speed limit in rpm");
     PRINT("  limit.current      : Current limit in A");
+    PRINT("  can.id             : CAN ID of the motor (0-7)");
 
     // TODO:部分不可调
     // PRINT("  can.baud_rate      : CAN bus baud rate");
@@ -105,6 +110,7 @@ void foc_config_list() {
         PRINT("limit.current = no limit");
     else
         PRINT("limit.current = %.3g A", foc.PID_Speed.output_limit_p);
+    PRINT("can.id = %03d", foc.ID);
     // TODO: 波特率不可更改
     PRINT("can.baud_rate = 1'000'000");
 }
@@ -156,11 +162,17 @@ void foc_config(int argc, char *argv[]) {
                 foc.setLimit(valf, NAN);
             } else if (strcmp(key, "limit.current") == 0) {
                 foc.setLimit(NAN, valf);
+            } else if (strcmp(key, "can.id") == 0) {
+                foc.ID = static_cast<uint8_t>(std::clamp(static_cast<int>(valf), 0, 7));
             } else {
                 PRINT("Unknown config target: %s", key);
                 break;
             }
-            PRINT("Setting config [%s] = %.3g", key, valf);
+            if (valf == 0) {
+                PRINT("Setting config [%s] = 0.000", key);
+            } else {
+                PRINT("Setting config [%s] = %.3g", key, valf);
+            }
         } while (false);
     } else {
         PRINT("Missing value for config [%s]", key);
@@ -177,6 +189,7 @@ void foc_ctrl_help() {
     PRINT("");
     PRINT("Control Parameters:");
     PRINT("  currentQ          : Set current in Q axis (A)");
+    PRINT("  low_speed         : Set speed by increasing angle (rpm)");
     PRINT("  speed             : Set speed (rpm)");
     PRINT("  angle             : Set angle (rad)");
 }
@@ -279,6 +292,7 @@ void foc_restore() {
     foc.setPID(FOC_SPEED_KP, FOC_SPEED_KI, FOC_SPEED_KD,
                FOC_ANGLE_KP, FOC_ANGLE_KI, FOC_ANGLE_KD);
     foc.setLimit(FOC_MAX_SPEED,FOC_MAX_CURRENT);
+    foc.ID = 0;
 
     foc.freeze_storage_calibration(FOC::STORAGE_PID_PARAMETER_OK); //储存PID参数
     foc.freeze_storage_calibration(FOC::STORAGE_LIMIT_OK);         //储存限制参数

@@ -13,7 +13,8 @@
 #ifndef FOC_CONFIG_H
 #define FOC_CONFIG_H
 
-#define FOC_VERSION "5.0.0"
+#define FOC_HARDWARE_VERSION "4310_5.0.0"
+#define FOC_SOFTWARE_VERSION "5.1.1"
 
 /*==========================电机参数==========================*/
 #define FOC_KV                  33.0f   // KV值,单位rpm/V
