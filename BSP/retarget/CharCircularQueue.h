@@ -44,6 +44,7 @@ public:
     }
 
     [[nodiscard]] char front() const { return buf[head]; }
+    [[nodiscard]] int Size() const { return size; }
     [[nodiscard]] int currentSize() const { return count; }
 
 private:

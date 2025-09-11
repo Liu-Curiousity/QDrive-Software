@@ -8,6 +8,7 @@
 
 #include "usbd_cdc_if.h"
 #include "CharCircularQueue.h"
+#include "CDC_Tx_DualBuffer.h"
 
 #if !defined(OS_USE_SEMIHOSTING)
 
@@ -23,27 +24,35 @@ void RetargetInit() {
 #endif
 }
 
-CharCircularQueue char_queue{128};
+CharCircularQueue rx_queue{128};
+TxDualBuffer<char, 512> tx_buffer(&CDC_Transmit_FS);
 
 void CDC_Receive_FS_Callback(uint8_t *Buf, uint32_t *Len) {
     auto length = *Len;
-    while (length--) char_queue.enqueue(*(Buf++));
+    while (length--) rx_queue.enqueue(*(Buf++));
+}
+
+void CDC_TransmitCplt_FS_Callback() {
+    tx_buffer.transmitComplete();
 }
 
 signed short shellRead(char *data, unsigned short len) {
     signed short i = 0;
-    for (i = 0; i < len && !char_queue.isEmpty(); ++i, ++data) {
-        char_queue.dequeue(*data);
+    for (i = 0; i < len && !rx_queue.isEmpty(); ++i, ++data) {
+        rx_queue.dequeue(*data);
     }
     delay(1); // 延时1ms,因为shellTask是死循环一点delay都没有,为了让IDLE线程能够运行以释放内存等
     return i;
 }
 
 signed short shellWrite(char *data, unsigned short len) {
-    const uint32_t start_tick = HAL_GetTick();
-    while (HAL_OK != CDC_Transmit_FS(reinterpret_cast<uint8_t *>(data), len))
-        if (HAL_GetTick() - start_tick > 100) return -1;
-    return 0;
+    volatile signed short i = 0;
+    if (tx_buffer.inBuffer(data, len))
+        i = 0;
+    else
+        i = -1;
+    return i;
+    // return tx_buffer.inBuffer(data, len) ? 0 : -1;
 }
 
 #if USE_TinyPrintf == 1
