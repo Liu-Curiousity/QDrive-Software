@@ -24,7 +24,8 @@ signed short silent(char *data, unsigned short len) {
     } while (0)
 
 void print_version() {
-    PRINT("QDrive version %s", FOC_VERSION);
+    PRINT("Hardware version %s", FOC_HARDWARE_VERSION);
+    PRINT("Software version %s", FOC_SOFTWARE_VERSION);
 }
 
 void foc_info() {
@@ -188,6 +189,7 @@ void foc_ctrl_help() {
     PRINT("");
     PRINT("Control Parameters:");
     PRINT("  currentQ          : Set current in Q axis (A)");
+    PRINT("  low_speed         : Set speed by increasing angle (rpm)");
     PRINT("  speed             : Set speed (rpm)");
     PRINT("  angle             : Set angle (rad)");
 }
