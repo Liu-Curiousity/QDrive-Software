@@ -18,7 +18,8 @@ public:
     virtual ~Filter() = default;
     // user should define constructor self, just to assign the member variables.
 
-    virtual float getFc() = 0; //!< Return low pass filter cut-off frequency
+    virtual float getFc() = 0; //!< Return filter cut-off frequency, unit s
+    virtual float getTs() = 0; //!< Return filter time constant
     virtual float operator()(float x) = 0;
 };
 
