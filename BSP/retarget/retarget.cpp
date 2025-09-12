@@ -46,13 +46,7 @@ signed short shellRead(char *data, unsigned short len) {
 }
 
 signed short shellWrite(char *data, unsigned short len) {
-    volatile signed short i = 0;
-    if (tx_buffer.inBuffer(data, len))
-        i = 0;
-    else
-        i = -1;
-    return i;
-    // return tx_buffer.inBuffer(data, len) ? 0 : -1;
+    return tx_buffer.inBuffer(data, len) ? 0 : -1;
 }
 
 #if USE_TinyPrintf == 1

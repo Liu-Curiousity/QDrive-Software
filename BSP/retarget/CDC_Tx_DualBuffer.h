@@ -23,9 +23,11 @@ public:
 
     bool inBuffer(Tp *& buf, std::size_t len) {
         if (Nm - buffer_index < len) return false;
+        HAL_NVIC_DisableIRQ(USB_LP_IRQn);
         std::copy(buf, buf + len, vice_buffer + buffer_index);
         buffer_index += len;
         if (!transmitting) start_transmit();
+        HAL_NVIC_EnableIRQ(USB_LP_IRQn);
         return true;
     }
 
