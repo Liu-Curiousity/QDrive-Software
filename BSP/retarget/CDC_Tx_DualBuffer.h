@@ -22,13 +22,19 @@ public:
     [[nodiscard]] bool isTransmitting() const { return transmitting; }
 
     bool inBuffer(Tp *& buf, std::size_t len) {
-        if (Nm - buffer_index < len) return false;
+        static bool result = false;
         HAL_NVIC_DisableIRQ(USB_LP_IRQn);
-        std::copy(buf, buf + len, vice_buffer + buffer_index);
-        buffer_index += len;
-        if (!transmitting) start_transmit();
+        if (Nm - buffer_index >= len) {
+            std::copy(buf, buf + len, vice_buffer + buffer_index);
+            buffer_index += len;
+            result = true;
+        } else {
+            result = false;
+        }
+        // if (buffer_index && !transmitting) start_transmit();
+        if (buffer_index) start_transmit(); // 原本是要判断transmitting的,但是该死的CDC,发送失败是不会有回调函数的,故只能这样写了
         HAL_NVIC_EnableIRQ(USB_LP_IRQn);
-        return true;
+        return result;
     }
 
     void transmitComplete() {
@@ -50,6 +56,8 @@ private:
             std::swap(main_buffer, vice_buffer);
             buffer_index = 0;
             transmitting = true;
+        } else {
+            transmitting = false;
         }
     }
 };
