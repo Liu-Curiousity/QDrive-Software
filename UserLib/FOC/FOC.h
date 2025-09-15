@@ -28,7 +28,7 @@
 #include "BLDC_Driver.h"
 #include "CurrentSensor.h"
 #include "Encoder.h"
-#include "LowPassFilter.h"
+#include "Filter.h"
 #include "Storage.h"
 #include "PID.h"
 
@@ -62,7 +62,7 @@ public:
      * @param PID_Angle 角度PID
      */
     FOC(const uint8_t pole_pairs, const uint16_t CtrlFrequency, const uint16_t CurrentCtrlFrequency,
-        LowPassFilter& CurrentQFilter, LowPassFilter& CurrentDFilter, LowPassFilter& SpeedFilter,
+        Filter& CurrentQFilter, Filter& CurrentDFilter, Filter& SpeedFilter,
         BLDC_Driver& driver, Encoder& encoder, Storage& storage, CurrentSensor& current_sensor,
         const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Angle) :
         pole_pairs(pole_pairs), CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
@@ -174,9 +174,9 @@ private:
     BLDC_Driver& bldc_driver;      //驱动器
     Encoder& bldc_encoder;         //编码器
     CurrentSensor& current_sensor; //电流传感器
-    LowPassFilter& CurrentQFilter; //Q轴电流低通滤波器
-    LowPassFilter& CurrentDFilter; //D轴电流低通滤波器
-    LowPassFilter& SpeedFilter;    //速度低通滤波器
+    Filter& CurrentQFilter; //Q轴电流低通滤波器
+    Filter& CurrentDFilter; //D轴电流低通滤波器
+    Filter& SpeedFilter;    //速度低通滤波器
 
     // 校准参数
     bool encoder_direction{true};            // true if the encoder is in the same direction as the motor(Uq)

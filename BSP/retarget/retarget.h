@@ -41,6 +41,7 @@ int _fstat(int fd, struct stat *st);
 #endif
 
 void CDC_Receive_FS_Callback(uint8_t *Buf, uint32_t *Len);
+void CDC_TransmitCplt_FS_Callback();
 signed short shellRead(char *data, unsigned short len);
 signed short shellWrite(char *data, unsigned short len);
 

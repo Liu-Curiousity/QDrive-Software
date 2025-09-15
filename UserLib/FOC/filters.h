@@ -16,8 +16,9 @@
 #ifndef FILTERS_H
 #define FILTERS_H
 
-#include "LowPassFilter.h"
+#include "Filter.h"
 #include <cstring>
+#include <initializer_list>
 #include <numbers>
 
 using namespace std;
@@ -25,17 +26,18 @@ using namespace std;
 /**
  * @brief one-order low pass filter
  */
-class LowPassFilter_1_Order final : public LowPassFilter {
+class LowPassFilter_1_Order final : public Filter {
 public:
     /**
      * @brief constructor
-     * @param Ts Low pass filter time constant,unit s
-     * @param Fc Low pass filter cut-off frequency,unit Hz
+     * @param Ts Low pass filter time constant, unit s
+     * @param Fc Low pass filter cut-off frequency, unit Hz
      */
     LowPassFilter_1_Order(const float Ts, const float Fc) :
         Ts(Ts), Fc(Fc), a(2 * numbers::pi_v<float> * Fc * Ts / (2 * numbers::pi_v<float> * Fc * Ts + 1)) {}
 
-    float Fc; //!< Low pass filter cut-off frequency
+    float getFc() override { return Fc; }
+    float getTs() override { return Ts; }
 
     float operator()(const float value) override {
         this->value = a * value + (1 - a) * this->value;
@@ -43,27 +45,29 @@ public:
     }
 
 private:
-    const float Ts;
+    const float Ts{0}; // Low pass filter time constant, unit s
+    const float Fc{0}; // Low pass filter cut-off frequency, unit Hz
     float value{0};
-    float a; //filter coefficient,default 1(no filter)
+    const float a{1}; // filter coefficient,default 1(no filter)
 };
 
 /**
  * @brief two-order low pass filter
  */
-class LowPassFilter_2_Order final : public LowPassFilter {
+class LowPassFilter_2_Order final : public Filter {
 public:
     /**
      * @brief constructor
-     * @param Ts Low pass filter time constant,unit s
-     * @param Fc Low pass filter cut-off frequency,unit Hz
+     * @param Ts Low pass filter time constant, unit s
+     * @param Fc Low pass filter cut-off frequency, unit Hz
      */
     LowPassFilter_2_Order(const float Ts, const float Fc) :
-        Fc(Fc), Ts(Ts), wc(2 * numbers::pi_v<float> * Fc), b0(wc * wc * Ts * Ts),
+        Ts(Ts), Fc(Fc), wc(2 * numbers::pi_v<float> * Fc), b0(wc * wc * Ts * Ts),
         a0(4 + 4 * dampingRatio * wc * Ts + b0),
         a1(-8 + 2 * b0), a2(b0 + 4 - 4 * dampingRatio * wc * Ts) {}
 
-    float Fc; //!< Low pass filter cut-off frequency
+    float getFc() override { return Fc; }
+    float getTs() override { return Ts; }
 
     float operator()(const float x) override {
         xin[2] = x;
@@ -77,14 +81,15 @@ public:
     }
 
 private:
-    const float Ts;                   // 采样周期
-    const float dampingRatio = 0.707; // 阻尼比
-    float wc{0};
+    const float Ts{0};               // Low pass filter time constant, unit s
+    const float Fc{0};               // Low pass filter cut-off frequency, unit Hz
+    const float dampingRatio{0.707}; // Damping ratio
+    const float wc{0};
 
-    float b0{0};
-    float a0{0};
-    float a1{0};
-    float a2{0};
+    const float b0{0};
+    const float a0{0};
+    const float a1{0};
+    const float a2{0};
 
     float xin[3]{};
     float yout[3]{};
@@ -93,7 +98,7 @@ private:
 /**
  * @brief one-order Kalman filter
  */
-class KalmanFilter_1_Order final : public LowPassFilter {
+class KalmanFilter_1_Order final : public Filter {
 public:
     /**
      * @brief constructor
@@ -118,7 +123,7 @@ private:
     float R{0};
 };
 
-class MovingAverageFilter final : public LowPassFilter {
+class MovingAverageFilter final : public Filter {
 public:
     /**
      * @brief constructor
@@ -141,8 +146,39 @@ private:
     size_t index{0};
     size_t window_size{0};
     float sum{0};
-    float *values;
+    float *values{nullptr};
 };
 
+class FIRFilter final : public Filter {
+public:
+    FIRFilter(const initializer_list<float> coefficients) :
+        order(coefficients.size()), coef(new float[order]), buffer(new float[order]) {
+        std::copy(coefficients.begin(), coefficients.end(), coef);
+        std::fill_n(buffer, order, 0.0f);
+    }
+
+    ~FIRFilter() override {
+        delete[] coef;
+        delete[] buffer;
+    }
+
+    float operator()(const float value) override {
+        buffer[index] = value;
+        float result = 0.0f;
+        size_t buf_index = index;
+        for (size_t i = 0; i < order; ++i) {
+            result += coef[i] * buffer[buf_index];
+            buf_index = (buf_index == 0) ? order - 1 : buf_index - 1;
+        }
+        index = (index + 1) % order;
+        return result;
+    }
+
+private:
+    size_t order{0};
+    size_t index{0};
+    float *coef{nullptr};
+    float *buffer{nullptr};
+};
 
 #endif //FILTERS_H
