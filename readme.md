@@ -4,7 +4,7 @@
 
 您可以复刻此项目的硬件部分，或购买QDrive成品驱动板：[QDrive成品驱动板](https://e.tb.cn/h.hvxbdqyMjSPHMGw?tk=HijG4lsnjo0)。
 
-![ "PCB正面"](./Doc/Images/PCB正面.jpg)
+![ "PCB"](./Doc/Images/PCB.jpg)
 
 [//]: # (![]&#40;./Doc/Images/PCB渲染图.png "PCB渲染图"&#41;)
 
