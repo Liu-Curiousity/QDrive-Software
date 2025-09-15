@@ -131,7 +131,7 @@ void FeedBackSend() {
     // Q轴电流
     *(int16_t *)(FeedBackDataBuffer + 2) = foc.getCurrent() / 10 * INT16_MAX;
     // 电机转速
-    *(int16_t *)(FeedBackDataBuffer + 4) = foc.getSpeed() / 5000 * INT16_MAX;
+    *(int16_t *)(FeedBackDataBuffer + 4) = foc.getSpeed() / 1000 * INT16_MAX;
     // 电机角度
     *(int16_t *)(FeedBackDataBuffer + 6) = foc.getAngle() / (2 * numbers::pi_v<float>) * UINT16_MAX;
     CAN_Transmit(8, FeedBackDataBuffer);
