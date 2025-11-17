@@ -17,6 +17,7 @@
 #define FILTERS_H
 
 #include "Filter.h"
+#include <algorithm>
 #include <cstring>
 #include <initializer_list>
 #include <numbers>
@@ -26,7 +27,7 @@ using namespace std;
 /**
  * @brief one-order low pass filter
  */
-class LowPassFilter_1_Order final : public Filter {
+class LowPassFilter_1_Order final : public LP_Filter {
 public:
     /**
      * @brief constructor
@@ -54,24 +55,26 @@ private:
 /**
  * @brief two-order low pass filter
  */
-class LowPassFilter_2_Order final : public Filter {
+class LowPassFilter_2_Order final : public LP_Filter {
 public:
     /**
      * @brief constructor
      * @param Ts Low pass filter time constant, unit s
      * @param Fc Low pass filter cut-off frequency, unit Hz
+     * @param dampingRatio Damping ratio, default 0.707
      */
-    LowPassFilter_2_Order(const float Ts, const float Fc) :
-        Ts(Ts), Fc(Fc), wc(2 * numbers::pi_v<float> * Fc), b0(wc * wc * Ts * Ts),
-        a0(4 + 4 * dampingRatio * wc * Ts + b0),
-        a1(-8 + 2 * b0), a2(b0 + 4 - 4 * dampingRatio * wc * Ts) {}
+    LowPassFilter_2_Order(const float Ts, const float Fc, const float dampingRatio = 0.707) :
+        Ts(Ts), Fc(Fc), Wc(2 / Ts * tan(numbers::pi_v<float> * Fc * Ts)),
+        b0(Wc * Wc * Ts * Ts), b1(2 * b0), b2(b0),
+        a0(4 + 4 * dampingRatio * Wc * Ts + b0),
+        a1(-8 + 2 * b0), a2(4 - 4 * dampingRatio * Wc * Ts + b0) {}
 
     float getFc() override { return Fc; }
     float getTs() override { return Ts; }
 
     float operator()(const float x) override {
         xin[2] = x;
-        yout[2] = (b0 * xin[2] + 2 * b0 * xin[1] + b0 * xin[0] - a1 * yout[1] - a2 * yout[0]) / a0;
+        yout[2] = (b0 * xin[2] + b1 * xin[1] + b2 * xin[0] - a1 * yout[1] - a2 * yout[0]) / a0;
         xin[0] = xin[1];
         xin[1] = xin[2];
         yout[0] = yout[1];
@@ -81,12 +84,69 @@ public:
     }
 
 private:
-    const float Ts{0};               // Low pass filter time constant, unit s
-    const float Fc{0};               // Low pass filter cut-off frequency, unit Hz
-    const float dampingRatio{0.707}; // Damping ratio
-    const float wc{0};
+    const float Ts{0}; // Low pass filter time constant, unit s
+    const float Fc{0}; // Low pass filter cut-off frequency, unit Hz
+    const float Wc{0};
 
     const float b0{0};
+    const float b1{0};
+    const float b2{0};
+    const float a0{0};
+    const float a1{0};
+    const float a2{0};
+
+    float xin[3]{};
+    float yout[3]{};
+};
+
+
+/**
+ * @brief two-order band pass filter
+ */
+class BandPassFilter_2_Order final : public BP_Filter {
+public:
+    /**
+     * @brief constructor
+     * @param Ts Band pass filter time constant, unit s
+     * @param Fp Band pass filter pass frequency, unit Hz
+     * @param Fs Band pass filter stop frequency, unit Hz
+     */
+    BandPassFilter_2_Order(const float Ts, const float Fp, const float Fs) :
+        Ts(Ts), Fp(Fp), Fs(Fs),
+        Wp(2 / Ts * tan(numbers::pi_v<float> * Fp * Ts)),
+        Ws(2 / Ts * tan(numbers::pi_v<float> * Fs * Ts)),
+        Wc(sqrt(Wp * Ws)),
+        b0(2 / Ts * (Ws - Wp)), b1(0), b2(-b0),
+        a0(4 / Ts / Ts + b0 + Ws * Wp),
+        a1(-8 / Ts / Ts + 2 * Ws * Wp),
+        a2(4 / Ts / Ts - b0 + Ws * Wp) {}
+
+    float getFp() override { return Fp; }
+    float getFs() override { return Fs; }
+    float getTs() override { return Ts; }
+
+    float operator()(const float x) override {
+        xin[2] = x;
+        yout[2] = (b0 * xin[2] + b1 * xin[1] + b2 * xin[0] - a1 * yout[1] - a2 * yout[0]) / a0;
+        xin[0] = xin[1];
+        xin[1] = xin[2];
+        yout[0] = yout[1];
+        yout[1] = yout[2];
+
+        return yout[2];
+    }
+
+private:
+    const float Ts{0}; // Band pass filter time constant, unit s
+    const float Fp{0}; // Band pass filter pass frequency, unit Hz
+    const float Fs{0}; // Band pass filter stop frequency, unit Hz
+    const float Wp{0};
+    const float Ws{0};
+    const float Wc{0};
+
+    const float b0{0};
+    const float b1{0};
+    const float b2{0};
     const float a0{0};
     const float a1{0};
     const float a2{0};
@@ -107,6 +167,7 @@ public:
      */
     KalmanFilter_1_Order(const float Q, const float R) : Q(Q), R(R) {}
 
+    float getTs() override { return 0; }
     float operator()(const float value) override {
         P = P + Q;
         k = P / (P + R);
@@ -134,6 +195,7 @@ public:
 
     ~MovingAverageFilter() override { delete[] values; }
 
+    float getTs() override { return 0; }
     float operator()(const float value) override {
         sum -= values[index];
         values[index] = value;
@@ -153,7 +215,7 @@ class FIRFilter final : public Filter {
 public:
     FIRFilter(const initializer_list<float> coefficients) :
         order(coefficients.size()), coef(new float[order]), buffer(new float[order]) {
-        std::copy(coefficients.begin(), coefficients.end(), coef);
+        ranges::copy(coefficients, coef);
         std::fill_n(buffer, order, 0.0f);
     }
 
@@ -161,6 +223,8 @@ public:
         delete[] coef;
         delete[] buffer;
     }
+
+    float getTs() override { return 0; }
 
     float operator()(const float value) override {
         buffer[index] = value;
