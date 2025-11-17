@@ -89,3 +89,8 @@ file(GLOB_RECURSE USERLIB_SOURCES "UserLib/*.*" "Applications/*.*" "BSP/*.*")
 foreach (SRC ${USERLIB_SOURCES})
     set_source_files_properties(${SRC} PROPERTIES COMPILE_OPTIONS "-include;sys_public.h")
 endforeach ()
+
+add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${CMAKE_PROJECT_NAME}> ${CMAKE_PROJECT_NAME}.bin
+        COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${CMAKE_PROJECT_NAME}> ${CMAKE_PROJECT_NAME}.hex
+)
