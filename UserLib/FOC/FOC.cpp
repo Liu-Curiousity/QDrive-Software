@@ -31,10 +31,7 @@ using namespace std;
 
 float FOC::wrap(float value, const float min, const float max) {
     value = std::fmod(value - min, max - min);
-    if (value < 0) {
-        value += max - min;
-    }
-    return value + min;
+    return value < 0 ? value + max : value + min;
 }
 
 void FOC::load_storage_calibration() {
@@ -171,7 +168,7 @@ void FOC::disable() {
         bldc_driver.disable();
     }
     //2.关闭编码器
-    if (bldc_driver.enabled)
+    if (bldc_encoder.enabled)
         bldc_encoder.disable();
     enabled = false;
 }

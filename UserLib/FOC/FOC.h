@@ -24,7 +24,7 @@
 #ifndef FOC_H
 #define FOC_H
 
-#include "cstdint"
+#include <cstdint>
 #include "BLDC_Driver.h"
 #include "CurrentSensor.h"
 #include "Encoder.h"
@@ -174,9 +174,9 @@ private:
     BLDC_Driver& bldc_driver;      //驱动器
     Encoder& bldc_encoder;         //编码器
     CurrentSensor& current_sensor; //电流传感器
-    Filter& CurrentQFilter; //Q轴电流低通滤波器
-    Filter& CurrentDFilter; //D轴电流低通滤波器
-    Filter& SpeedFilter;    //速度低通滤波器
+    Filter& CurrentQFilter;        //Q轴电流低通滤波器
+    Filter& CurrentDFilter;        //D轴电流低通滤波器
+    Filter& SpeedFilter;           //速度低通滤波器
 
     // 校准参数
     bool encoder_direction{true};            // true if the encoder is in the same direction as the motor(Uq)
