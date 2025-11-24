@@ -20,7 +20,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 
 # Set the project name
-set(CMAKE_PROJECT_NAME FOC_PM4310)
+set(CMAKE_PROJECT_NAME FOC_QD4310)
 
 # Include toolchain file
 include("cmake/gcc-arm-none-eabi.cmake")

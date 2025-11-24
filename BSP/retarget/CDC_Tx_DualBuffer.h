@@ -10,8 +10,8 @@
                 V1.0.0创建于2025/9/11
  * */
 
-#ifndef FOC_PM4310_CDC_TX_DUALBUFFER_H
-#define FOC_PM4310_CDC_TX_DUALBUFFER_H
+#pragma once
+
 #include <algorithm>
 
 template <typename Tp, std::size_t Nm>
@@ -61,5 +61,3 @@ private:
         }
     }
 };
-
-#endif //FOC_PM4310_CDC_TX_DUALBUFFER_H
