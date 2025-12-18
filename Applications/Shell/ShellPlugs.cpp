@@ -53,13 +53,13 @@ void foc_status() {
 }
 
 void foc_config_help() {
-    PRINT("Usage: QDrive config [--list | PARAM_PATH VALUE | key=value]");
+    PRINT("Usage: config [--list | PARAM_PATH VALUE | key=value]");
     PRINT("");
     PRINT("Examples:");
-    PRINT("  QDrive config pid.speed.kp 0.1");
-    PRINT("  QDrive config pid.speed.ki=0.1");
-    PRINT("  QDrive config --help");
-    PRINT("  QDrive config --list");
+    PRINT("  config pid.speed.kp 0.1");
+    PRINT("  config pid.speed.ki=0.1");
+    PRINT("  config --help");
+    PRINT("  config --list");
     PRINT("");
     PRINT("Configuration Parameters:");
     PRINT("  pid.speed.kp       : Speed PID proportional gain");
@@ -180,18 +180,19 @@ void foc_config(int argc, char *argv[]) {
 }
 
 void foc_ctrl_help() {
-    PRINT("Usage: QDrive ctrl [currentQ VALUE | speed VALUE | angle VALUE | key=value]");
+    PRINT("Usage: ctrl [current VALUE | low_speed VALUE  | speed VALUE  | step_angle VALUE | angle VALUE | key=value]");
     PRINT("");
     PRINT("Examples:");
-    PRINT("  QDrive ctrl speed 100");
-    PRINT("  QDrive ctrl speed=100");
-    PRINT("  QDrive ctrl --help");
+    PRINT("  ctrl speed 100");
+    PRINT("  ctrl speed=100");
+    PRINT("  ctrl --help");
     PRINT("");
     PRINT("Control Parameters:");
-    PRINT("  currentQ          : Set current in Q axis (A)");
+    PRINT("  current           : Set current in Q axis (A)");
     PRINT("  low_speed         : Set speed by increasing angle (rpm)");
     PRINT("  speed             : Set speed (rpm)");
     PRINT("  angle             : Set angle (rad)");
+    PRINT("  step_angle        : Step an specific angle (rad)");
 }
 
 void foc_ctrl(int argc, char *argv[]) {
@@ -228,6 +229,9 @@ void foc_ctrl(int argc, char *argv[]) {
         } else if (strcmp(key, "angle") == 0) {
             PRINT("Setting angle = %.2f rad", valf);
             foc.Ctrl(FOC::CtrlType::AngleCtrl, valf);
+        } else if (strcmp(key, "step_angle") == 0) {
+            PRINT("Stepping %.2f rad angle", valf);
+            foc.Ctrl(FOC::CtrlType::StepAngleCtrl, valf);
         } else if (strcmp(key, "low_speed") == 0) {
             PRINT("Setting low_speed = %.2f rpm", valf);
             foc.Ctrl(FOC::CtrlType::LowSpeedCtrl, valf);
@@ -301,6 +305,10 @@ void foc_restore() {
 }
 
 void foc_store() {
+    if (foc.started) {
+        PRINT("QDrive is running, please disable it first");
+        return;
+    }
     foc_config_list();
     PRINT("Are you sure you want to store configurations? (y/n)");
     char response;

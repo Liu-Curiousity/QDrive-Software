@@ -2,8 +2,8 @@
  * @brief   FOC驱动库
  * @details
  * @author  LiuHaoqi
- * @date    2024-7-10
- * @version V3.0.0
+ * @date    2025-12-18
+ * @version V5.2.0
  * @note    此库为中间层库,与硬件完全解耦
  * @warning 无
  * @par     历史版本:
@@ -18,6 +18,7 @@
  *		    V5.0.0修改于2025-6-26,调整initialize,enable,start三层实现逻辑细节
  *		    V5.0.0调整SetPhaseVoltage()参数顺序
  *		    V5.1.0修改于2025-7-3,修复calibrate()函数致命问题,重新调整init,enable,start三层实现逻辑细节,为后续无感算法铺路,调整更新电压函数接口名称
+ *		    V5.2.0修改于2025-12-18,添加StepAngleCtrl控制模式,优化AngleCtrl控制模式下的角度环处理逻辑
  */
 
 
@@ -411,8 +412,16 @@ void FOC::Ctrl(const CtrlType ctrl_type, float value) {
             low_speed = value;       // 设置低速控制速度
             low_speed_angle = Angle; // 记录当前角度为低速控制起始角度
             break;
+        case CtrlType::StepAngleCtrl:
+            PID_Angle.SetTarget(PID_Angle.target + value);
+            break;
         case CtrlType::AngleCtrl:
             value = wrap(value, 0, 2 * numbers::pi_v<float>); // 限制在0~2pi之间
+            // 使电机始终沿差值小于pi的方向转动
+            if (value - Angle > numbers::pi_v<float>)
+                value -= 2 * numbers::pi_v<float>;
+            else if (value - Angle < -numbers::pi_v<float>)
+                value += 2 * numbers::pi_v<float>;
             PID_Angle.SetTarget(value);
             break;
         case CtrlType::SpeedCtrl:
@@ -431,6 +440,7 @@ __attribute__((section(".ccmram_func")))
 void FOC::Ctrl_ISR() {
     if (!started && !anticogging_calibrating) return;
 
+    static float PreviousAngle_CtrlISR = 0;
     /**1.速度闭环控制**/
     switch (ctrl_type) {
         case CtrlType::LowSpeedCtrl:
@@ -440,13 +450,12 @@ void FOC::Ctrl_ISR() {
             else if (low_speed_angle < 0) low_speed_angle += numbers::pi_v<float> * 2;
             PID_Angle.SetTarget(low_speed_angle);
         case CtrlType::AngleCtrl:
-            //使电机始终沿差值小于pi的方向转动
-            if (Angle - PID_Angle.target > numbers::pi_v<float>)
-                PID_Speed.SetTarget(PID_Angle.calc(Angle - 2 * numbers::pi_v<float>));
-            else if (Angle - PID_Angle.target < -numbers::pi_v<float>)
-                PID_Speed.SetTarget(PID_Angle.calc(Angle + 2 * numbers::pi_v<float>));
-            else
-                PID_Speed.SetTarget(PID_Angle.calc(Angle));
+        case CtrlType::StepAngleCtrl:
+            if (PreviousAngle_CtrlISR - Angle > numbers::pi_v<float>)
+                PID_Angle.target -= 2 * numbers::pi_v<float>;
+            else if (PreviousAngle_CtrlISR - Angle < -numbers::pi_v<float>)
+                PID_Angle.target += 2 * numbers::pi_v<float>;
+            PID_Speed.SetTarget(PID_Angle.calc(Angle));
         case CtrlType::SpeedCtrl:
             target_iq = PID_Speed.calc(Speed);
         case CtrlType::CurrentCtrl:
@@ -460,6 +469,7 @@ void FOC::Ctrl_ISR() {
             }
             break;
     }
+    PreviousAngle_CtrlISR = Angle;
 }
 
 /*CCMRAM加速运行*/

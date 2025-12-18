@@ -1,9 +1,9 @@
 /**
-* @brief   FOC驱动库
+ * @brief   FOC驱动库
  * @details
  * @author  LiuHaoqi
- * @date    2024-7-10
- * @version V3.0.0
+ * @date    2025-12-18
+ * @version V5.2.0
  * @note    此库为中间层库,与硬件完全解耦
  * @warning 无
  * @par     历史版本:
@@ -18,6 +18,7 @@
  *		    V5.0.0修改于2025-6-26,调整initialize,enable,start三层实现逻辑细节
  *		    V5.0.0调整SetPhaseVoltage()参数顺序
  *		    V5.1.0修改于2025-7-3,修复calibrate()函数致命问题,重新调整init,enable,start三层实现逻辑细节,为后续无感算法铺路,调整更新电压函数接口名称
+ *		    V5.2.0修改于2025-12-18,添加StepAngleCtrl控制模式,优化AngleCtrl控制模式下的角度环处理逻辑
  */
 
 
@@ -41,7 +42,8 @@ public:
         CurrentCtrl = 0,
         SpeedCtrl = 1,
         AngleCtrl = 2,
-        LowSpeedCtrl = 3,
+        StepAngleCtrl = 3,
+        LowSpeedCtrl = 4,
     };
 
     /**
