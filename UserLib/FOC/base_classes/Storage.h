@@ -17,10 +17,12 @@
 
 class Storage {
 public:
+    explicit Storage(const uint32_t StorageSize) : storage_size(StorageSize) {}
     virtual ~Storage() = default;
     // user should define constructor self, just to assign the member variables. it should decouple from the hardware
 
     bool initialized = false;
+    const uint32_t storage_size = 0; // storage size in bytes
 
     virtual void init() = 0;
 
