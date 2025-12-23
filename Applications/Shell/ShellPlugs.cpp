@@ -5,6 +5,7 @@
 #include "retarget/retarget.h"
 #include "FOC.h"
 #include "FOC_config.h"
+#include "Storage_EmbeddedFlash.h"
 #include "main.h"
 
 extern FOC foc;
@@ -331,6 +332,34 @@ void shell_reboot() {
 void shell_silent() {
     shell.write = silent; // 禁止输出
 }
+
+void shell_upgrade() {
+    if (foc.started) {
+        PRINT("QDrive is running, please disable it first");
+        return;
+    }
+    PRINT("Are you sure you want to upgrade the software? (y/n)");
+    char response;
+    while (!shellRead(&response, 1)) {
+        delay(1);
+    }
+    if (response != 'y' && response != 'Y') {
+        PRINT("Update operation cancelled");
+        return;
+    }
+    PRINT("Entering DFU mode...");
+    delay(100);
+    // 设置系统引导到系统内置的DFU bootloader
+    static uint32_t MagicWord = 0x44465521; // 'D' 'F' 'U' '!'
+    // 设置bootloader标志
+    DFU_storage.write(0x00, reinterpret_cast<uint8_t *>(&MagicWord), 4);
+    NVIC_SystemReset();
+}
+
+SHELL_EXPORT_CMD(
+    SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
+    upgrade, shell_upgrade, Enter DFU mode for software upgrade
+);
 
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),

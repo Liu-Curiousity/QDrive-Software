@@ -42,5 +42,6 @@ private:
 };
 
 extern Storage_EmbeddedFlash storage;
+extern Storage_EmbeddedFlash DFU_storage;
 
 #endif //STORAGE_EMBEDDEDFLASH_H
