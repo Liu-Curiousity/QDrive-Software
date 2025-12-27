@@ -281,17 +281,6 @@ void FOC::updateVoltage(const float voltage) {
     Voltage = voltage;
 }
 
-void FOC::setLimit(const float speed_limit, const float current_limit) {
-    if (!isnan(speed_limit)) {
-        PID_Angle.output_limit_p = speed_limit;
-        PID_Angle.output_limit_n = -speed_limit;
-    }
-    if (!isnan(current_limit)) {
-        PID_Speed.output_limit_p = current_limit;
-        PID_Speed.output_limit_n = -current_limit;
-    }
-}
-
 void FOC::Ctrl(const CtrlType ctrl_type, float value) {
     switch (ctrl_type) {
         case CtrlType::LowSpeedCtrl:

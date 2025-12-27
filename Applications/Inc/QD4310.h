@@ -76,9 +76,9 @@ public:
     }
 
     void anticogging_calibrate() {
-        if (!enabled) return;           // 如果没有使能,则不能校准
-        if (!calibrated) return;        // 如果没有基础校准,则不能校准
-        if (started) return;            // 如果已经启动,则不能校准
+        if (!enabled) return;    // 如果没有使能,则不能校准
+        if (!calibrated) return; // 如果没有基础校准,则不能校准
+        if (started) return;     // 如果已经启动,则不能校准
         FOC::anticogging_calibrate();
         freeze_storage_calibration(STORAGE_ANTICOGGING_CALIBRATE_OK); // 储存齿槽转矩补偿表
     }
@@ -102,6 +102,13 @@ public:
         if (!std::isnan(pid_angle_kd)) PID_Angle.kd = pid_angle_kd;
     }
 
+    /**
+     * @brief 设置速度和电流限制
+     * @param speed_limit 速度限制,单位rpm
+     * @param current_limit 电流限制,单位A
+     */
+    void setLimit(float speed_limit, float current_limit);
+
 private:
     friend void foc_config_list();
     friend void foc_store();
@@ -121,16 +128,20 @@ private:
 
     Storage& storage; //存储器
 
-    /**
-     * @brief 储存PID参数
-     */
-    void storagePID() {
-        freeze_storage_calibration(STORAGE_PID_PARAMETER_OK);
-    }
-
     void load_storage_calibration();
     void freeze_storage_calibration(StorageStatus storage_type);
 };
+
+inline void QD4310::setLimit(const float speed_limit, const float current_limit) {
+    if (!std::isnan(speed_limit)) {
+        PID_Angle.output_limit_p = speed_limit;
+        PID_Angle.output_limit_n = -speed_limit;
+    }
+    if (!std::isnan(current_limit)) {
+        PID_Speed.output_limit_p = current_limit;
+        PID_Speed.output_limit_n = -current_limit;
+    }
+}
 
 inline void QD4310::load_storage_calibration() {
     StorageStatus storage_status;

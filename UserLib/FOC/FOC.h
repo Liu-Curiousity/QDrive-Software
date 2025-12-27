@@ -107,13 +107,6 @@ public:
      */
     void updateVoltage(float voltage);
 
-    /**
-     * @brief 设置速度和电流限制
-     * @param speed_limit 速度限制,单位rpm
-     * @param current_limit 电流限制,单位A
-     */
-    void setLimit(float speed_limit, float current_limit);
-
     // 初始化配置项
     const uint8_t pole_pairs;            // 极对数
     const uint16_t CtrlFrequency;        // 控制频率(速度环、角度环),单位Hz
@@ -127,21 +120,12 @@ public:
     bool anticogging_calibrated{false}; // 是否校准过齿槽转矩
 
 protected:
-    CtrlType ctrl_type{CtrlType::CurrentCtrl}; //当前控制类型
-
     //PID类
     PID PID_CurrentQ;      //Q轴电流PID
     PID PID_CurrentD;      //D轴电流PID
     PID PID_Speed;         //速度PID
     PID PID_Angle;         //角度PID
     float target_iq{0.0f}; //目标Q轴电流
-
-    BLDC_Driver& bldc_driver;      //驱动器
-    Encoder& bldc_encoder;         //编码器
-    CurrentSensor& current_sensor; //电流传感器
-    Filter& CurrentQFilter;        //Q轴电流低通滤波器
-    Filter& CurrentDFilter;        //D轴电流低通滤波器
-    Filter& SpeedFilter;           //速度低通滤波器
 
     // 校准参数
     bool encoder_direction{true};            // true if the encoder is in the same direction as the motor(Uq)
@@ -153,6 +137,15 @@ protected:
     static constexpr uint16_t map_len{2000}; // 齿槽转矩校准点数
     float anticogging_map[map_len]{};        // 齿槽转矩补偿表
     bool anticogging_calibrating{false};     // 齿槽转矩是否正在校准
+
+private:
+    CtrlType ctrl_type{CtrlType::CurrentCtrl}; //当前控制类型
+    BLDC_Driver& bldc_driver;      //驱动器
+    Encoder& bldc_encoder;         //编码器
+    CurrentSensor& current_sensor; //电流传感器
+    Filter& CurrentQFilter;        //Q轴电流低通滤波器
+    Filter& CurrentDFilter;        //D轴电流低通滤波器
+    Filter& SpeedFilter;           //速度低通滤波器
 
     // 运行时参数
     float Angle{0};           // 当前电机角度,单位rad

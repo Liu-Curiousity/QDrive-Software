@@ -10,7 +10,7 @@
 
 using namespace std;
 
-extern QD4310 foc;
+extern QD4310 qd4310;
 
 void FDCAN_Filter_INIT(FDCAN_HandleTypeDef *hfdcan);
 void CAN_Transmit(uint8_t length, uint8_t *pdata);
@@ -21,10 +21,8 @@ xQueueHandle xQueue1;
 void StartCommunicateTask(void *argument) {
     xQueue1 = xQueueCreate(5, 3);
     // 1.等待foc初始化
-    while (!foc.initialized)
+    while (!qd4310.initialized)
         delay(100);
-    foc.enable(); // 使能FOC
-    foc.anticogging_enabled = false;
     // 2.初始化CAN并开启CAN接收
     FDCAN_Filter_INIT(&hfdcan1);
 
@@ -36,29 +34,29 @@ void StartCommunicateTask(void *argument) {
             case 0x00: // NOP指令,只发送反馈报文
                 break;
             case 0x01: // 使能指令
-                foc.start();
+                qd4310.start();
                 break;
             case 0x02: // 失能指令
-                foc.stop();
+                qd4310.stop();
                 break;
             case 0x03: // 电流控制
-                foc.Ctrl(FOC::CtrlType::CurrentCtrl,
+                qd4310.Ctrl( QD4310::CtrlType::CurrentCtrl,
                          *(int16_t *)(RxBuffer + 1) * 10.0f / INT16_MAX);
                 break;
             case 0x04: // 速度控制
-                foc.Ctrl(FOC::CtrlType::SpeedCtrl,
+                qd4310.Ctrl( QD4310::CtrlType::SpeedCtrl,
                          *(int16_t *)(RxBuffer + 1) * 1000.0f / INT16_MAX);
                 break;
             case 0x05: // 角度控制
-                foc.Ctrl(FOC::CtrlType::AngleCtrl,
+                qd4310.Ctrl( QD4310::CtrlType::AngleCtrl,
                          *(int16_t *)(RxBuffer + 1) * 2 * numbers::pi_v<float> / UINT16_MAX);
                 break;
             case 0x06: // 低速控制
-                foc.Ctrl(FOC::CtrlType::LowSpeedCtrl,
+                qd4310.Ctrl( QD4310::CtrlType::LowSpeedCtrl,
                          *(int16_t *)(RxBuffer + 1) * 1000.0f / INT16_MAX);
                 break;
             case 0x07: // 角度递增
-                foc.Ctrl(FOC::CtrlType::StepAngleCtrl,
+                qd4310.Ctrl( QD4310::CtrlType::StepAngleCtrl,
                          *(int16_t *)(RxBuffer + 1) * 10 * numbers::pi_v<float> / INT16_MAX);
                 break;
             default:
@@ -101,7 +99,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
         if (HAL_FDCAN_GetRxFifoFillLevel(hfdcan, FDCAN_RX_FIFO0)) {
             /*读取数据*/
             HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, FDCAN_RxData);
-            if (RxHeader.Identifier == 0x400 + foc.ID && RxHeader.DataLength == 3) {
+            if (RxHeader.Identifier == 0x400 + qd4310.ID && RxHeader.DataLength == 3) {
                 // 如果是自己ID的报文,进行处理
                 xQueueSendToBackFromISR(xQueue1, FDCAN_RxData, &xHigherPriorityTaskWoken);
                 if (xHigherPriorityTaskWoken) {
@@ -118,7 +116,7 @@ void CAN_Transmit(uint8_t length, uint8_t *pdata) {
         0x500, FDCAN_STANDARD_ID, FDCAN_DATA_FRAME, FDCAN_DLC_BYTES_8, FDCAN_ESI_ACTIVE,
         FDCAN_BRS_OFF,FDCAN_CLASSIC_CAN, FDCAN_NO_TX_EVENTS, 0
     };
-    TxHeader.Identifier = 0x500 + foc.ID;
+    TxHeader.Identifier = 0x500 + qd4310.ID;
     TxHeader.DataLength = length;
     HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, pdata);
 }
@@ -126,14 +124,14 @@ void CAN_Transmit(uint8_t length, uint8_t *pdata) {
 void FeedBackSend() {
     static uint8_t FeedBackDataBuffer[8] = {0};
     // 电机状态
-    FeedBackDataBuffer[0] = foc.started;
+    FeedBackDataBuffer[0] = qd4310.started;
     // 错误码(预留)
     FeedBackDataBuffer[1] = 0x00;
     // Q轴电流
-    *(int16_t *)(FeedBackDataBuffer + 2) = foc.getCurrent() / 10 * INT16_MAX;
+    *(int16_t *)(FeedBackDataBuffer + 2) = qd4310.getCurrent() / 10 * INT16_MAX;
     // 电机转速
-    *(int16_t *)(FeedBackDataBuffer + 4) = foc.getSpeed() / 1000 * INT16_MAX;
+    *(int16_t *)(FeedBackDataBuffer + 4) = qd4310.getSpeed() / 1000 * INT16_MAX;
     // 电机角度
-    *(int16_t *)(FeedBackDataBuffer + 6) = foc.getAngle() / (2 * numbers::pi_v<float>) * UINT16_MAX;
+    *(int16_t *)(FeedBackDataBuffer + 6) = qd4310.getAngle() / (2 * numbers::pi_v<float>) * UINT16_MAX;
     CAN_Transmit(8, FeedBackDataBuffer);
 }
