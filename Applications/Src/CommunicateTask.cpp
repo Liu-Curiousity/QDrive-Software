@@ -4,13 +4,13 @@
 #include <numbers>
 #include "task_public.h"
 #include "fdcan.h"
-#include "FOC.h"
+#include "QD4310.h"
 #include "queue.h"
 #include "task.h"
 
 using namespace std;
 
-extern FOC foc;
+extern QD4310 foc;
 
 void FDCAN_Filter_INIT(FDCAN_HandleTypeDef *hfdcan);
 void CAN_Transmit(uint8_t length, uint8_t *pdata);
@@ -37,12 +37,9 @@ void StartCommunicateTask(void *argument) {
                 break;
             case 0x01: // 使能指令
                 foc.start();
-                if (foc.started)
-                    HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
                 break;
             case 0x02: // 失能指令
                 foc.stop();
-                HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
                 break;
             case 0x03: // 电流控制
                 foc.Ctrl(FOC::CtrlType::CurrentCtrl,

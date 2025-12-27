@@ -30,7 +30,6 @@
 #include "CurrentSensor.h"
 #include "Encoder.h"
 #include "Filter.h"
-#include "Storage.h"
 #include "PID.h"
 
 /**
@@ -56,7 +55,6 @@ public:
      * @param SpeedFilter 速度滤波器系数
      * @param driver BLDC驱动
      * @param encoder 编码器驱动
-     * @param storage 存储器
      * @param current_sensor 电流传感器
      * @param PID_CurrentQ Q轴电流PID
      * @param PID_CurrentD D轴电流PID
@@ -65,11 +63,11 @@ public:
      */
     FOC(const uint8_t pole_pairs, const uint16_t CtrlFrequency, const uint16_t CurrentCtrlFrequency,
         Filter& CurrentQFilter, Filter& CurrentDFilter, Filter& SpeedFilter,
-        BLDC_Driver& driver, Encoder& encoder, Storage& storage, CurrentSensor& current_sensor,
+        BLDC_Driver& driver, Encoder& encoder, CurrentSensor& current_sensor,
         const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Angle) :
         pole_pairs(pole_pairs), CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
         PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Angle(PID_Angle),
-        storage(storage), bldc_driver(driver), bldc_encoder(encoder), current_sensor(current_sensor),
+        bldc_driver(driver), bldc_encoder(encoder), current_sensor(current_sensor),
         CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter) {}
 
     [[nodiscard]] CtrlType getCtrlType() const { return ctrl_type; } // 获取控制模式
@@ -110,35 +108,17 @@ public:
     void updateVoltage(float voltage);
 
     /**
-     * @brief 设置PID参数
-     * @param pid_speed_kp 速度环比例系数,若为NAN则不更新
-     * @param pid_speed_ki 速度环积分系数,若为NAN则不更新
-     * @param pid_speed_kd 速度环微分系数,若为NAN则不更新
-     * @param pid_angle_kp 角度环比例系数,若为NAN则不更新
-     * @param pid_angle_ki 角度环积分系数,若为NAN则不更新
-     * @param pid_angle_kd 角度环微分系数,若为NAN则不更新
-     */
-    void setPID(float pid_speed_kp, float pid_speed_ki, float pid_speed_kd,
-                float pid_angle_kp, float pid_angle_ki, float pid_angle_kd);
-
-    /**
      * @brief 设置速度和电流限制
      * @param speed_limit 速度限制,单位rpm
      * @param current_limit 电流限制,单位A
      */
     void setLimit(float speed_limit, float current_limit);
 
-    /**
-     * @brief 储存PID参数
-     */
-    void storagePID();
-
     // 初始化配置项
     const uint8_t pole_pairs;            // 极对数
     const uint16_t CtrlFrequency;        // 控制频率(速度环、角度环),单位Hz
     const uint16_t CurrentCtrlFrequency; // 控制频率(电流环),单位Hz
 
-    uint8_t ID{0};                      // 电机ID
     bool initialized{false};            // 是否初始化
     bool enabled{false};                // 是否使能
     bool started{false};                // 是否启动
@@ -146,23 +126,7 @@ public:
     bool anticogging_enabled{false};    // 是否开启齿槽转矩补偿
     bool anticogging_calibrated{false}; // 是否校准过齿槽转矩
 
-private:
-    friend void foc_config_list();
-    friend void foc_store();
-    friend void foc_restore();
-
-    enum StorageStatus:uint8_t {
-        STORAGE_BASE_CALIBRATE_OK = 0x80,
-        STORAGE_ANTICOGGING_CALIBRATE_OK = 0x20,
-        STORAGE_PID_PARAMETER_OK = 0x08,
-        STORAGE_LIMIT_OK = 0x02,
-        STORAGE_ALL_OK = STORAGE_BASE_CALIBRATE_OK |
-                         STORAGE_ANTICOGGING_CALIBRATE_OK |
-                         STORAGE_PID_PARAMETER_OK |
-                         STORAGE_LIMIT_OK,
-        STORAGE_ERROR = 0x55,
-    };
-
+protected:
     CtrlType ctrl_type{CtrlType::CurrentCtrl}; //当前控制类型
 
     //PID类
@@ -172,7 +136,6 @@ private:
     PID PID_Angle;         //角度PID
     float target_iq{0.0f}; //目标Q轴电流
 
-    Storage& storage;              //存储器
     BLDC_Driver& bldc_driver;      //驱动器
     Encoder& bldc_encoder;         //编码器
     CurrentSensor& current_sensor; //电流传感器
@@ -219,8 +182,6 @@ private:
     float Voltage{1}; //母线电压
 
     static float wrap(float value, float min, float max);
-    void load_storage_calibration();
-    void freeze_storage_calibration(StorageStatus storage_type);
     void UpdateCurrent(float iu, float iv, float iw);
     void SetPhaseVoltage(float ud, float uq, float electrical_angle);
 };

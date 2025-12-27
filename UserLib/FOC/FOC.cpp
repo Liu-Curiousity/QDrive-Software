@@ -35,98 +35,6 @@ float FOC::wrap(float value, const float min, const float max) {
     return value < 0 ? value + max : value + min;
 }
 
-void FOC::load_storage_calibration() {
-    StorageStatus storage_status;
-    storage.read(0x000, reinterpret_cast<uint8_t *>(&storage_status), sizeof(storage_status));
-    if ((storage_status & 0xC0) == STORAGE_BASE_CALIBRATE_OK) {
-        // 如果基础校准数据正常,则读取
-        storage.read(0x100, reinterpret_cast<uint8_t *>(&encoder_direction), sizeof(encoder_direction));
-        storage.read(0x110, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
-        storage.read(0x120, reinterpret_cast<uint8_t *>(&iu_offset), sizeof(iu_offset));
-        storage.read(0x130, reinterpret_cast<uint8_t *>(&iv_offset), sizeof(iv_offset));
-        storage.read(0x140, reinterpret_cast<uint8_t *>(&phase_resistance), sizeof(phase_resistance));
-        storage.read(0x150, reinterpret_cast<uint8_t *>(&phase_inductance), sizeof(phase_inductance));
-        calibrated = true;
-    }
-    if ((storage_status & 0x30) == STORAGE_ANTICOGGING_CALIBRATE_OK) {
-        storage.read(0x800, reinterpret_cast<uint8_t *>(anticogging_map), sizeof(anticogging_map));
-        anticogging_calibrated = true;
-    }
-    if ((storage_status & 0x0C) == STORAGE_PID_PARAMETER_OK) {
-        storage.read(0x160, reinterpret_cast<uint8_t *>(&PID_Speed.kp), sizeof(PID_Speed.kp));
-        storage.read(0x170, reinterpret_cast<uint8_t *>(&PID_Speed.ki), sizeof(PID_Speed.ki));
-        storage.read(0x180, reinterpret_cast<uint8_t *>(&PID_Speed.kd), sizeof(PID_Speed.kd));
-        storage.read(0x190, reinterpret_cast<uint8_t *>(&PID_Angle.kp), sizeof(PID_Angle.kp));
-        storage.read(0x1A0, reinterpret_cast<uint8_t *>(&PID_Angle.ki), sizeof(PID_Angle.ki));
-        storage.read(0x1B0, reinterpret_cast<uint8_t *>(&PID_Angle.kd), sizeof(PID_Angle.kd));
-    }
-    if ((storage_status & 0x03) == STORAGE_LIMIT_OK) {
-        storage.read(0x1C0, reinterpret_cast<uint8_t *>(&PID_Angle.output_limit_p), sizeof(PID_Angle.output_limit_p));
-        PID_Angle.output_limit_n = -PID_Angle.output_limit_p;
-        storage.read(0x1D0, reinterpret_cast<uint8_t *>(&PID_Speed.output_limit_p), sizeof(PID_Speed.output_limit_p));
-        PID_Speed.output_limit_n = -PID_Speed.output_limit_p;
-    }
-
-    storage.read(0x1E0, &ID, sizeof(ID));
-}
-
-/**
- * @brief 储存校准数据
- * @param storage_type 储存数据类型
- */
-void FOC::freeze_storage_calibration(const StorageStatus storage_type) {
-    StorageStatus storage_status;
-    storage.read(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
-    switch (storage_type) {
-        case STORAGE_BASE_CALIBRATE_OK:
-            // 储存基础校准数据
-            storage.write(0x100, reinterpret_cast<uint8_t *>(&encoder_direction), sizeof(encoder_direction));
-            storage.write(0x110, reinterpret_cast<uint8_t *>(&zero_electric_angle), sizeof(zero_electric_angle));
-            storage.write(0x120, reinterpret_cast<uint8_t *>(&iu_offset), sizeof(iu_offset));
-            storage.write(0x130, reinterpret_cast<uint8_t *>(&iv_offset), sizeof(iv_offset));
-            storage.write(0x140, reinterpret_cast<uint8_t *>(&phase_resistance), sizeof(phase_resistance));
-            storage.write(0x150, reinterpret_cast<uint8_t *>(&phase_inductance), sizeof(phase_inductance));
-
-            // 更新储存状态
-            storage_status = static_cast<StorageStatus>((storage_status & 0x3F) | STORAGE_BASE_CALIBRATE_OK);
-            storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
-            break;
-        case STORAGE_ANTICOGGING_CALIBRATE_OK:
-            // 储存齿槽转矩补偿表
-            storage.write(0x800, reinterpret_cast<uint8_t *>(anticogging_map), sizeof(anticogging_map));
-
-            // 更新储存状态
-            storage_status = static_cast<StorageStatus>((storage_status & 0xCF) | STORAGE_ANTICOGGING_CALIBRATE_OK);
-            storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
-            break;
-        case STORAGE_PID_PARAMETER_OK:
-            // 储存PID参数
-            storage.write(0x160, reinterpret_cast<uint8_t *>(&PID_Speed.kp), sizeof(PID_Speed.kp));
-            storage.write(0x170, reinterpret_cast<uint8_t *>(&PID_Speed.ki), sizeof(PID_Speed.ki));
-            storage.write(0x180, reinterpret_cast<uint8_t *>(&PID_Speed.kd), sizeof(PID_Speed.kd));
-            storage.write(0x190, reinterpret_cast<uint8_t *>(&PID_Angle.kp), sizeof(PID_Angle.kp));
-            storage.write(0x1A0, reinterpret_cast<uint8_t *>(&PID_Angle.ki), sizeof(PID_Angle.ki));
-            storage.write(0x1B0, reinterpret_cast<uint8_t *>(&PID_Angle.kd), sizeof(PID_Angle.kd));
-
-            // 更新储存状态
-            storage_status = static_cast<StorageStatus>((storage_status & 0xF3) | STORAGE_PID_PARAMETER_OK);
-            storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
-            break;
-        case STORAGE_LIMIT_OK:
-            storage.write(0x1C0, reinterpret_cast<uint8_t *>(&PID_Angle.output_limit_p),
-                          sizeof(PID_Angle.output_limit_p));
-            storage.write(0x1D0, reinterpret_cast<uint8_t *>(&PID_Speed.output_limit_p),
-                          sizeof(PID_Speed.output_limit_p));
-
-            // 更新储存状态
-            storage_status = static_cast<StorageStatus>((storage_status & 0xFC) | STORAGE_LIMIT_OK);
-            storage.write(0x000, reinterpret_cast<uint8_t *>(&storage_status), 1);
-            break;
-        default: ;
-    }
-    storage.write(0x1E0, &ID, sizeof(ID));
-}
-
 void FOC::init() {
     // 1.初始化BLDC驱动
     if (!bldc_driver.initialized)
@@ -137,12 +45,7 @@ void FOC::init() {
     // 3.初始化电流传感器
     if (!current_sensor.initialized)
         current_sensor.init();
-    // 4.初始化flash
-    if (!storage.initialized)
-        storage.init();
-    // 5.从flash中读取校准数据
-    load_storage_calibration();
-    // 6.完成初始化
+    // 4.完成初始化
     initialized = true;
 }
 
@@ -263,8 +166,6 @@ void FOC::calibrate() {
     SetPhaseVoltage(0, 0, 0);
     zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (pole_pairs - 1)) / pole_pairs;
 
-    /*5.校准完成*/
-    freeze_storage_calibration(STORAGE_BASE_CALIBRATE_OK); // 保存基础校准数据
     calibrated = true;
 }
 
@@ -308,7 +209,6 @@ void FOC::anticogging_calibrate() {
     for (auto& anticogging : anticogging_map) {
         anticogging -= anticogging_avg;
     }
-    freeze_storage_calibration(STORAGE_ANTICOGGING_CALIBRATE_OK); // 保存基础校准数据
     anticogging_calibrated = true;
 }
 
@@ -381,16 +281,6 @@ void FOC::updateVoltage(const float voltage) {
     Voltage = voltage;
 }
 
-void FOC::setPID(const float pid_speed_kp, const float pid_speed_ki, const float pid_speed_kd,
-                 const float pid_angle_kp, const float pid_angle_ki, const float pid_angle_kd) {
-    if (!isnan(pid_speed_kp)) PID_Speed.kp = pid_speed_kp;
-    if (!isnan(pid_speed_ki)) PID_Speed.ki = pid_speed_ki;
-    if (!isnan(pid_speed_kd)) PID_Speed.kd = pid_speed_kd;
-    if (!isnan(pid_angle_kp)) PID_Angle.kp = pid_angle_kp;
-    if (!isnan(pid_angle_ki)) PID_Angle.ki = pid_angle_ki;
-    if (!isnan(pid_angle_kd)) PID_Angle.kd = pid_angle_kd;
-}
-
 void FOC::setLimit(const float speed_limit, const float current_limit) {
     if (!isnan(speed_limit)) {
         PID_Angle.output_limit_p = speed_limit;
@@ -400,10 +290,6 @@ void FOC::setLimit(const float speed_limit, const float current_limit) {
         PID_Speed.output_limit_p = current_limit;
         PID_Speed.output_limit_n = -current_limit;
     }
-}
-
-void FOC::storagePID() {
-    freeze_storage_calibration(STORAGE_PID_PARAMETER_OK);
 }
 
 void FOC::Ctrl(const CtrlType ctrl_type, float value) {

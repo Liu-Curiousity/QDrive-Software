@@ -10,6 +10,7 @@
 #include "Storage_EmbeddedFlash.h"
 #include "CurrentSensor_Embed.h"
 #include "filters.h"
+#include "QD4310.h"
 
 BLDC_Driver_DRV8300 bldc_driver(&htim1, 2125);
 Encoder_MT6825 bldc_encoder(SPI1_CSn_GPIO_Port, SPI1_CSn_Pin, &hspi1);
@@ -20,45 +21,45 @@ LowPassFilter_2_Order CurrentDFilter(0.00005f, 1500); // 20kHz
 LowPassFilter_2_Order SpeedFilter(0.00005f, 300);     // 20kHz
 
 __attribute__((section(".ccmram")))
-FOC foc(FOC_POLE_PAIRS, 1000, 20000,
-        CurrentQFilter, CurrentDFilter, SpeedFilter,
-        bldc_driver, bldc_encoder, storage, current_sensor,
-        PID(PID::delta_type,
-            FOC_CURRENT_KP,
-            FOC_CURRENT_KI,
-            FOC_CURRENT_KD,
-            NAN,
-            NAN,
-            1.0f,
-            -1.0f
-        ),
-        PID(PID::delta_type,
-            FOC_CURRENT_KP,
-            FOC_CURRENT_KI,
-            FOC_CURRENT_KD,
-            NAN,
-            NAN,
-            1.0f,
-            -1.0f
-        ),
-        PID(PID::position_type,
-            FOC_SPEED_KP,
-            FOC_SPEED_KI,
-            FOC_SPEED_KD,
-            2e3f,
-            -2e3f,
-            FOC_MAX_CURRENT,
-            -FOC_MAX_CURRENT
-        ),
-        PID(PID::position_type,
-            FOC_ANGLE_KP,
-            FOC_ANGLE_KI,
-            FOC_ANGLE_KD,
-            NAN,
-            NAN,
-            FOC_MAX_SPEED,
-            -FOC_MAX_SPEED
-        )
+QD4310 foc(FOC_POLE_PAIRS, 1000, 20000,
+           CurrentQFilter, CurrentDFilter, SpeedFilter,
+           bldc_driver, bldc_encoder, storage, current_sensor,
+           PID(PID::delta_type,
+               FOC_CURRENT_KP,
+               FOC_CURRENT_KI,
+               FOC_CURRENT_KD,
+               NAN,
+               NAN,
+               1.0f,
+               -1.0f
+           ),
+           PID(PID::delta_type,
+               FOC_CURRENT_KP,
+               FOC_CURRENT_KI,
+               FOC_CURRENT_KD,
+               NAN,
+               NAN,
+               1.0f,
+               -1.0f
+           ),
+           PID(PID::position_type,
+               FOC_SPEED_KP,
+               FOC_SPEED_KI,
+               FOC_SPEED_KD,
+               2e3f,
+               -2e3f,
+               FOC_MAX_CURRENT,
+               -FOC_MAX_CURRENT
+           ),
+           PID(PID::position_type,
+               FOC_ANGLE_KP,
+               FOC_ANGLE_KI,
+               FOC_ANGLE_KD,
+               NAN,
+               NAN,
+               FOC_MAX_SPEED,
+               -FOC_MAX_SPEED
+           )
 );
 
 void StartFOCTask(void *argument) {

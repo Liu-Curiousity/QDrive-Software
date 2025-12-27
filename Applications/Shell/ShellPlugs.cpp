@@ -3,11 +3,11 @@
 #include "shell_cpp.h"
 #include "usbd_cdc_if.h"
 #include "retarget/retarget.h"
-#include "FOC.h"
+#include "QD4310.h"
 #include "FOC_config.h"
 #include "main.h"
 
-extern FOC foc;
+extern QD4310 foc;
 extern Shell shell;
 
 
@@ -247,7 +247,6 @@ void foc_ctrl(int argc, char *argv[]) {
 void foc_enable() {
     foc.start();
     if (foc.started) {
-        HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
         PRINT("QDrive enabled");
     } else
         PRINT("enable failed, please calibrate first");
@@ -255,7 +254,6 @@ void foc_enable() {
 
 void foc_disable() {
     foc.stop();
-    HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
     PRINT("QDrive disabled");
 }
 
@@ -298,8 +296,8 @@ void foc_restore() {
     foc.setLimit(FOC_MAX_SPEED,FOC_MAX_CURRENT);
     foc.ID = 0;
 
-    foc.freeze_storage_calibration(FOC::STORAGE_PID_PARAMETER_OK); //储存PID参数
-    foc.freeze_storage_calibration(FOC::STORAGE_LIMIT_OK);         //储存限制参数
+    foc.freeze_storage_calibration(QD4310::STORAGE_PID_PARAMETER_OK); //储存PID参数
+    foc.freeze_storage_calibration(QD4310::STORAGE_LIMIT_OK);         //储存限制参数
     PRINT("QDrive factory restore completed");
     foc_config_list();
 }
@@ -319,8 +317,8 @@ void foc_store() {
         PRINT("Store operation cancelled");
         return;
     }
-    foc.freeze_storage_calibration(FOC::STORAGE_PID_PARAMETER_OK); //储存PID参数
-    foc.freeze_storage_calibration(FOC::STORAGE_LIMIT_OK);         //储存限制参数
+    foc.freeze_storage_calibration(QD4310::STORAGE_PID_PARAMETER_OK); //储存PID参数
+    foc.freeze_storage_calibration(QD4310::STORAGE_LIMIT_OK);         //储存限制参数
     PRINT("Store configuration completed");
 }
 
