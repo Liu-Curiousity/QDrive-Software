@@ -95,16 +95,22 @@ private:
     friend void foc_restore();
 
     enum StorageStatus:uint8_t {
-        STORAGE_BASE_CALIBRATE_OK = 0x80,
-        STORAGE_ANTICOGGING_CALIBRATE_OK = 0x20,
-        STORAGE_PID_PARAMETER_OK = 0x08,
-        STORAGE_LIMIT_OK = 0x02,
+        STORAGE_NONE = 0b0000'0000,
+        STORAGE_BASE_CALIBRATE_OK = 0b0000'0001,
+        STORAGE_ANTICOGGING_CALIBRATE_OK = 0b0000'0010,
+        STORAGE_PID_PARAMETER_OK = 0b0000'0100,
+        STORAGE_LIMIT_OK = 0b0000'1000,
+        STORAGE_ID_OK = 0b0001'0000,
+        STORAGE_ZERO_POS_OK = 0b0010'0000,
         STORAGE_ALL_OK = STORAGE_BASE_CALIBRATE_OK |
                          STORAGE_ANTICOGGING_CALIBRATE_OK |
                          STORAGE_PID_PARAMETER_OK |
-                         STORAGE_LIMIT_OK,
-        STORAGE_ERROR = 0x55,
+                         STORAGE_LIMIT_OK |
+                         STORAGE_ID_OK |
+                         STORAGE_ZERO_POS_OK,
     };
+
+    static constexpr uint8_t STORAGE_MAGIC = 0xAA; // 存储器魔术字,储存在0x000
 
     Storage& storage;     //存储器
     float zero_pos{0.0f}; //位置零点

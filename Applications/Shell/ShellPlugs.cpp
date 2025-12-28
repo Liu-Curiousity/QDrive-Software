@@ -299,8 +299,11 @@ void foc_restore() {
     qd4310.setLimit(FOC_MAX_SPEED,FOC_MAX_CURRENT);
     qd4310.ID = 0;
 
-    qd4310.freeze_storage_calibration(QD4310::STORAGE_PID_PARAMETER_OK); //储存PID参数
-    qd4310.freeze_storage_calibration(QD4310::STORAGE_LIMIT_OK);         //储存限制参数
+    qd4310.freeze_storage_calibration(
+        static_cast<QD4310::StorageStatus>(QD4310::STORAGE_PID_PARAMETER_OK | // 储存PID参数
+                                           QD4310::STORAGE_LIMIT_OK |         // 储存限制参数
+                                           QD4310::STORAGE_ID_OK)             // 储存ID
+    );
     PRINT("QDrive factory restore completed");
     foc_config_list();
 }
@@ -320,8 +323,11 @@ void foc_store() {
         PRINT("Store operation cancelled");
         return;
     }
-    qd4310.freeze_storage_calibration(QD4310::STORAGE_PID_PARAMETER_OK); //储存PID参数
-    qd4310.freeze_storage_calibration(QD4310::STORAGE_LIMIT_OK);         //储存限制参数
+    qd4310.freeze_storage_calibration(
+        static_cast<QD4310::StorageStatus>(QD4310::STORAGE_PID_PARAMETER_OK | // 储存PID参数
+                                           QD4310::STORAGE_LIMIT_OK |         // 储存限制参数
+                                           QD4310::STORAGE_ID_OK)             // 储存ID
+    );
     PRINT("Store configuration completed");
 }
 
