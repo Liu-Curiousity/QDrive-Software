@@ -146,6 +146,7 @@ void foc_config(int argc, char *argv[]) {
 
     if (strcmp(key, "zero_pos") == 0) {
         qd4310.setZeroPosition(value ? atoff(value) : qd4310.getAngle());
+        PRINT("Setting config [zero_pos]");
     } else if (value) {
         float valf = atoff(value);
         do {
