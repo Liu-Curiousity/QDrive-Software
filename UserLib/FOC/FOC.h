@@ -138,6 +138,8 @@ protected:
     float anticogging_map[map_len]{};        // 齿槽转矩补偿表
     bool anticogging_calibrating{false};     // 齿槽转矩是否正在校准
 
+    static float wrap(float value, float min, float max);
+
 private:
     CtrlType ctrl_type{CtrlType::CurrentCtrl}; //当前控制类型
     BLDC_Driver& bldc_driver;      //驱动器
@@ -174,7 +176,6 @@ private:
 
     float Voltage{1}; //母线电压
 
-    static float wrap(float value, float min, float max);
     void UpdateCurrent(float iu, float iv, float iw);
     void SetPhaseVoltage(float ud, float uq, float electrical_angle);
 };

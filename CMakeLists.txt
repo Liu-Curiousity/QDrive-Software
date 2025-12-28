@@ -42,6 +42,7 @@ add_executable(${CMAKE_PROJECT_NAME})
 add_subdirectory(cmake/stm32cubemx)
 
 add_subdirectory(UserLib/FOC)
+add_subdirectory(UserLib/QD4310)
 add_subdirectory(UserLib/PID)
 add_subdirectory(UserLib/LetterShell)
 
@@ -78,6 +79,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
         # Add user defined libraries
         foc
+        qd4310
         pid
         letter_shell
 )

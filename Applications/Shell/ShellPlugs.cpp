@@ -44,8 +44,8 @@ void foc_status() {
     PRINT("  CAN ID       : %03d", qd4310.ID);
     PRINT("  Status       : %s", qd4310.started ? "enabled" : "disabled");
     PRINT("  CtrlMode     : %s",
-          qd4310.getCtrlType() ==  QD4310::CtrlType::CurrentCtrl ? "CurrentCtrl" :
-          qd4310.getCtrlType() ==  QD4310::CtrlType::SpeedCtrl ? "SpeedCtrl" : "AngleCtrl");
+          qd4310.getCtrlType() == QD4310::CtrlType::CurrentCtrl ? "CurrentCtrl" :
+          qd4310.getCtrlType() == QD4310::CtrlType::SpeedCtrl ? "SpeedCtrl" : "AngleCtrl");
     PRINT("  Current      : %.2f A", qd4310.getCurrent());
     PRINT("  Speed        : %.2f rpm", qd4310.getSpeed());
     PRINT("  Angle        : %.2f rad", qd4310.getAngle());
@@ -71,6 +71,7 @@ void foc_config_help() {
     PRINT("  limit.speed        : Speed limit in rpm");
     PRINT("  limit.current      : Current limit in A");
     PRINT("  can.id             : CAN ID of the motor (0-7)");
+    PRINT("  zero_pos           : Position zero offset in rad");
 
     // TODO:部分不可调
     // PRINT("  can.baud_rate      : CAN bus baud rate");
@@ -127,9 +128,9 @@ void foc_config(int argc, char *argv[]) {
     }
 
     const char *key = argv[1];
-    const char *value = NULL;
+    const char *value = nullptr;
 
-    if (strchr(key, '=') != NULL) {
+    if (strchr(key, '=') != nullptr) {
         // 解析 key=value 格式
         static char keybuf[128];
         strncpy(keybuf, key, sizeof(keybuf) - 1);
@@ -143,8 +144,10 @@ void foc_config(int argc, char *argv[]) {
         value = argv[2];
     }
 
-    if (value) {
-        float valf = atof(value);
+    if (strcmp(key, "zero_pos") == 0) {
+        qd4310.setZeroPosition(value ? atoff(value) : qd4310.getAngle());
+    } else if (value) {
+        float valf = atoff(value);
         do {
             if (strcmp(key, "pid.speed.kp") == 0) {
                 qd4310.setPID(valf,NAN,NAN,NAN,NAN,NAN);
@@ -202,9 +205,9 @@ void foc_ctrl(int argc, char *argv[]) {
     }
 
     const char *key = argv[1];
-    const char *value = NULL;
+    const char *value = nullptr;
 
-    if (strchr(key, '=') != NULL) {
+    if (strchr(key, '=') != nullptr) {
         // 解析 key=value 格式
         static char keybuf[128];
         strncpy(keybuf, key, sizeof(keybuf) - 1);
@@ -219,22 +222,22 @@ void foc_ctrl(int argc, char *argv[]) {
     }
 
     if (value) {
-        float valf = atof(value);
+        float valf = atoff(value);
         if (strcmp(key, "current") == 0) {
             PRINT("Setting current = %.2f A", valf);
-            qd4310.Ctrl( QD4310::CtrlType::CurrentCtrl, valf);
+            qd4310.Ctrl(QD4310::CtrlType::CurrentCtrl, valf);
         } else if (strcmp(key, "speed") == 0) {
             PRINT("Setting speed = %.2f rpm", valf);
-            qd4310.Ctrl( QD4310::CtrlType::SpeedCtrl, valf);
+            qd4310.Ctrl(QD4310::CtrlType::SpeedCtrl, valf);
         } else if (strcmp(key, "angle") == 0) {
             PRINT("Setting angle = %.2f rad", valf);
-            qd4310.Ctrl( QD4310::CtrlType::AngleCtrl, valf);
+            qd4310.Ctrl(QD4310::CtrlType::AngleCtrl, valf);
         } else if (strcmp(key, "step_angle") == 0) {
             PRINT("Stepping %.2f rad angle", valf);
-            qd4310.Ctrl( QD4310::CtrlType::StepAngleCtrl, valf);
+            qd4310.Ctrl(QD4310::CtrlType::StepAngleCtrl, valf);
         } else if (strcmp(key, "low_speed") == 0) {
             PRINT("Setting low_speed = %.2f rpm", valf);
-            qd4310.Ctrl( QD4310::CtrlType::LowSpeedCtrl, valf);
+            qd4310.Ctrl(QD4310::CtrlType::LowSpeedCtrl, valf);
         } else {
             PRINT("Unknown ctrl target: %s", key);
             foc_ctrl_help();
@@ -292,7 +295,7 @@ void foc_restore() {
         return;
     }
     qd4310.setPID(FOC_SPEED_KP, FOC_SPEED_KI, FOC_SPEED_KD,
-               FOC_ANGLE_KP, FOC_ANGLE_KI, FOC_ANGLE_KD);
+                  FOC_ANGLE_KP, FOC_ANGLE_KI, FOC_ANGLE_KD);
     qd4310.setLimit(FOC_MAX_SPEED,FOC_MAX_CURRENT);
     qd4310.ID = 0;
 

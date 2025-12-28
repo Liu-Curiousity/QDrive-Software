@@ -1,12 +1,12 @@
 //
 // Created by 26757 on 25-5-6.
 //
-#include <numbers>
 #include "task_public.h"
 #include "fdcan.h"
 #include "QD4310.h"
 #include "queue.h"
 #include "task.h"
+#include <numbers>
 
 using namespace std;
 
