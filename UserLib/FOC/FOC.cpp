@@ -313,9 +313,14 @@ void FOC::Ctrl(const CtrlType ctrl_type, float value) {
 
 __attribute__((section(".ccmram_func")))
 void FOC::Ctrl_ISR() {
-    if (!started && !anticogging_calibrating) return;
+    static float PreviousAngle_CtrlISR = Angle;
+    if (!enabled) return;
+    if (!calibrated) return;
+    if (!started && !anticogging_calibrating) {
+        PreviousAngle_CtrlISR = Angle;
+        return;
+    }
 
-    static float PreviousAngle_CtrlISR = 0;
     /**1.速度闭环控制**/
     switch (ctrl_type) {
         case CtrlType::LowSpeedCtrl:
