@@ -288,7 +288,10 @@ void FOC::Ctrl(const CtrlType ctrl_type, float value) {
             low_speed_angle = Angle; // 记录当前角度为低速控制起始角度
             break;
         case CtrlType::StepAngleCtrl:
-            PID_Angle.SetTarget(PID_Angle.target + value);
+            if (this->ctrl_type == ctrl_type)
+                PID_Angle.SetTarget(PID_Angle.target + value);
+            else
+                PID_Angle.SetTarget(Angle + value);
             break;
         case CtrlType::AngleCtrl:
             value = wrap(value, 0, 2 * numbers::pi_v<float>); // 限制在0~2pi之间
