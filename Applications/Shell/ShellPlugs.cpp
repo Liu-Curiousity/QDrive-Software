@@ -149,35 +149,33 @@ void foc_config(int argc, char *argv[]) {
         PRINT("Setting config [zero_pos]");
     } else if (value) {
         float valf = atoff(value);
-        do {
-            if (strcmp(key, "pid.speed.kp") == 0) {
-                qd4310.setPID(valf,NAN,NAN,NAN,NAN,NAN);
-            } else if (strcmp(key, "pid.speed.ki") == 0) {
-                qd4310.setPID(NAN, valf,NAN,NAN,NAN,NAN);
-            } else if (strcmp(key, "pid.speed.kd") == 0) {
-                qd4310.setPID(NAN,NAN, valf,NAN,NAN,NAN);
-            } else if (strcmp(key, "pid.angle.kp") == 0) {
-                qd4310.setPID(NAN,NAN,NAN, valf,NAN,NAN);
-            } else if (strcmp(key, "pid.angle.ki") == 0) {
-                qd4310.setPID(NAN,NAN,NAN, NAN, valf,NAN);
-            } else if (strcmp(key, "pid.angle.kd") == 0) {
-                qd4310.setPID(NAN,NAN,NAN, NAN,NAN, valf);
-            } else if (strcmp(key, "limit.speed") == 0) {
-                qd4310.setLimit(valf, NAN);
-            } else if (strcmp(key, "limit.current") == 0) {
-                qd4310.setLimit(NAN, valf);
-            } else if (strcmp(key, "can.id") == 0) {
-                qd4310.ID = static_cast<uint8_t>(std::clamp(static_cast<int>(valf), 0, 7));
-            } else {
-                PRINT("Unknown config target: %s", key);
-                break;
-            }
-            if (valf == 0) {
-                PRINT("Setting config [%s] = 0.000", key);
-            } else {
-                PRINT("Setting config [%s] = %.3g", key, valf);
-            }
-        } while (false);
+        if (strcmp(key, "pid.speed.kp") == 0) {
+            qd4310.setPID(valf,NAN,NAN,NAN,NAN,NAN);
+        } else if (strcmp(key, "pid.speed.ki") == 0) {
+            qd4310.setPID(NAN, valf,NAN,NAN,NAN,NAN);
+        } else if (strcmp(key, "pid.speed.kd") == 0) {
+            qd4310.setPID(NAN,NAN, valf,NAN,NAN,NAN);
+        } else if (strcmp(key, "pid.angle.kp") == 0) {
+            qd4310.setPID(NAN,NAN,NAN, valf,NAN,NAN);
+        } else if (strcmp(key, "pid.angle.ki") == 0) {
+            qd4310.setPID(NAN,NAN,NAN, NAN, valf,NAN);
+        } else if (strcmp(key, "pid.angle.kd") == 0) {
+            qd4310.setPID(NAN,NAN,NAN, NAN,NAN, valf);
+        } else if (strcmp(key, "limit.speed") == 0) {
+            qd4310.setLimit(valf, NAN);
+        } else if (strcmp(key, "limit.current") == 0) {
+            qd4310.setLimit(NAN, valf);
+        } else if (strcmp(key, "can.id") == 0) {
+            qd4310.ID = static_cast<uint8_t>(std::clamp(static_cast<int>(valf), 0, 7));
+        } else {
+            PRINT("Unknown config target: %s", key);
+            return;
+        }
+        if (valf == 0) {
+            PRINT("Setting config [%s] = 0.000", key);
+        } else {
+            PRINT("Setting config [%s] = %.3g", key, valf);
+        }
     } else {
         PRINT("Missing value for config [%s]", key);
     }
