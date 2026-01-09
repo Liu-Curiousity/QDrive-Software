@@ -68,7 +68,13 @@ public:
         pole_pairs(pole_pairs), CtrlFrequency(CtrlFrequency), CurrentCtrlFrequency(CurrentCtrlFrequency),
         PID_CurrentQ(PID_CurrentQ), PID_CurrentD(PID_CurrentD), PID_Speed(PID_Speed), PID_Angle(PID_Angle),
         bldc_driver(driver), bldc_encoder(encoder), current_sensor(current_sensor),
-        CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter) {}
+        CurrentQFilter(CurrentQFilter), CurrentDFilter(CurrentDFilter), SpeedFilter(SpeedFilter) {
+        anticogging_map = new float[map_len]{};
+    }
+
+    ~FOC() {
+        delete[] anticogging_map;
+    }
 
     [[nodiscard]] CtrlType getCtrlType() const { return ctrl_type; } // 获取控制模式
     [[nodiscard]] float getSpeed() const { return Speed; }           // 获取电机转速,单位rpm
@@ -135,19 +141,19 @@ protected:
     float iv_offset{0};                      // V相电流偏置,单位A
     float zero_electric_angle{0};            // 电机零点电角度,单位rad
     static constexpr uint16_t map_len{2000}; // 齿槽转矩校准点数
-    float anticogging_map[map_len]{};        // 齿槽转矩补偿表
+    float *anticogging_map;                  // 齿槽转矩补偿表
     bool anticogging_calibrating{false};     // 齿槽转矩是否正在校准
 
     static float wrap(float value, float min, float max);
 
 private:
     CtrlType ctrl_type{CtrlType::CurrentCtrl}; //当前控制类型
-    BLDC_Driver& bldc_driver;      //驱动器
-    Encoder& bldc_encoder;         //编码器
-    CurrentSensor& current_sensor; //电流传感器
-    Filter& CurrentQFilter;        //Q轴电流低通滤波器
-    Filter& CurrentDFilter;        //D轴电流低通滤波器
-    Filter& SpeedFilter;           //速度低通滤波器
+    BLDC_Driver& bldc_driver;                  //驱动器
+    Encoder& bldc_encoder;                     //编码器
+    CurrentSensor& current_sensor;             //电流传感器
+    Filter& CurrentQFilter;                    //Q轴电流低通滤波器
+    Filter& CurrentDFilter;                    //D轴电流低通滤波器
+    Filter& SpeedFilter;                       //速度低通滤波器
 
     // 运行时参数
     float Angle{0};           // 当前电机角度,单位rad

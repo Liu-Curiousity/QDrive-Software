@@ -173,6 +173,7 @@ void FOC::anticogging_calibrate() {
     if (!enabled) return;           // 如果没有使能,则不能校准
     if (!calibrated) return;        // 如果没有基础校准,则不能校准
     if (started) return;            // 如果已经启动,则不能校准
+    if (!anticogging_map) return;   // 如果补偿表指针为空,则不能校准
     anticogging_calibrated = false; // 标记为未校准
 
     Ctrl(CtrlType::CurrentCtrl, 0); // 释放电机
@@ -206,8 +207,8 @@ void FOC::anticogging_calibrate() {
     anticogging_calibrating = false; // 结束校准,即关闭闭环控制
     // 后处理:将补偿表平移到0点(应为正转校准时的Iq平均值大于0(需推动转子转动))
     const float anticogging_avg = accumulate(anticogging_map, anticogging_map + map_len, 0.0f) / map_len;
-    for (auto& anticogging : anticogging_map) {
-        anticogging -= anticogging_avg;
+    for (int i = 0; i < map_len; ++i) {
+        anticogging_map[i] -= anticogging_avg;
     }
     anticogging_calibrated = true;
 }
@@ -343,7 +344,7 @@ void FOC::Ctrl_ISR() {
             target_iq = PID_Speed.calc(Speed);
         case CtrlType::CurrentCtrl:
             /*齿槽转矩补偿*/
-            if (anticogging_enabled && anticogging_calibrated) {
+            if (anticogging_enabled && anticogging_calibrated && anticogging_calibrating) {
                 const uint16_t index =
                     static_cast<uint16_t>(Angle * map_len * 0.5f * numbers::inv_pi_v<float> + 0.5f) % map_len;
                 PID_CurrentQ.SetTarget(target_iq + anticogging_map[index]);
