@@ -20,7 +20,6 @@ LowPassFilter_2_Order CurrentQFilter(0.00005f, 1500); // 20kHz
 LowPassFilter_2_Order CurrentDFilter(0.00005f, 1500); // 20kHz
 LowPassFilter_2_Order SpeedFilter(0.00005f, 300);     // 20kHz
 
-__attribute__((section(".ccmram")))
 QD4310 qd4310(FOC_POLE_PAIRS, 1000, 20000,
               CurrentQFilter, CurrentDFilter, SpeedFilter,
               bldc_driver, bldc_encoder, storage, current_sensor,

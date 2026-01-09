@@ -30,15 +30,18 @@ void QD4310::calibrate() {
     if (!enabled) return; // 如果没有使能,则不能校准
     if (started) return;  // 如果已经启动,则不能校准
     FOC::calibrate();
-    freeze_storage_calibration(STORAGE_BASE_CALIBRATE_OK); // 保存基础校准数据
+    if (calibrated)                                            // 如果基础校准成功
+        freeze_storage_calibration(STORAGE_BASE_CALIBRATE_OK); // 保存基础校准数据
 }
 
 void QD4310::anticogging_calibrate() {
-    if (!enabled) return;    // 如果没有使能,则不能校准
-    if (!calibrated) return; // 如果没有基础校准,则不能校准
-    if (started) return;     // 如果已经启动,则不能校准
+    if (!enabled) return;         // 如果没有使能,则不能校准
+    if (!calibrated) return;      // 如果没有基础校准,则不能校准
+    if (started) return;          // 如果已经启动,则不能校准
+    if (!anticogging_map) return; // 如果补偿表指针为空,则不能校准
     FOC::anticogging_calibrate();
-    freeze_storage_calibration(STORAGE_ANTICOGGING_CALIBRATE_OK); // 储存齿槽转矩补偿表
+    if (anticogging_calibrated)                                       // 如果齿槽转矩补偿校准成功
+        freeze_storage_calibration(STORAGE_ANTICOGGING_CALIBRATE_OK); // 储存齿槽转矩补偿表
 }
 
 [[nodiscard]] float QD4310::getAngle() const {

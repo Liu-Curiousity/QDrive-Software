@@ -11,6 +11,45 @@
 extern QD4310 qd4310;
 extern Shell shell;
 
+static float atof_lite(const char *s) {
+    if (!s) return 0.0f;
+
+    // 可选符号
+    int sign = 1;
+    if (*s == '+') {
+        ++s;
+    } else if (*s == '-') {
+        sign = -1;
+        ++s;
+    }
+
+    // 解析整数部分
+    float int_part = 0.0f;
+    bool has_digit = false;
+    while (*s >= '0' && *s <= '9') {
+        has_digit = true;
+        int_part = int_part * 10.0f + static_cast<float>(*s - '0');
+        ++s;
+    }
+
+    // 解析小数部分
+    float frac_part = 0.0f;
+    float scale = 1.0f;
+    if (*s == '.') {
+        ++s;
+        while (*s >= '0' && *s <= '9') {
+            has_digit = true;
+            frac_part = frac_part * 10.0f + static_cast<float>(*s - '0');
+            scale *= 10.0f;
+            ++s;
+        }
+    }
+
+    if (!has_digit) return 0.0f;
+
+    const float result = int_part + (frac_part / scale);
+    return (sign < 0) ? -result : result;
+}
 
 signed short silent(char *data, unsigned short len) {
     return 0;
@@ -146,39 +185,37 @@ void foc_config(int argc, char *argv[]) {
     }
 
     if (strcmp(key, "zero_pos") == 0) {
-        qd4310.setZeroPosition(value ? atoff(value) : qd4310.getAngle());
+        qd4310.setZeroPosition(value ? atof_lite(value) : qd4310.getAngle());
         PRINT("Setting config [zero_pos]");
     } else if (value) {
-        float valf = atoff(value);
-        do {
-            if (strcmp(key, "pid.speed.kp") == 0) {
-                qd4310.setPID(valf,NAN,NAN,NAN,NAN,NAN);
-            } else if (strcmp(key, "pid.speed.ki") == 0) {
-                qd4310.setPID(NAN, valf,NAN,NAN,NAN,NAN);
-            } else if (strcmp(key, "pid.speed.kd") == 0) {
-                qd4310.setPID(NAN,NAN, valf,NAN,NAN,NAN);
-            } else if (strcmp(key, "pid.angle.kp") == 0) {
-                qd4310.setPID(NAN,NAN,NAN, valf,NAN,NAN);
-            } else if (strcmp(key, "pid.angle.ki") == 0) {
-                qd4310.setPID(NAN,NAN,NAN, NAN, valf,NAN);
-            } else if (strcmp(key, "pid.angle.kd") == 0) {
-                qd4310.setPID(NAN,NAN,NAN, NAN,NAN, valf);
-            } else if (strcmp(key, "limit.speed") == 0) {
-                qd4310.setLimit(valf, NAN);
-            } else if (strcmp(key, "limit.current") == 0) {
-                qd4310.setLimit(NAN, valf);
-            } else if (strcmp(key, "can.id") == 0) {
-                qd4310.ID = static_cast<uint8_t>(std::clamp(static_cast<int>(valf), 0, 7));
-            } else {
-                PRINT("Unknown config target: %s", key);
-                break;
-            }
-            if (valf == 0) {
-                PRINT("Setting config [%s] = 0.000", key);
-            } else {
-                PRINT("Setting config [%s] = %.3g", key, valf);
-            }
-        } while (false);
+        float valf = atof_lite(value);
+        if (strcmp(key, "pid.speed.kp") == 0) {
+            qd4310.setPID(valf,NAN,NAN,NAN,NAN,NAN);
+        } else if (strcmp(key, "pid.speed.ki") == 0) {
+            qd4310.setPID(NAN, valf,NAN,NAN,NAN,NAN);
+        } else if (strcmp(key, "pid.speed.kd") == 0) {
+            qd4310.setPID(NAN,NAN, valf,NAN,NAN,NAN);
+        } else if (strcmp(key, "pid.angle.kp") == 0) {
+            qd4310.setPID(NAN,NAN,NAN, valf,NAN,NAN);
+        } else if (strcmp(key, "pid.angle.ki") == 0) {
+            qd4310.setPID(NAN,NAN,NAN, NAN, valf,NAN);
+        } else if (strcmp(key, "pid.angle.kd") == 0) {
+            qd4310.setPID(NAN,NAN,NAN, NAN,NAN, valf);
+        } else if (strcmp(key, "limit.speed") == 0) {
+            qd4310.setLimit(valf, NAN);
+        } else if (strcmp(key, "limit.current") == 0) {
+            qd4310.setLimit(NAN, valf);
+        } else if (strcmp(key, "can.id") == 0) {
+            qd4310.ID = static_cast<uint8_t>(std::clamp(static_cast<int>(valf), 0, 7));
+        } else {
+            PRINT("Unknown config target: %s", key);
+            return;
+        }
+        if (valf == 0) {
+            PRINT("Setting config [%s] = 0.000", key);
+        } else {
+            PRINT("Setting config [%s] = %.3g", key, valf);
+        }
     } else {
         PRINT("Missing value for config [%s]", key);
     }
@@ -224,7 +261,7 @@ void foc_ctrl(int argc, char *argv[]) {
     }
 
     if (value) {
-        float valf = atoff(value);
+        float valf = atof_lite(value);
         if (strcmp(key, "current") == 0) {
             PRINT("Setting current = %.2f A", valf);
             qd4310.Ctrl(QD4310::CtrlType::CurrentCtrl, valf);
