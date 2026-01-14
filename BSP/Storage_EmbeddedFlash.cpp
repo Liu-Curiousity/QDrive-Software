@@ -30,10 +30,10 @@ void Storage_EmbeddedFlash::write_page_bytes(const uint32_t page, const uint32_t
     FLASH_EraseInitTypeDef EraseInitStruct;
     EraseInitStruct.TypeErase = FLASH_TYPEERASE_PAGES; // 标明Flash执行页面只做擦除操作
     EraseInitStruct.Banks = FLASH_BANK_1;
-    EraseInitStruct.Page = page;                     // 声明要擦除的地址
-    EraseInitStruct.NbPages = 1;                     // 说明要擦除的页数,此参数必须是Min_Data = 1和Max_Data =(最大页数-初始页的值)之间的值
-    uint32_t PageError = 0;                          // 设置PageError,如果出现错误这个变量会被设置为出错的FLASH地址
-    HAL_FLASHEx_Erase(&EraseInitStruct, &PageError); // 调用擦除函数擦除
+    EraseInitStruct.Page = page; // 声明要擦除的地址
+    EraseInitStruct.NbPages = 1; // 说明要擦除的页数,此参数必须是Min_Data = 1和Max_Data =(最大页数-初始页的值)之间的值
+    uint32_t PageError = 0; // 设置PageError,如果出现错误这个变量会被设置为出错的FLASH地址
+    while (HAL_OK != HAL_FLASHEx_Erase(&EraseInitStruct, &PageError)) {} // 调用擦除函数擦除
 
     for (uint32_t i = 0; i < FLASH_PAGE_SIZE / 8; i++) {
         while (HAL_OK != HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD,
