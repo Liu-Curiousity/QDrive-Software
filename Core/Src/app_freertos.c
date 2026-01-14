@@ -54,28 +54,28 @@ osThreadId_t DebugTaskHandle;
 const osThreadAttr_t DebugTask_attributes = {
   .name = "DebugTask",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 64 * 4
+  .stack_size = 128 * 4
 };
 /* Definitions for FOCTask */
 osThreadId_t FOCTaskHandle;
 const osThreadAttr_t FOCTask_attributes = {
   .name = "FOCTask",
   .priority = (osPriority_t) osPriorityRealtime,
-  .stack_size = 128 * 4
+  .stack_size = 256 * 4
 };
 /* Definitions for CommunicateTask */
 osThreadId_t CommunicateTaskHandle;
 const osThreadAttr_t CommunicateTask_attributes = {
   .name = "CommunicateTask",
   .priority = (osPriority_t) osPriorityAboveNormal,
-  .stack_size = 128 * 4
+  .stack_size = 256 * 4
 };
 /* Definitions for StartShell */
 osThreadId_t StartShellHandle;
 const osThreadAttr_t StartShell_attributes = {
   .name = "StartShell",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 64 * 4
+  .stack_size = 128 * 4
 };
 
 /* Private function prototypes -----------------------------------------------*/
