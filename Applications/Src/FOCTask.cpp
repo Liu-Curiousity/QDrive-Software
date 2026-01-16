@@ -5,15 +5,15 @@
 #include "spi.h"
 #include "adc.h"
 #include "cmsis_os2.h"
-#include "Encoder_MT6825.h"
-#include "BLDC_Driver_FD6288.h"
+#include "Encoder_MT6826S.h"
+#include "BLDC_Driver_DRV8300.h"
 #include "Storage_EmbeddedFlash.h"
 #include "CurrentSensor_Embed.h"
 #include "filters.h"
 #include "QD4310.h"
 
 BLDC_Driver_DRV8300 bldc_driver(&htim1, 2125);
-Encoder_MT6825 bldc_encoder(SPI1_CSn_GPIO_Port, SPI1_CSn_Pin, &hspi1);
+Encoder_MT6826S bldc_encoder(SPI1_CSn_GPIO_Port, SPI1_CSn_Pin, &hspi1);
 CurrentSensor_Embed current_sensor(&hadc1, &hadc2);
 
 LowPassFilter_2_Order CurrentQFilter(0.00005f, 1500); // 20kHz
