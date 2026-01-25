@@ -285,8 +285,8 @@ void FOC::updateVoltage(const float voltage) {
 void FOC::Ctrl(const CtrlType ctrl_type, float value) {
     switch (ctrl_type) {
         case CtrlType::LowSpeedCtrl:
-            low_speed = value;       // 设置低速控制速度
-            low_speed_angle = Angle; // 记录当前角度为低速控制起始角度
+            low_speed = value;          // 设置低速控制速度
+            PID_Angle.SetTarget(Angle); // 使用当前角度为低速控制起始角度
             break;
         case CtrlType::StepAngleCtrl:
             if (this->ctrl_type == ctrl_type)
@@ -329,10 +329,7 @@ void FOC::Ctrl_ISR() {
     switch (ctrl_type) {
         case CtrlType::LowSpeedCtrl:
             // 角度递增实现的低速控制
-            low_speed_angle += numbers::pi_v<float> * 2 * low_speed / CtrlFrequency / 60; // 低速角度递增
-            if (low_speed_angle > numbers::pi_v<float> * 2) low_speed_angle -= numbers::pi_v<float> * 2;
-            else if (low_speed_angle < 0) low_speed_angle += numbers::pi_v<float> * 2;
-            PID_Angle.SetTarget(low_speed_angle);
+            PID_Angle.SetTarget(PID_Angle.target + numbers::pi_v<float> * 2 * low_speed / CtrlFrequency / 60);
         case CtrlType::AngleCtrl:
         case CtrlType::StepAngleCtrl:
             if (PreviousAngle_CtrlISR - Angle > numbers::pi_v<float>)

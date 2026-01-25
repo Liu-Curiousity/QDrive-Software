@@ -40,29 +40,29 @@ void StartCommunicateTask(void *argument) {
                 qd4310.stop();
                 break;
             case 0x03: // 电流控制
-                qd4310.Ctrl( QD4310::CtrlType::CurrentCtrl,
-                         *(int16_t *)(RxBuffer + 1) * 10.0f / INT16_MAX);
+                qd4310.Ctrl(QD4310::CtrlType::CurrentCtrl,
+                            *(int16_t *)(RxBuffer + 1) * 10.0f / INT16_MAX);
                 break;
             case 0x04: // 速度控制
-                qd4310.Ctrl( QD4310::CtrlType::SpeedCtrl,
-                         *(int16_t *)(RxBuffer + 1) * 1000.0f / INT16_MAX);
+                qd4310.Ctrl(QD4310::CtrlType::SpeedCtrl,
+                            *(int16_t *)(RxBuffer + 1) * 1000.0f / INT16_MAX);
                 break;
             case 0x05: // 角度控制
-                qd4310.Ctrl( QD4310::CtrlType::AngleCtrl,
-                         *(int16_t *)(RxBuffer + 1) * 2 * numbers::pi_v<float> / UINT16_MAX);
+                qd4310.Ctrl(QD4310::CtrlType::AngleCtrl,
+                            *(int16_t *)(RxBuffer + 1) * 2 * numbers::pi_v<float> / UINT16_MAX);
                 break;
             case 0x06: // 低速控制
-                qd4310.Ctrl( QD4310::CtrlType::LowSpeedCtrl,
-                         *(int16_t *)(RxBuffer + 1) * 1000.0f / INT16_MAX);
+                qd4310.Ctrl(QD4310::CtrlType::LowSpeedCtrl,
+                            *(int16_t *)(RxBuffer + 1) * 1000.0f / INT16_MAX);
                 break;
             case 0x07: // 角度递增
-                qd4310.Ctrl( QD4310::CtrlType::StepAngleCtrl,
-                         *(int16_t *)(RxBuffer + 1) * 10 * numbers::pi_v<float> / INT16_MAX);
+                qd4310.Ctrl(QD4310::CtrlType::StepAngleCtrl,
+                            *(int16_t *)(RxBuffer + 1) * 2 * numbers::pi_v<float> / INT16_MAX);
                 break;
             default:
                 break;
         }
-        if (RxBuffer[0] <= 0x06) {
+        if (RxBuffer[0] <= 0x07) {
             // 是合法命令则发送反馈报文
             FeedBackSend();
         }

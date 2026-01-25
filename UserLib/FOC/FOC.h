@@ -161,7 +161,6 @@ private:
     float ElectricalAngle{0}; // 当前电机电角度,单位rad
     float Speed{0};           // 电机转速,单位rpm
     // 极低速控制
-    float low_speed_angle{0}; // 极低速控制角度,单位rad
     float low_speed{0};       // 单位rpm
 
     float Uu{0}; //U相电压
