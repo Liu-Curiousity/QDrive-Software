@@ -12,7 +12,7 @@ Storage_EmbeddedFlash storage{0x0801D800, 0x00002800};     // 最后10KB作为�
 Storage_EmbeddedFlash DFU_storage{0x08003800, 0x00000800}; // Bootloader的最后2KB作为储存空间
 
 void Storage_EmbeddedFlash::write_page_bytes(const uint32_t page, const uint32_t addr,
-                                             const uint8_t *pdata, uint32_t count) {
+                                             const void *pdata, uint32_t count) {
     if (count == 0) return;
     // 限制写入范围
     count = std::min(count, FLASH_PAGE_SIZE - addr);
@@ -23,7 +23,7 @@ void Storage_EmbeddedFlash::write_page_bytes(const uint32_t page, const uint32_t
     }
 
     for (uint32_t i = 0; i < count; i++) {
-        page_buffer[addr + i] = pdata[i];
+        page_buffer[addr + i] = static_cast<const uint8_t *>(pdata)[i];
     }
 
     HAL_FLASH_Unlock(); //解锁Flash
@@ -45,7 +45,7 @@ void Storage_EmbeddedFlash::write_page_bytes(const uint32_t page, const uint32_t
     HAL_FLASH_Lock(); //锁住Flash
 }
 
-void Storage_EmbeddedFlash::write(const uint32_t addr, uint8_t *buff, uint32_t count) {
+void Storage_EmbeddedFlash::write(const uint32_t addr, void *buff, uint32_t count) {
     // 限制写入范围
     count = std::min(count, storage_size - addr);
 
@@ -60,20 +60,22 @@ void Storage_EmbeddedFlash::write(const uint32_t addr, uint8_t *buff, uint32_t c
             if (i == 0)
                 write_page_bytes(start_page, offset, buff, FLASH_PAGE_SIZE - offset);
             else if (i == page_num - 1)
-                write_page_bytes(start_page + i, 0, buff + FLASH_PAGE_SIZE * i - offset,
+                write_page_bytes(start_page + i, 0, static_cast<uint8_t *>(buff) + FLASH_PAGE_SIZE * i - offset,
                                  count + offset - FLASH_PAGE_SIZE * i);
             else
-                write_page_bytes(start_page + i, 0, buff + FLASH_PAGE_SIZE * i - offset, FLASH_PAGE_SIZE);
+                write_page_bytes(start_page + i, 0, static_cast<uint8_t *>(buff) + FLASH_PAGE_SIZE * i - offset,
+                                 FLASH_PAGE_SIZE);
         }
     }
 }
 
-void Storage_EmbeddedFlash::read(const uint32_t addr, uint8_t *buff, uint32_t count) {
+void Storage_EmbeddedFlash::read(const uint32_t addr, void *buff, uint32_t count) {
     // 限制读取范围
     count = std::min(count, storage_size - addr);
 
     auto s = reinterpret_cast<uint8_t *>(STORAGE_ADDRESS_BASE + addr);
+    auto buff_ = static_cast<uint8_t *>(buff);
     for (uint32_t i = 0; i < count; i++) {
-        *(buff++) = *(s++);
+        *(buff_++) = *(s++);
     }
 }

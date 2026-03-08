@@ -46,7 +46,8 @@ public:
             PID_CurrentQ, PID_CurrentD, PID_Speed, PID_Angle),
         storage(storage) {}
 
-    uint8_t ID{0}; // 电机ID
+    uint8_t ID{0};                   // 电机ID
+    uint32_t uart_baud_rate{115200}; // UART波特率
 
     void init();
     void start();
@@ -65,6 +66,13 @@ public:
     void Ctrl(CtrlType ctrl_type, float value);
 
     /**
+     * @brief 设置电机ID
+     * @param id 电机ID,范围0-7
+     * @return 设置成功返回true,失败返回false
+    */
+    bool setID(uint8_t id);
+
+    /**
      * @brief 设置PID参数
      * @param pid_speed_kp 速度环比例系数,若为NAN则不更新
      * @param pid_speed_ki 速度环积分系数,若为NAN则不更新
@@ -72,22 +80,32 @@ public:
      * @param pid_angle_kp 角度环比例系数,若为NAN则不更新
      * @param pid_angle_ki 角度环积分系数,若为NAN则不更新
      * @param pid_angle_kd 角度环微分系数,若为NAN则不更新
+     * @return 设置成功返回true,失败返回false
      */
-    void setPID(float pid_speed_kp, float pid_speed_ki, float pid_speed_kd,
+    bool setPID(float pid_speed_kp, float pid_speed_ki, float pid_speed_kd,
                 float pid_angle_kp, float pid_angle_ki, float pid_angle_kd);
 
     /**
      * @brief 设置速度和电流限制
      * @param speed_limit 速度限制,单位rpm
      * @param current_limit 电流限制,单位A
+     * @return 设置成功返回true,失败返回false
      */
-    void setLimit(float speed_limit, float current_limit);
+    bool setLimit(float speed_limit, float current_limit);
 
     /**
      * @brief 设置位置零点
      * @param position 位置零点,单位rad
+     * @return 设置成功返回true,失败返回false
      */
-    void setZeroPosition(float position);
+    bool setZeroPosition(float position);
+
+    /**
+     * @brief 设置UART波特率
+     * @param baud_rate 波特率,单位bps
+     * @return 设置成功返回true,失败返回false
+     */
+    bool setUartBaudRate(uint32_t baud_rate);
 
 private:
     friend void foc_config_list();
@@ -100,13 +118,13 @@ private:
         STORAGE_ANTICOGGING_CALIBRATE_OK = 0b0000'0010,
         STORAGE_PID_PARAMETER_OK = 0b0000'0100,
         STORAGE_LIMIT_OK = 0b0000'1000,
-        STORAGE_ID_OK = 0b0001'0000,
+        STORAGE_PLUG_OK = 0b0001'0000,
         STORAGE_ZERO_POS_OK = 0b0010'0000,
         STORAGE_ALL_OK = STORAGE_BASE_CALIBRATE_OK |
                          STORAGE_ANTICOGGING_CALIBRATE_OK |
                          STORAGE_PID_PARAMETER_OK |
                          STORAGE_LIMIT_OK |
-                         STORAGE_ID_OK |
+                         STORAGE_PLUG_OK |
                          STORAGE_ZERO_POS_OK,
     };
 

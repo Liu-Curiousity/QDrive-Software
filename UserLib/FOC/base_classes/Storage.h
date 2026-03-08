@@ -32,7 +32,7 @@ public:
      * @param buff 写入缓冲区
      * @param count 写入字节数
      */
-    virtual void write(uint32_t addr, uint8_t *buff, uint32_t count) = 0;
+    virtual void write(uint32_t addr, void *buff, uint32_t count) = 0;
 
     /**
      * @brief 从储存区读出count个字节
@@ -40,7 +40,7 @@ public:
      * @param buff 读出缓冲区
      * @param count 读取字节数
      */
-    virtual void read(uint32_t addr, uint8_t *buff, uint32_t count) = 0;
+    virtual void read(uint32_t addr, void *buff, uint32_t count) = 0;
 };
 
 #endif //STORAGE_H
