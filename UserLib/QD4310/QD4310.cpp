@@ -4,6 +4,7 @@
 #include "QD4310.h"
 #include <algorithm>
 #include <numbers>
+#include "usart.h"
 
 using namespace std;
 
@@ -91,6 +92,18 @@ bool QD4310::setZeroPosition(const float position) {
     return true;
 }
 
+bool QD4310::setUartBaudRate(const uint32_t baud_rate) {
+    if (baud_rate < 50'000 || baud_rate > 10'000'000) return false; // 波特率必须在50'000-10'000'000之间
+    uart_baud_rate = baud_rate;
+    // TODO: 重写配置UART
+    HAL_UART_DeInit(&huart3);
+    huart3.Init.BaudRate = baud_rate;
+    if (HAL_UART_Init(&huart3) != HAL_OK) {
+        Error_Handler();
+    }
+    return true;
+}
+
 void QD4310::load_storage_calibration() {
     uint8_t storage_magic;
     storage.read(0x000, &storage_magic, sizeof(storage_magic));
@@ -128,6 +141,8 @@ void QD4310::load_storage_calibration() {
     }
     if ((storage_status & STORAGE_PLUG_OK) == STORAGE_PLUG_OK) {
         storage.read(0x400, &ID, sizeof(ID));
+        storage.read(0x410, &uart_baud_rate, sizeof(uart_baud_rate));
+        setUartBaudRate(uart_baud_rate); // 配置UART波特率
     }
     if ((storage_status & STORAGE_ZERO_POS_OK) == STORAGE_ZERO_POS_OK) {
         storage.read(0x500, &zero_pos, sizeof(zero_pos));
@@ -181,6 +196,8 @@ void QD4310::freeze_storage_calibration(const StorageStatus storage_type) {
     if ((storage_type & STORAGE_PLUG_OK) == STORAGE_PLUG_OK) {
         // 储存ID
         storage.write(0x400, &ID, sizeof(ID));
+        // 储存波特率
+        storage.write(0x410, &uart_baud_rate, sizeof(uart_baud_rate));
     }
     if ((storage_type & STORAGE_ZERO_POS_OK) == STORAGE_ZERO_POS_OK) {
         // 储存位置零点

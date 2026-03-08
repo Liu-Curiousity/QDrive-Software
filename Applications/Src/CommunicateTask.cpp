@@ -57,11 +57,12 @@ void StartCommunicateTask(void *argument) {
     xQueue1 = xQueueCreate(5, sizeof(RxCommand));
     // 1.等待foc初始化
     while (!qd4310.initialized)
-        delay(100);
+        delay(10);
     // 2.初始化CAN并开启CAN接收
     FDCAN_Filter_INIT(&hfdcan1);
     // 3.开启UART接收
-    HAL_UARTEx_ReceiveToIdle_IT(&huart3, UART_RxBuffer, sizeof(UART_RxBuffer));
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, UART_RxBuffer, sizeof(UART_RxBuffer));
+    __HAL_DMA_DISABLE_IT(huart3.hdmarx, DMA_IT_HT); // 关闭DMA半传输中断
 
     RxCommand rx_command;
     while (true) {
@@ -132,7 +133,7 @@ void StartCommunicateTask(void *argument) {
             if (rx_command.plug == RxCommand::PlugType::CAN) {
                 CAN_Transmit(sizeof(TxData.raw) - 2, TxData.raw + 1);
             } else if (rx_command.plug == RxCommand::PlugType::UART) {
-                HAL_UART_Transmit_IT(&huart3, TxData.raw, sizeof(TxData.raw));
+                HAL_UART_Transmit_DMA(&huart3, TxData.raw, sizeof(TxData.raw));
             } else if (rx_command.plug == RxCommand::PlugType::PWM) {} else {}
         }
     }
@@ -196,7 +197,16 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
             }
         }
         std::fill_n(UART_RxBuffer, sizeof(UART_RxBuffer), 0);
-        HAL_UARTEx_ReceiveToIdle_IT(&huart3, UART_RxBuffer, sizeof(UART_RxBuffer));
+        HAL_UARTEx_ReceiveToIdle_DMA(&huart3, UART_RxBuffer, sizeof(UART_RxBuffer));
+        __HAL_DMA_DISABLE_IT(huart3.hdmarx, DMA_IT_HT); // 关闭DMA半传输中断
+    }
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
+    if (huart == &huart3) {
+        __HAL_UNLOCK(huart);
+        HAL_UARTEx_ReceiveToIdle_DMA(huart, UART_RxBuffer, sizeof(UART_RxBuffer));
+        __HAL_DMA_DISABLE_IT(huart3.hdmarx, DMA_IT_HT); // 关闭DMA半传输中断
     }
 }
 

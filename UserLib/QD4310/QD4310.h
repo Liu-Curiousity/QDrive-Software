@@ -46,7 +46,8 @@ public:
             PID_CurrentQ, PID_CurrentD, PID_Speed, PID_Angle),
         storage(storage) {}
 
-    uint8_t ID{0}; // 电机ID
+    uint8_t ID{0};                   // 电机ID
+    uint32_t uart_baud_rate{115200}; // UART波特率
 
     void init();
     void start();
@@ -98,6 +99,13 @@ public:
      * @return 设置成功返回true,失败返回false
      */
     bool setZeroPosition(float position);
+
+    /**
+     * @brief 设置UART波特率
+     * @param baud_rate 波特率,单位bps
+     * @return 设置成功返回true,失败返回false
+     */
+    bool setUartBaudRate(uint32_t baud_rate);
 
 private:
     friend void foc_config_list();
