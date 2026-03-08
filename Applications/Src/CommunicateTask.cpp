@@ -33,7 +33,7 @@ public:
     };
 
     union RxData {
-        struct {
+        struct __attribute__((packed)) {
             CmdType cmd_type; // 命令类型
             int16_t data;     // 命令数据
         } fields;
@@ -54,14 +54,14 @@ uint8_t CRC8(const uint8_t *data, uint32_t len, uint8_t polynomial, uint8_t init
 xQueueHandle xQueue1;
 
 void StartCommunicateTask(void *argument) {
-    xQueue1 = xQueueCreate(5, 3);
+    xQueue1 = xQueueCreate(5, sizeof(RxCommand));
     // 1.等待foc初始化
     while (!qd4310.initialized)
         delay(100);
     // 2.初始化CAN并开启CAN接收
     FDCAN_Filter_INIT(&hfdcan1);
     // 3.开启UART接收
-    HAL_UARTEx_ReceiveToIdle_DMA(&huart3, UART_RxBuffer, sizeof(UART_RxBuffer));
+    HAL_UARTEx_ReceiveToIdle_IT(&huart3, UART_RxBuffer, sizeof(UART_RxBuffer));
 
     RxCommand rx_command;
     while (true) {
@@ -102,7 +102,7 @@ void StartCommunicateTask(void *argument) {
         // 是合法命令则发送反馈报文
         if (rx_command.cmd.fields.cmd_type <= RxCommand::CmdType::StepAngleCtrl) {
             static union TxData {
-                struct {
+                struct __attribute__((packed)) {
                     uint8_t id;          // 电机ID
                     uint8_t motor_state; // 电机状态
                     uint8_t error_code;  // 错误码(预留)
@@ -114,6 +114,7 @@ void StartCommunicateTask(void *argument) {
 
                 uint8_t raw[10]; // 原始数据
             } TxData{};
+
             TxData.data.id = qd4310.ID;
             // 电机状态
             TxData.data.motor_state = qd4310.started ? 0x01 : 0x00;
@@ -131,7 +132,7 @@ void StartCommunicateTask(void *argument) {
             if (rx_command.plug == RxCommand::PlugType::CAN) {
                 CAN_Transmit(sizeof(TxData.raw) - 2, TxData.raw + 1);
             } else if (rx_command.plug == RxCommand::PlugType::UART) {
-                HAL_UART_Transmit_DMA(&huart3, TxData.raw, sizeof(TxData.raw));
+                HAL_UART_Transmit_IT(&huart3, TxData.raw, sizeof(TxData.raw));
             } else if (rx_command.plug == RxCommand::PlugType::PWM) {} else {}
         }
     }
@@ -195,7 +196,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
             }
         }
         std::fill_n(UART_RxBuffer, sizeof(UART_RxBuffer), 0);
-        HAL_UARTEx_ReceiveToIdle_DMA(&huart3, UART_RxBuffer, sizeof(UART_RxBuffer));
+        HAL_UARTEx_ReceiveToIdle_IT(&huart3, UART_RxBuffer, sizeof(UART_RxBuffer));
     }
 }
 
