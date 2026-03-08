@@ -205,7 +205,10 @@ void foc_config(int argc, char *argv[]) {
         } else if (strcmp(key, "limit.current") == 0) {
             qd4310.setLimit(NAN, valf);
         } else if (strcmp(key, "can.id") == 0) {
-            qd4310.ID = static_cast<uint8_t>(std::clamp(static_cast<int>(valf), 0, 7));
+            if (!qd4310.setID(valf)) {
+                PRINT("Invalid CAN ID: %d, must be between 0 and 7", static_cast<int>(valf));
+                return;
+            }
         } else {
             PRINT("Unknown config target: %s", key);
             return;
@@ -335,12 +338,12 @@ void foc_restore() {
     qd4310.setPID(FOC_SPEED_KP, FOC_SPEED_KI, FOC_SPEED_KD,
                   FOC_ANGLE_KP, FOC_ANGLE_KI, FOC_ANGLE_KD);
     qd4310.setLimit(FOC_MAX_SPEED,FOC_MAX_CURRENT);
-    qd4310.ID = 0;
+    qd4310.setID(0);
 
     qd4310.freeze_storage_calibration(
         static_cast<QD4310::StorageStatus>(QD4310::STORAGE_PID_PARAMETER_OK | // 储存PID参数
                                            QD4310::STORAGE_LIMIT_OK |         // 储存限制参数
-                                           QD4310::STORAGE_ID_OK)             // 储存ID
+                                           QD4310::STORAGE_PLUG_OK)             // 储存ID
     );
     PRINT("QDrive factory restore completed");
     foc_config_list();
@@ -364,7 +367,7 @@ void foc_store() {
     qd4310.freeze_storage_calibration(
         static_cast<QD4310::StorageStatus>(QD4310::STORAGE_PID_PARAMETER_OK | // 储存PID参数
                                            QD4310::STORAGE_LIMIT_OK |         // 储存限制参数
-                                           QD4310::STORAGE_ID_OK)             // 储存ID
+                                           QD4310::STORAGE_PLUG_OK)             // 储存ID
     );
     PRINT("Store configuration completed");
 }
