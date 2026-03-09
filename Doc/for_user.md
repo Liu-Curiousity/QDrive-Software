@@ -1,7 +1,5 @@
 ## 如何获得
 
----
-
 1. **下载程序固件**：进入[Release](https://github.com/Liu-Curiousity/QDrive-Software/releases)页面，下载最新的固件文件(
    .bin、.hex或.elf文件)。
 2. **准备驱动板**：从[此工程](https://github.com/Liu-Curiousity/QDrive-Hardware)准备QDrive驱动板，并组装完成。
@@ -13,11 +11,9 @@
 
 ## 如何使用
 
-适用于4310电机的QDrive具有以下两个接口：CAN总线、Type-C接口的USB串口。
+适用于4310电机的QDrive具有以下四个接口：CAN总线、UART串口、PWM接口、Type-C接口。
 
-下面是使用方法概要，更详细的使用说明、例程和注意事项参见[QD4310使用手册](https://pan.quark.cn/s/cfc4e3119ac5)。
-
----
+* **下面是使用方法概要，更详细的使用说明、例程和注意事项参见[QD4310使用手册](https://pan.quark.cn/s/cfc4e3119ac5)。**
 
 ### 首次上电
 
@@ -29,4 +25,6 @@
 ### 后续使用
 
 1. 可使用USB串口控制QDrive，串口输入`help`命令查看可用命令列表。
-2. 可使用CAN总线控制QDrive，使用CAN总线发送相应的指令包：[QDrive CAN通信协议](../Applications/Src/CommunicationProtocol.md)。
+2. 可使用CAN总线控制QDrive，使用CAN总线发送相应的指令包：[QDrive 通信协议](../Applications/Src/CommunicationProtocol.md)。
+3. 可使用UART控制QDrive，使用UART发送相应的指令包：[QDrive 通信协议](../Applications/Src/CommunicationProtocol.md)。
+4. 可使用PWM控制QDrive，PWM格式：[QDrive 通信协议](../Applications/Src/CommunicationProtocol.md)。
