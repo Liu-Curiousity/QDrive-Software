@@ -1,14 +1,17 @@
 /**
+ * @file        PID.h
  * @brief       PID基础控制库(C++)
  * @details
- * @author      Haoqi Liu
- * @date        2025-1-20
- * @version     V1.1.0
+ * @author      Liu-Curiousity (2675794963@qq.com)
+ * @date        2025-7-8
+ * @version     V1.1.1
  * @note
  * @warning
  * @par         历史版本
  *              V1.0.0创建于2024-9-21,更改自C语言版本PID库
  *              V1.1.0创建于2025-1-20,添加类初始化默认限幅参数,现在可以在初始化时设置限幅
+ *              V1.1.1创建于2025-7-8,修改限幅NAN判断
+ * @copyright   (c) 2025 QDrive
  * */
 
 #ifndef PID_H

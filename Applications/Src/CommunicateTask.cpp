@@ -1,6 +1,21 @@
-//
-// Created by 26757 on 25-5-6.
-//
+/**
+ * @file        CommunicateTask.cpp
+ * @brief       通信任务
+ * @details
+ * @author      Liu-Curiousity (2675794963@qq.com)
+ * @date        2026-3-9
+ * @version     V1.2.0
+ * @note
+ * @warning
+ * @par         历史版本:
+ *		        V1.0.0创建于2025-5-6
+ *		        V1.1.0创建于2025-8-6, 添加低速控制
+ *		        V1.1.0创建于2025-12-18, 添加角度步进控制
+ *		        V1.1.1创建于2025-12-27, 适配新的QD4310类接口
+ *		        V1.2.0创建于2026-3-9, 使用union联合替代数组实现命令解析,添加UART通信接口支持
+ * @copyright   (c) 2026 QDrive
+ */
+
 #include <algorithm>
 
 #include "task_public.h"

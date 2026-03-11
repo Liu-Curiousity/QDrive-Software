@@ -1,3 +1,18 @@
+/**
+ * @file        StartShell.cpp
+ * @brief       启动shell
+ * @details
+ * @author      Liu-Curiousity (2675794963@qq.com)
+ * @date        2025-7-8
+ * @version     V1.1.0
+ * @note
+ * @warning
+ * @par         历史版本:
+ *		        V1.0.0创建于2025-6-21
+ *		        V1.1.0创建于2025-7-8
+ * @copyright   (c) 2025 QDrive
+ */
+
 #include "task_public.h"
 #include "usbd_cdc_if.h"
 #include "usb_device.h"

@@ -1,15 +1,17 @@
 /**
- * @brief   Encoder base class
- * @details User should override the pure virtual functions to implement the driver.
- * @author  LiuHaoqi
- * @date    2025-4-8
- * @version V3.0.0
+ * @file        Encoder.h
+ * @brief       Encoder base class
+ * @details     User should override the pure virtual functions to implement the driver.
+ * @author      Liu-Curiousity (2675794963@qq.com)
+ * @date        2025-4-8
+ * @version     V3.0.0
  * @note
  * @warning
- * @par     history:
-            V1.0.0 on 2024-7-3
-            V2.0.0 on 2025-1-20,refactor by C++
-            V3.0.0 on 2025-4-8,redesign refer to SimpleFOC
+ * @par         history:
+                V1.0.0 on 2024-7-3
+                V2.0.0 on 2025-1-20,refactor by C++
+                V3.0.0 on 2025-4-8,redesign refer to SimpleFOC
+ * @copyright   (c) 2025 QDrive
  * */
 
 #ifndef ENCODER_H

@@ -1,16 +1,20 @@
 /**
+ * @file        filters.h
  * @brief 		filters implementation
  * @detail
- * @author 	    Haoqi Liu
- * @date        25-4-17
- * @version 	V3.0.1
+ * @author      Liu-Curiousity (2675794963@qq.com)
+ * @date        25-11-18
+ * @version 	V3.2.0
  * @note
  * @warning
  * @par 		history
                 V1.0.0 on 24-12-7
-                V2.0.0 on 25-2-21,optimize LowPassFilter(rename,delete template,add constructor,add operator())
-                V3.0.0 on 25-4-11,refactor with C++ inheritance
-                V3.0.1 on 25-4-17,replace malloc/free with new/delete
+                V2.0.0 on 25-2-21, optimize LowPassFilter(rename,delete template,add constructor,add operator())
+                V3.0.0 on 25-4-11, refactor with C++ inheritance
+                V3.0.1 on 25-4-17, replace malloc/free with new/delete
+                V3.1.0 on 25-9-11, add FIRFilter()
+                V3.2.0 on 25-11-18, add dampingRatio of LowPassFilter_2_Order
+* @copyright   (c) 2025 QDrive
  * */
 
 #ifndef FILTERS_H

@@ -1,13 +1,17 @@
 /**
+ * @file        Storage.h
  * @brief 		a library for storage datas using embedded flash
  * @detail
- * @author 	    Haoqi Liu
- * @date        25-4-22
- * @version 	V1.0.0
+ * @author      Liu-Curiousity (2675794963@qq.com)
+ * @date        26-3-8
+ * @version 	V2.1.0
  * @note 		
  * @warning	    
  * @par 		history
                 V1.0.0 on 25-4-22
+                V2.0.0 on 25-12-23, add storage_size member variable
+                V2.1.0 on 26-3-8, verify the uint8_t * to void *
+ * @copyright   (c) 2026 QDrive
  * */
 
 #ifndef STORAGE_H
