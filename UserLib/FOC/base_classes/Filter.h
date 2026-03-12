@@ -1,13 +1,17 @@
 /**
- * @brief   Filter base class
- * @details User should override the pure virtual functions to implement the driver.
- * @author  LiuHaoqi
- * @date    2025-4-11
- * @version V1.0.0
+ * @file        Filter.h
+ * @brief       Filter base class
+ * @details     User should override the pure virtual functions to implement the driver.
+ * @author      Liu-Curiousity (2675794963@qq.com)
+ * @date        2025-11-18
+ * @version     V1.2.0
  * @note
  * @warning
- * @par     history:
-            V1.0.0 on 2025-4-11
+ * @par         history:
+                V1.0.0 on 2025-4-11
+                V1.1.0 on 2025-9-11, add getTs()
+                V1.2.0 on 2025-11-18, add HP_Filter, HP_Filter, BP_Filter and BS_Filter
+ * @copyright   (c) 2025 QDrive
  * */
 
 #ifndef FILTER_H

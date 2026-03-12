@@ -1,3 +1,21 @@
+/**
+ * @file        FOCTask.cpp
+ * @brief       FOC控制任务
+ * @details
+ * @author      Liu-Curiousity (2675794963@qq.com)
+ * @date        2025-12-27
+ * @version     V1.1.2
+ * @note
+ * @warning
+ * @par         历史版本:
+ *		        V1.0.0创建于2025-2-16
+ *		        V1.0.1创建于2022-4-11, 适配滤波器重构
+ *		        V1.1.0创建于2025-4-30, 优化启动流程,添加储存功能
+ *		        V1.1.1创建于2025-5-4, 优化ADC采样方式
+ *		        V1.1.2创建于2025-12-27, 适配QD4310重构
+ * @copyright   (c) 2025 QDrive
+ */
+
 #include "task_public.h"
 #include "FOC.h"
 #include "FOC_config.h"

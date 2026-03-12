@@ -1,6 +1,22 @@
-//
-// Created by 26757 on 25-5-6.
-//
+/**
+ * @file        CommunicateTask.cpp
+ * @brief       通信任务
+ * @details
+ * @author      Liu-Curiousity (2675794963@qq.com)
+ * @date        2026-3-9
+ * @version     V1.2.0
+ * @note
+ * @warning
+ * @par         历史版本:
+ *		        V1.0.0创建于2025-5-6
+ *		        V1.1.0创建于2025-8-6, 添加低速控制
+ *		        V1.1.0创建于2025-12-18, 添加角度步进控制
+ *		        V1.1.1创建于2025-12-27, 适配新的QD4310类接口
+ *		        V1.2.0创建于2026-3-9, 使用union联合替代数组实现命令解析,添加UART通信接口支持
+ *		        V1.2.1创建于2026-3-12, 修复CAN通信失效的问题
+ * @copyright   (c) 2026 QDrive
+ */
+
 #include <algorithm>
 
 #include "task_public.h"
@@ -167,9 +183,10 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
         static RxCommand rx_command{.cmd = {}, .plug = RxCommand::PlugType::CAN};
         /*如果FIFO中有数据*/
         if (HAL_FDCAN_GetRxFifoFillLevel(hfdcan, FDCAN_RX_FIFO0)) {
+            /*读取数据*/
+            HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, rx_command.cmd.raw);
             // 如果是自己ID的报文且数据长度匹配,进行处理
             if (RxHeader.Identifier == 0x400 + qd4310.ID && RxHeader.DataLength == 3) {
-                HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, rx_command.cmd.raw);
                 xQueueSendToBackFromISR(xQueue1, &rx_command, &xHigherPriorityTaskWoken);
                 if (xHigherPriorityTaskWoken) {
                     taskYIELD();

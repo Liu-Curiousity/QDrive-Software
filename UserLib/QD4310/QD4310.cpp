@@ -1,6 +1,20 @@
-//
-// Created by 26757 on 2025/12/28.
-//
+/**
+ * @file        QD4310.cpp
+ * @brief       QD4310电机控制库
+ * @details
+ * @author      Liu-Curiousity (2675794963@qq.com)
+ * @date        2026-3-9
+ * @version     V1.1.0
+ * @note        此库为中间层库,与硬件完全解耦
+ * @warning
+ * @par         历史版本:
+ *		        V1.0.0创建于2025-12-28, 将FOC非核心功能剥离,使用QD4310类集FOC实现解耦
+ *		        V1.0.1创建于2026-1-9, 添加更多错误判断
+ *		        V1.0.2创建于2026-3-8, 优化储存函数接口、优化qd4310设置api
+ *		        V1.1.0创建于2026-3-9, 添加UART波特率设置功能
+ * @copyright   (c) 2026 QDrive
+ */
+
 #include "QD4310.h"
 #include <algorithm>
 #include <numbers>

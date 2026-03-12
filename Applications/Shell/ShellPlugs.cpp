@@ -1,3 +1,25 @@
+/**
+ * @file        ShellPlugs.cpp
+ * @brief       shell 接口函数
+ * @details
+ * @author      Liu-Curiousity (2675794963@qq.com)
+ * @date        2026-3-9
+ * @version     V1.5.0
+ * @note
+ * @warning
+ * @par         历史版本:
+ *		        V1.0.0创建于2025-6-22
+ *		        V1.1.0创建于2025-7-8, 添加校准接口
+ *		        V1.2.0创建于2025-7-11, 添加限幅设置接口
+ *		        V1.3.0创建于2025-7-24, 添加静默模式
+ *		        V1.4.0创建于2025-8-15, 添加ID设置功能
+ *		        V1.4.0创建于2025-12-18, 添加角度步进控制功能
+ *		        V1.4.0创建于2025-12-28, 适配QD4310类
+ *		        V1.4.1创建于2026-1-9, 重新实现轻量化atof函数，避免引入庞大的标准库
+ *		        V1.5.0创建于2026-3-9, 添加UART波特率设置功能
+ * @copyright   (c) 2026 QDrive
+ */
+
 #include <algorithm>
 
 #include "shell_cpp.h"

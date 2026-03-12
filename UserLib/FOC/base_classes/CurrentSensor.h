@@ -1,13 +1,15 @@
 /**
+ * @file        CurrentSensor.h
  * @brief 		CurrentSensor base class
  * @detail      User should override the pure virtual functions to implement the driver.
- * @author 	    Haoqi Liu
+ * @author 	    Liu-Curiousity (2675794963@qq.com)
  * @date        25-5-4
  * @version 	V1.0.0
  * @note 		
  * @warning	    
  * @par 		历史版本
                 V1.0.0创建于25-5-4
+ * @copyright   (c) 2025 QDrive
  * */
 
 #ifndef CURRENTSENSOR_H
