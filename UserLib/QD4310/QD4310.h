@@ -3,8 +3,8 @@
  * @brief       QD4310电机控制库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-3-9
- * @version     V1.1.0
+ * @date        2026-3-29
+ * @version     V1.2.0
  * @note        此库为中间层库,与硬件完全解耦
  * @warning
  * @par         历史版本:
@@ -12,6 +12,7 @@
  *		        V1.0.1创建于2026-1-9, 添加更多错误判断
  *		        V1.0.2创建于2026-3-8, 优化储存函数接口、优化qd4310设置api
  *		        V1.1.0创建于2026-3-9, 添加UART波特率设置功能
+ *		        V1.2.0创建于2026-3-29, restore移至QD4310类内
  * @copyright   (c) 2026 QDrive
  */
 
@@ -138,6 +139,7 @@ private:
     Storage& storage;     //存储器
     float zero_pos{0.0f}; //位置零点
 
+    void restore_calibration();
     void load_storage_calibration();
     void freeze_storage_calibration(StorageStatus storage_type);
 };

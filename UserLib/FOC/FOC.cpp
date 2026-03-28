@@ -3,8 +3,8 @@
  * @brief       FOC驱动库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-1-25
- * @version     V5.2.2
+ * @date        2026-3-29
+ * @version     V5.3.0
  * @note        此库为中间层库,与硬件完全解耦
  * @warning
  * @par         历史版本:
@@ -22,6 +22,7 @@
  *		        V5.2.0修改于2025-12-18,添加StepAngleCtrl控制模式,优化AngleCtrl控制模式下的角度环处理逻辑
  *		        V5.2.1修改于2025-12-29,修复使能后间隔小于1ms发送角度控制指令会导致当次指令异常的问题
  *		        V5.2.2修改于2026-1-25,更改角度模式和角度步进模式实现方式
+ *		        V5.3.0修改于2026-3-29,添加摩擦力识别与补偿
  * @copyright   (c) 2026 QDrive
  */
 
@@ -92,18 +93,10 @@ void FOC::stop() {
 void FOC::calibrate() {
     if (!enabled) return; // 如果没有使能,则不能校准
     if (started) return;  // 如果已经启动,则不能校准
-    calibrated = false;   // 标记为未校准
+    calibrated = false;   // 标记为未校准(停止isr)
 
     /*1.校准电流*/
-    SetPhaseVoltage(0, 0, 0); // 设置电压为0
-    delay(30);
-    iu_offset = iv_offset = 0;
-    for (int i = 0; i < 200; ++i) {
-        // 读取电流值,200次平均
-        iu_offset += current_sensor.iu / 200;
-        iv_offset += current_sensor.iv / 200;
-        delay(1);
-    }
+    current_calibrate();
 
     /*2.测量相电阻,确定后续校准使用电压*/
     bldc_driver.set_duty(0, 0, 0);
@@ -171,6 +164,27 @@ void FOC::calibrate() {
     zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (pole_pairs - 1)) / pole_pairs;
 
     calibrated = true;
+    delay(10);
+}
+
+void FOC::current_calibrate() {
+    if (!enabled) return; // 如果没有使能,则不能校准
+    if (started) return;  // 如果已经启动,则不能校准
+
+    const auto calibrate_status = calibrated; // 保存当前校准状态
+    calibrated = false;                       // 标记为未校准(停止isr)
+
+    SetPhaseVoltage(0, 0, 0); // 设置电压为0
+    delay(30);
+    iu_offset = iv_offset = 0;
+    for (int i = 0; i < 200; ++i) {
+        // 读取电流值,200次平均
+        iu_offset += current_sensor.iu / 200;
+        iv_offset += current_sensor.iv / 200;
+        delay(1);
+    }
+
+    calibrated = calibrate_status; // 恢复校准状态
 }
 
 void FOC::anticogging_calibrate() {
@@ -321,13 +335,15 @@ void FOC::Ctrl(const CtrlType ctrl_type, float value) {
 
 __attribute__((section(".ccmram_func")))
 void FOC::Ctrl_ISR() {
-    static float PreviousAngle_CtrlISR = Angle;
+    static float PreviousAngle_ = Angle;
+    static float Angle_ = Angle;
     if (!enabled) return;
     if (!calibrated) return;
     if (!started && !anticogging_calibrating) {
-        PreviousAngle_CtrlISR = Angle;
+        PreviousAngle_ = Angle;
         return;
     }
+    Angle_ = Angle;
 
     /**1.速度闭环控制**/
     switch (ctrl_type) {
@@ -336,25 +352,25 @@ void FOC::Ctrl_ISR() {
             PID_Angle.SetTarget(PID_Angle.target + numbers::pi_v<float> * 2 * low_speed / CtrlFrequency / 60);
         case CtrlType::AngleCtrl:
         case CtrlType::StepAngleCtrl:
-            if (PreviousAngle_CtrlISR - Angle > numbers::pi_v<float>)
+            if (PreviousAngle_ - Angle_ > numbers::pi_v<float>)
                 PID_Angle.target -= 2 * numbers::pi_v<float>;
-            else if (PreviousAngle_CtrlISR - Angle < -numbers::pi_v<float>)
+            else if (PreviousAngle_ - Angle_ < -numbers::pi_v<float>)
                 PID_Angle.target += 2 * numbers::pi_v<float>;
-            PID_Speed.SetTarget(PID_Angle.calc(Angle));
+            PID_Speed.SetTarget(PID_Angle.calc(Angle_));
         case CtrlType::SpeedCtrl:
             target_iq = PID_Speed.calc(Speed);
         case CtrlType::CurrentCtrl:
             /*齿槽转矩补偿*/
             if (anticogging_enabled && anticogging_calibrated && anticogging_calibrating) {
                 const uint16_t index =
-                    static_cast<uint16_t>(Angle * map_len * 0.5f * numbers::inv_pi_v<float> + 0.5f) % map_len;
+                    static_cast<uint16_t>(Angle_ * map_len * 0.5f * numbers::inv_pi_v<float> + 0.5f) % map_len;
                 PID_CurrentQ.SetTarget(target_iq + anticogging_map[index]);
             } else {
                 PID_CurrentQ.SetTarget(target_iq);
             }
             break;
     }
-    PreviousAngle_CtrlISR = Angle;
+    PreviousAngle_ = Angle_;
 }
 
 /*CCMRAM加速运行*/

@@ -3,10 +3,10 @@
  * @brief       FOC驱动库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-1-25
- * @version     V5.2.2
+ * @date        2026-3-29
+ * @version     V5.3.0
  * @note        此库为中间层库,与硬件完全解耦
- * @warning     无
+ * @warning
  * @par         历史版本:
  *		        V1.0.0创建于2024-7-3
  *		        v2.0.0修改于2024-7-10,添加d轴电流PID控制
@@ -22,6 +22,7 @@
  *		        V5.2.0修改于2025-12-18,添加StepAngleCtrl控制模式,优化AngleCtrl控制模式下的角度环处理逻辑
  *		        V5.2.1修改于2025-12-29,修复使能后间隔小于1ms发送角度控制指令会导致当次指令异常的问题
  *		        V5.2.2修改于2026-1-25,更改角度模式和角度步进模式实现方式
+ *		        V5.3.0修改于2026-3-29,添加摩擦力识别与补偿
  * @copyright   (c) 2026 QDrive
  */
 
@@ -91,8 +92,9 @@ public:
     void disable();
     void start();
     void stop();
-    void calibrate();
-    void anticogging_calibrate();
+    void calibrate();             // 基础校准
+    void current_calibrate();     // 电流偏置校准
+    void anticogging_calibrate(); // 抗齿槽校准
 
     /**
      * @brief FOC控制设置函数
@@ -165,7 +167,7 @@ private:
     float ElectricalAngle{0}; // 当前电机电角度,单位rad
     float Speed{0};           // 电机转速,单位rpm
     // 极低速控制
-    float low_speed{0};       // 单位rpm
+    float low_speed{0}; // 单位rpm
 
     float Uu{0}; //U相电压
     float Uv{0}; //V相电压

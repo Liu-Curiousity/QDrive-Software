@@ -3,8 +3,8 @@
  * @brief       QD4310电机控制库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-3-9
- * @version     V1.1.0
+ * @date        2026-3-29
+ * @version     V1.2.0
  * @note        此库为中间层库,与硬件完全解耦
  * @warning
  * @par         历史版本:
@@ -12,10 +12,12 @@
  *		        V1.0.1创建于2026-1-9, 添加更多错误判断
  *		        V1.0.2创建于2026-3-8, 优化储存函数接口、优化qd4310设置api
  *		        V1.1.0创建于2026-3-9, 添加UART波特率设置功能
+ *		        V1.2.0创建于2026-3-29, restore移至QD4310类内
  * @copyright   (c) 2026 QDrive
  */
 
 #include "QD4310.h"
+#include "FOC_config.h"
 #include <algorithm>
 #include <numbers>
 #include "usart.h"
@@ -116,6 +118,20 @@ bool QD4310::setUartBaudRate(const uint32_t baud_rate) {
         Error_Handler();
     }
     return true;
+}
+
+void QD4310::restore_calibration() {
+    setPID(FOC_SPEED_KP, FOC_SPEED_KI, FOC_SPEED_KD,
+           FOC_ANGLE_KP, FOC_ANGLE_KI, FOC_ANGLE_KD);
+    setLimit(FOC_MAX_SPEED, FOC_MAX_CURRENT);
+    setID(0);
+    setUartBaudRate(115200);
+
+    freeze_storage_calibration(
+        static_cast<StorageStatus>(STORAGE_PID_PARAMETER_OK | // 储存PID参数
+                                   STORAGE_LIMIT_OK |         // 储存限制参数
+                                   STORAGE_PLUG_OK)           // 储存ID
+    );
 }
 
 void QD4310::load_storage_calibration() {

@@ -365,17 +365,7 @@ void foc_restore() {
         PRINT("Factory restore cancelled");
         return;
     }
-    qd4310.setPID(FOC_SPEED_KP, FOC_SPEED_KI, FOC_SPEED_KD,
-                  FOC_ANGLE_KP, FOC_ANGLE_KI, FOC_ANGLE_KD);
-    qd4310.setLimit(FOC_MAX_SPEED,FOC_MAX_CURRENT);
-    qd4310.setID(0);
-    qd4310.setUartBaudRate(115200);
-
-    qd4310.freeze_storage_calibration(
-        static_cast<QD4310::StorageStatus>(QD4310::STORAGE_PID_PARAMETER_OK | // 储存PID参数
-                                           QD4310::STORAGE_LIMIT_OK |         // 储存限制参数
-                                           QD4310::STORAGE_PLUG_OK)           // 储存ID
-    );
+    qd4310.restore_calibration(); // 恢复出厂设置
     PRINT("QDrive factory restore completed");
     foc_config_list();
 }
