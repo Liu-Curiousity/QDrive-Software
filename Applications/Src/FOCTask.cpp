@@ -30,7 +30,7 @@
 #include "filters.h"
 #include "QD4310.h"
 
-BLDC_Driver_DRV8300 bldc_driver(&htim1, 2125);
+BLDC_Driver_DRV8300 bldc_driver(&htim3, 2125);
 Encoder_MT6826S bldc_encoder(SPI1_CSn_GPIO_Port, SPI1_CSn_Pin, &hspi1);
 CurrentSensor_Embed current_sensor(&hadc1, &hadc2);
 
@@ -83,7 +83,7 @@ FOC& foc = *reinterpret_cast<FOC *>(&qd4310);
 
 void StartFOCTask(void *argument) {
     HAL_TIM_Base_Start_IT(&htim6);            // 开启速度环位置环中断控制
-    HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4); //开启PWM输出,用于触发ADC采样
+    HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4); //开启PWM输出,用于触发ADC采样
     qd4310.init();                            // 初始化FOC
     qd4310.enable();                          // 使能FOC
     while (true) {

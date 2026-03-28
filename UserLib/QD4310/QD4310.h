@@ -136,7 +136,7 @@ private:
     static constexpr uint8_t STORAGE_MAGIC = 0xAA; // 存储器魔术字,储存在0x000
 
     Storage& storage;     //存储器
-    float zero_pos{0.0f}; //位置零点
+    float zero_pos{0.0f}; //位置零点`
 
     void load_storage_calibration();
     void freeze_storage_calibration(StorageStatus storage_type);

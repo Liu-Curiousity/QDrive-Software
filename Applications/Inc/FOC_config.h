@@ -15,19 +15,19 @@
 #ifndef FOC_CONFIG_H
 #define FOC_CONFIG_H
 
-#define FOC_HARDWARE_VERSION "4310_6.0.0"
-#define FOC_SOFTWARE_VERSION "6.1.1"
+#define FOC_HARDWARE_VERSION "2806_1.0.0"
+#define FOC_SOFTWARE_VERSION "1.0.0"
 
 /*==========================电机参数==========================*/
 #define FOC_KV                  33.0f   // KV值,单位rpm/V
-#define FOC_POLE_PAIRS          14      // 极对数
-#define FOC_NOMINAL_VOLTAGE     24      // 额定电压,单位V
-#define FOC_PHASE_INDUCTANCE    4.74f   // 相电感,单位mH
-#define FOC_PHASE_RESISTANCE    10.9f   // 相电阻,单位Ω
-#define FOC_TORQUE_CONSTANT     0.27f   // 转矩常数,单位Nm/A
+#define FOC_POLE_PAIRS          7       // 极对数
+#define FOC_NOMINAL_VOLTAGE     12      // 额定电压,单位V
+#define FOC_PHASE_INDUCTANCE    1.64f   // 相电感,单位mH
+#define FOC_PHASE_RESISTANCE    5.13f   // 相电阻,单位Ω
+#define FOC_TORQUE_CONSTANT     0.07f   // 转矩常数,单位Nm/A
 
 /*=========================驱动板参数==========================*/
-#define FOC_MAX_CURRENT         1.65f   // 最大电流,单位A
+#define FOC_MAX_CURRENT         1.2f    // 最大电流,单位A
 
 /*==========================配置参数==========================*/
 #define FOC_MAX_SPEED           1000.0f   // 最大转速,单位rpm

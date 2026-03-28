@@ -28,18 +28,19 @@ public:
     ~BLDC_Driver_DRV8300() override = default;
 
     BLDC_Driver_DRV8300(TIM_HandleTypeDef *htim, const uint16_t MaxDuty) :
-        htim(htim), MaxDuty(MaxDuty) { initialized = true; }
+        htim(htim), MaxDuty(MaxDuty) { initialized = false; }
 
-    void init() override { initialized = true; }
+    void init() override {
+        initialized = true;
+        HAL_GPIO_WritePin(nSLEEP_GPIO_Port, nSLEEP_Pin, GPIO_PIN_SET);
+    }
 
     void enable() override {
         //打开所有PWM通道输出
         HAL_TIM_PWM_Start(htim, TIM_CHANNEL_1);
         HAL_TIM_PWM_Start(htim, TIM_CHANNEL_2);
-        HAL_TIM_PWM_Start(htim, TIM_CHANNEL_3);
-        HAL_TIMEx_PWMN_Start(htim, TIM_CHANNEL_1);
-        HAL_TIMEx_PWMN_Start(htim, TIM_CHANNEL_2);
-        HAL_TIMEx_PWMN_Start(htim, TIM_CHANNEL_3);
+        HAL_TIM_PWM_Start(htim, TIM_CHANNEL_4);
+        HAL_GPIO_WritePin(Drive_EN_GPIO_Port, Drive_EN_Pin, GPIO_PIN_SET);
         enabled = true;
     }
 
@@ -49,10 +50,8 @@ public:
         // 关闭所有PWM通道输出
         HAL_TIM_PWM_Stop(htim, TIM_CHANNEL_1);
         HAL_TIM_PWM_Stop(htim, TIM_CHANNEL_2);
-        HAL_TIM_PWM_Stop(htim, TIM_CHANNEL_3);
-        HAL_TIMEx_PWMN_Stop(htim, TIM_CHANNEL_1);
-        HAL_TIMEx_PWMN_Stop(htim, TIM_CHANNEL_2);
-        HAL_TIMEx_PWMN_Stop(htim, TIM_CHANNEL_3);
+        HAL_TIM_PWM_Stop(htim, TIM_CHANNEL_4);
+        HAL_GPIO_WritePin(Drive_EN_GPIO_Port,Drive_EN_Pin, GPIO_PIN_RESET);
         enabled = false;
     }
 
@@ -63,8 +62,8 @@ public:
             w *= static_cast<float>(MaxDuty);
             //设置PWM占空比
             __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_1, u);
-            __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_3, v);
-            __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_2, w);
+            __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_2, v);
+            __HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_4, w);
         }
     }
 

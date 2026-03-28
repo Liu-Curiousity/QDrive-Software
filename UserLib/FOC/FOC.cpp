@@ -391,5 +391,6 @@ void FOC::loopCtrl() {
     } else {
         ud = uq = 0;
     }
-    SetPhaseVoltage(ud, uq, ElectricalAngle);
+    // SetPhaseVoltage(ud, uq, ElectricalAngle);
+    SetPhaseVoltage(0, 0.5f, ElectricalAngle);
 }

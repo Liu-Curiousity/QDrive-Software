@@ -58,11 +58,17 @@ void Error_Handler(void);
 
 /* Private defines -----------------------------------------------------------*/
 #define SPI1_CSn_Pin GPIO_PIN_4
-#define SPI1_CSn_GPIO_Port GPIOC
-#define LED_R_Pin GPIO_PIN_6
-#define LED_R_GPIO_Port GPIOB
-#define LED_G_Pin GPIO_PIN_7
-#define LED_G_GPIO_Port GPIOB
+#define SPI1_CSn_GPIO_Port GPIOA
+#define Drive_EN_Pin GPIO_PIN_8
+#define Drive_EN_GPIO_Port GPIOA
+#define nSLEEP_Pin GPIO_PIN_9
+#define nSLEEP_GPIO_Port GPIOA
+#define nFAULT_Pin GPIO_PIN_10
+#define nFAULT_GPIO_Port GPIOA
+#define LED_R_Pin GPIO_PIN_15
+#define LED_R_GPIO_Port GPIOA
+#define LED_G_Pin GPIO_PIN_10
+#define LED_G_GPIO_Port GPIOC
 
 /* USER CODE BEGIN Private defines */
 
