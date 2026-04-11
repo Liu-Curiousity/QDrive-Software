@@ -38,7 +38,7 @@ LowPassFilter_2_Order CurrentQFilter(0.00005f, 1500); // 20kHz
 LowPassFilter_2_Order CurrentDFilter(0.00005f, 1500); // 20kHz
 LowPassFilter_2_Order SpeedFilter(0.00005f, 300);     // 20kHz
 
-QD4310 qd4310(FOC_POLE_PAIRS, 1000, 20000,
+QD4310 qd4310(FOC_POLE_PAIRS, 5000, 20000,
               CurrentQFilter, CurrentDFilter, SpeedFilter,
               bldc_driver, bldc_encoder, storage, current_sensor,
               PID(PID::delta_type,
@@ -63,8 +63,8 @@ QD4310 qd4310(FOC_POLE_PAIRS, 1000, 20000,
                   FOC_SPEED_KP,
                   FOC_SPEED_KI,
                   FOC_SPEED_KD,
-                  2e3f,
-                  -2e3f,
+                  1e4f,
+                  -1e4f,
                   FOC_MAX_CURRENT,
                   -FOC_MAX_CURRENT
               ),

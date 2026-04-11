@@ -188,9 +188,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
             // 如果是自己ID的报文且数据长度匹配,进行处理
             if (RxHeader.Identifier == 0x400 + qd4310.ID && RxHeader.DataLength == 3) {
                 xQueueSendToBackFromISR(xQueue1, &rx_command, &xHigherPriorityTaskWoken);
-                if (xHigherPriorityTaskWoken) {
-                    taskYIELD();
-                }
+                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
             }
         }
     }
@@ -209,9 +207,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
             CRC8(UART_RxBuffer, 4, 0x07, 0x00, 0x00, false, false) == UART_RxBuffer[4]) {
             std::copy_n(UART_RxBuffer + 1, 3, rx_command.cmd.raw);
             xQueueSendToBackFromISR(xQueue1, &rx_command, &xHigherPriorityTaskWoken);
-            if (xHigherPriorityTaskWoken) {
-                taskYIELD();
-            }
+            portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
         }
         std::fill_n(UART_RxBuffer, sizeof(UART_RxBuffer), 0);
         HAL_UARTEx_ReceiveToIdle_DMA(&huart3, UART_RxBuffer, sizeof(UART_RxBuffer));

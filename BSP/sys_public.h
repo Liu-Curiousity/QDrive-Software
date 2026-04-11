@@ -3,15 +3,16 @@
  * @brief 		用于支持简单平台移植的中间层
  * @detail
  * @author 	    Haoqi Liu
- * @date        25-4-17
- * @version 	V3.0.0
+ * @date        26-3-29
+ * @version 	V3.2.0
  * @note 		用户需要根据提示定义相关宏函数,其中,MAX_DELAY应与delay()匹配
  * @warning
  * @par 		历史版本
                 V1.0.0创建于24-11-24
-                V2.0.0创建于24-11-27,修改打印日志宏函数命名,添加更多日志打印方式
-                V3.0.0创建于25-4-17,重写new和delete函数
-                V3.1.0创建于25-9-11,添加另外两个重载delete函数
+                V2.0.0创建于24-11-27, 修改打印日志宏函数命名,添加更多日志打印方式
+                V3.0.0创建于25-4-17, 重写new和delete函数
+                V3.1.0创建于25-9-11, 添加另外两个重载delete函数
+                V3.2.0创建于26-3-29, 添加delay_us()函数
  * */
 
 #ifndef SYS_PUBLIC_H
@@ -23,6 +24,7 @@ extern "C" {
 
 /**====================================User Code Begin====================================**/
 #include "cmsis_os2.h"
+#include "stm32g4xx_hal.h"
 /**=====================================User Code End=====================================**/
 
 /**====================================用户需要定义的部分====================================**/
@@ -30,7 +32,15 @@ extern "C" {
 #define MAX_DELAY               portMAX_DELAY       //最大延时时间,单位ms
 #define TX_BUFFER_LENGTH        64                  //系统日志输出缓冲区大小
 
-#define delay(ms)               osDelay(ms)         //延时函数
+#define delay(ms)               delay_ms(ms)
+#define delay_ms(ms)            osDelay(ms)
+#define delay_us(us)            do { \
+                                    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk; \
+                                    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk; \
+                                    const uint32_t _start = DWT->CYCCNT; \
+                                    const uint32_t _ticks = (SystemCoreClock / 1000000U) * (uint32_t)(us); \
+                                    while ((DWT->CYCCNT - _start) < _ticks) { __asm volatile ("nop"); } \
+                                } while (0)
 #define get_tick()              xTaskGetTickCount() //获取系统滴答计数
 #define sys_log_function(...)   printf(__VA_ARGS__)
 /**=======================================================================================**/

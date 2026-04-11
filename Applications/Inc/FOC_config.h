@@ -15,8 +15,8 @@
 #ifndef FOC_CONFIG_H
 #define FOC_CONFIG_H
 
-#define FOC_HARDWARE_VERSION "4310_6.0.0"
-#define FOC_SOFTWARE_VERSION "6.1.1"
+#define FOC_HARDWARE_VERSION "4310_6.1.0"
+#define FOC_SOFTWARE_VERSION "6.2.0"
 
 /*==========================电机参数==========================*/
 #define FOC_KV                  33.0f   // KV值,单位rpm/V
@@ -36,7 +36,7 @@
 #define FOC_CURRENT_KI          1.0f
 #define FOC_CURRENT_KD          0.0f
 #define FOC_SPEED_KP            3e-3f
-#define FOC_SPEED_KI            3.9e-4f
+#define FOC_SPEED_KI            7.8e-5f
 #define FOC_SPEED_KD            0.0f
 #define FOC_ANGLE_KP            1200.0f
 #define FOC_ANGLE_KI            0.0f
