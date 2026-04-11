@@ -15,7 +15,7 @@
 #ifndef FOC_CONFIG_H
 #define FOC_CONFIG_H
 
-#define FOC_HARDWARE_VERSION "4310_6.0.0"
+#define FOC_HARDWARE_VERSION "4310_6.1.0"
 #define FOC_SOFTWARE_VERSION "6.2.0"
 
 /*==========================电机参数==========================*/
