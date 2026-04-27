@@ -2,7 +2,7 @@
 
 此为软件部分，硬件部分参见：[QDrive-硬件部分](https://github.com/Liu-Curiousity/QDrive-Hardware)
 
-您可以复刻此项目的硬件部分，或购买QDrive成品驱动板：[QDrive成品驱动板](https://e.tb.cn/h.hvxbdqyMjSPHMGw?tk=HijG4lsnjo0)。
+您可以复刻此项目的硬件部分，或购买QDrive成品驱动板：[QDrive成品驱动板](https://qdrive.com.cn/products/qd4310/)。
 
 ![ "PCB"](./Doc/Images/PCB.png)
 
