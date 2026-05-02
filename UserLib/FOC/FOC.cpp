@@ -3,8 +3,8 @@
  * @brief       FOC驱动库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-3-29
- * @version     V5.3.0
+ * @date        2026-5-2
+ * @version     V5.2.4
  * @note        此库为中间层库,与硬件完全解耦
  * @warning
  * @par         历史版本:
@@ -22,7 +22,8 @@
  *		        V5.2.0修改于2025-12-18,添加StepAngleCtrl控制模式,优化AngleCtrl控制模式下的角度环处理逻辑
  *		        V5.2.1修改于2025-12-29,修复使能后间隔小于1ms发送角度控制指令会导致当次指令异常的问题
  *		        V5.2.2修改于2026-1-25,更改角度模式和角度步进模式实现方式
- *		        V5.3.0修改于2026-3-29,添加摩擦力识别与补偿
+ *		        V5.2.3修改于2026-3-29,修复角度控制0点时偶现的突发旋转一周的问题
+ *		        V5.2.4修改于2026-5-2,修复低速模式下每发送一次控制指令都会顿一下的问题
  * @copyright   (c) 2026 QDrive
  */
 
@@ -303,8 +304,9 @@ void FOC::updateVoltage(const float voltage) {
 void FOC::Ctrl(const CtrlType ctrl_type, float value) {
     switch (ctrl_type) {
         case CtrlType::LowSpeedCtrl:
-            low_speed = value;          // 设置低速控制速度
-            PID_Angle.SetTarget(Angle); // 使用当前角度为低速控制起始角度
+            low_speed = value;                // 设置低速控制速度
+            if (this->ctrl_type != ctrl_type) // 当前控制模式不是低速控制时, 才设置角度
+                PID_Angle.SetTarget(Angle);   // 使用当前角度为低速控制起始角度
             break;
         case CtrlType::StepAngleCtrl:
             if (this->ctrl_type == ctrl_type)
@@ -313,13 +315,8 @@ void FOC::Ctrl(const CtrlType ctrl_type, float value) {
                 PID_Angle.SetTarget(Angle + value);
             break;
         case CtrlType::AngleCtrl:
-            value = wrap(value, 0, 2 * numbers::pi_v<float>); // 限制在0~2pi之间
             // 使电机始终沿差值小于pi的方向转动
-            if (value - Angle > numbers::pi_v<float>)
-                value -= 2 * numbers::pi_v<float>;
-            else if (value - Angle < -numbers::pi_v<float>)
-                value += 2 * numbers::pi_v<float>;
-            PID_Angle.SetTarget(value);
+            PID_Angle.SetTarget(Angle + wrap(value - Angle, -numbers::pi_v<float>, numbers::pi_v<float>));
             break;
         case CtrlType::SpeedCtrl:
             value = clamp(value, PID_Angle.output_limit_n, PID_Angle.output_limit_p); // 限制最大速度
@@ -376,7 +373,6 @@ void FOC::Ctrl_ISR() {
 /*CCMRAM加速运行*/
 __attribute__((section(".ccmram_func")))
 void FOC::loopCtrl() {
-    static float temp;
     if (!enabled) return;    // 如果没有使能,则不能运行
     if (!calibrated) return; // 如果没有校准,则不能运行
 
@@ -392,10 +388,8 @@ void FOC::loopCtrl() {
     ElectricalAngle = wrap(Angle * pole_pairs, 0, 2 * numbers::pi_v<float>);
 
     /**3.计算转速**/
-    temp = Angle - PreviousAngle;
-    if (PreviousAngle - Angle > numbers::pi_v<float>) temp += numbers::pi_v<float> * 2;
-    else if (PreviousAngle - Angle < -numbers::pi_v<float>) temp -= numbers::pi_v<float> * 2;
-    Speed = SpeedFilter(temp * 60 * CurrentCtrlFrequency * numbers::inv_pi_v<float> * 0.5f);
+    Speed = SpeedFilter(wrap(Angle - PreviousAngle, -numbers::pi_v<float>, numbers::pi_v<float>)
+                        * 60 * CurrentCtrlFrequency * numbers::inv_pi_v<float> * 0.5f);
     PreviousAngle = Angle;
 
     static float ud = 0;
