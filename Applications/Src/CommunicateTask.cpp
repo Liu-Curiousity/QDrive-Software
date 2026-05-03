@@ -54,7 +54,7 @@ public:
             int16_t data;     // 命令数据
         } fields;
 
-        uint8_t raw[3]; // 原始数据
+        uint8_t raw[8]; // 原始数据
     } cmd{};
 
     PlugType plug = PlugType::CAN;
