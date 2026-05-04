@@ -345,7 +345,7 @@ void FOC::Ctrl_ISR() {
     /**1.速度闭环控制**/
     switch (ctrl_type) {
         case CtrlType::LowSpeedCtrl:
-            // 角度递增实现的低速控制
+            // 角度步进实现的低速控制
             PID_Angle.SetTarget(PID_Angle.target + numbers::pi_v<float> * 2 * low_speed / CtrlFrequency / 60);
         case CtrlType::AngleCtrl:
         case CtrlType::StepAngleCtrl:

@@ -3,8 +3,8 @@
  * @brief       shell 接口函数
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-3-9
- * @version     V1.5.0
+ * @date        2026-5-5
+ * @version     V1.5.1
  * @note
  * @warning
  * @par         历史版本:
@@ -17,6 +17,7 @@
  *		        V1.4.0创建于2025-12-28, 适配QD4310类
  *		        V1.4.1创建于2026-1-9, 重新实现轻量化atof函数，避免引入庞大的标准库
  *		        V1.5.0创建于2026-3-9, 添加UART波特率设置功能
+*		        V1.5.1创建于2026-5-5, 修复角度步进模式和速度模式均错误显示角度模式的问题
  * @copyright   (c) 2026 QDrive
  */
 
@@ -106,7 +107,10 @@ void foc_status() {
     PRINT("  Status       : %s", qd4310.started ? "enabled" : "disabled");
     PRINT("  CtrlMode     : %s",
           qd4310.getCtrlType() == QD4310::CtrlType::CurrentCtrl ? "CurrentCtrl" :
-          qd4310.getCtrlType() == QD4310::CtrlType::SpeedCtrl ? "SpeedCtrl" : "AngleCtrl");
+          qd4310.getCtrlType() == QD4310::CtrlType::SpeedCtrl ? "SpeedCtrl" :
+          qd4310.getCtrlType() == QD4310::CtrlType::AngleCtrl ? "AngleCtrl" :
+          qd4310.getCtrlType() == QD4310::CtrlType::StepAngleCtrl ? "StepAngleCtrl" :
+          qd4310.getCtrlType() == QD4310::CtrlType::LowSpeedCtrl ? "LowSpeedCtrl" : "Unknown");
     PRINT("  Current      : %.2f A", qd4310.getCurrent());
     PRINT("  Speed        : %.2f rpm", qd4310.getSpeed());
     PRINT("  Angle        : %.2f rad", qd4310.getAngle());

@@ -3,14 +3,15 @@
  * @brief       启动shell
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2025-7-8
- * @version     V1.1.0
+ * @date        2026-5-6
+ * @version     V1.1.1
  * @note
  * @warning
  * @par         历史版本:
  *		        V1.0.0创建于2025-6-21
  *		        V1.1.0创建于2025-7-8
- * @copyright   (c) 2025 QDrive
+ *		        V1.1.1创建于2026-5-6, 使用sizeof()替换定值shell缓冲区大小, 减少误设置风险
+ * @copyright   (c) 2026 QDrive
  */
 
 #include "task_public.h"
@@ -25,7 +26,7 @@ char shellBuffer[256];
 
 void USB_Disconnected() {
     __HAL_RCC_USB_FORCE_RESET();
-    HAL_Delay(200);
+    delay_ms(200);
     __HAL_RCC_USB_RELEASE_RESET();
 
     GPIO_InitTypeDef GPIO_Initure;
@@ -39,16 +40,16 @@ void USB_Disconnected() {
 
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_11, GPIO_PIN_RESET);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
-    HAL_Delay(300);
+    delay_ms(300);
 }
 
 void StartStartShell(void *argument) {
     USB_Disconnected(); //USB重枚举
     MX_USB_Device_Init();
-    delay(100); // 错开RAM使用高峰期
+    delay_ms(100); // 错开RAM使用高峰期
     shell.read = shellRead;
     shell.write = shellWrite;
-    shellInit(&shell, shellBuffer, 256);
+    shellInit(&shell, shellBuffer, sizeof(shellBuffer));
     xTaskCreate(shellTask, "LetterShellTask", 128, &shell, osPriorityNormal, nullptr);
     vTaskDelete(nullptr);
 }
