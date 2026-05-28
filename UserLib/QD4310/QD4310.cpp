@@ -189,6 +189,7 @@ void QD4310::load_storage_calibration() {
     }
 }
 
+static uint8_t storage_buffer[0x100];
 /**
  * @brief 储存校准数据
  * @param storage_type 储存数据类型
@@ -200,20 +201,24 @@ void QD4310::freeze_storage_calibration(const StorageStatus storage_type) {
     // 如果魔术字不对,则清零所有储存标志
     if (storage_magic != STORAGE_MAGIC) {
         storage_magic = STORAGE_MAGIC;
-        storage.write(0x000, &storage_magic, sizeof(storage_magic));
         storage_status = STORAGE_NONE;
-        storage.write(0x010, &storage_status, sizeof(storage_status));
+        std::fill_n(storage_buffer, sizeof(storage_buffer), 0);
+        *reinterpret_cast<decltype(storage_magic) *>(&storage_buffer[0x000]) = storage_magic;
+        *reinterpret_cast<decltype(storage_status) *>(&storage_buffer[0x010]) = storage_status;
+        storage.write(0x000, storage_buffer, 0x020);
     }
 
     storage.read(0x010, &storage_status, 1);
     if ((storage_type & STORAGE_BASE_CALIBRATE_OK) == STORAGE_BASE_CALIBRATE_OK) {
         // 储存基础校准数据
-        storage.write(0x100, &encoder_direction, sizeof(encoder_direction));
-        storage.write(0x110, &zero_electric_angle, sizeof(zero_electric_angle));
-        storage.write(0x120, &iu_offset, sizeof(iu_offset));
-        storage.write(0x130, &iv_offset, sizeof(iv_offset));
-        storage.write(0x140, &phase_resistance, sizeof(phase_resistance));
-        storage.write(0x150, &phase_inductance, sizeof(phase_inductance));
+        std::fill_n(storage_buffer, sizeof(storage_buffer), 0);
+        *reinterpret_cast<decltype(encoder_direction) *>(&storage_buffer[0x000]) = encoder_direction;
+        *reinterpret_cast<decltype(zero_electric_angle) *>(&storage_buffer[0x010]) = zero_electric_angle;
+        *reinterpret_cast<decltype(iu_offset) *>(&storage_buffer[0x020]) = iu_offset;
+        *reinterpret_cast<decltype(iv_offset) *>(&storage_buffer[0x030]) = iv_offset;
+        *reinterpret_cast<decltype(phase_resistance) *>(&storage_buffer[0x040]) = phase_resistance;
+        *reinterpret_cast<decltype(phase_inductance) *>(&storage_buffer[0x050]) = phase_inductance;
+        storage.write(0x100, storage_buffer, 0x060);
     }
     if ((storage_type & STORAGE_ANTICOGGING_CALIBRATE_OK) == STORAGE_ANTICOGGING_CALIBRATE_OK) {
         // 储存齿槽转矩补偿表
@@ -221,23 +226,27 @@ void QD4310::freeze_storage_calibration(const StorageStatus storage_type) {
     }
     if ((storage_type & STORAGE_PID_PARAMETER_OK) == STORAGE_PID_PARAMETER_OK) {
         // 储存PID参数
-        storage.write(0x200, &PID_Speed.kp, sizeof(PID_Speed.kp));
-        storage.write(0x210, &PID_Speed.ki, sizeof(PID_Speed.ki));
-        storage.write(0x220, &PID_Speed.kd, sizeof(PID_Speed.kd));
-        storage.write(0x230, &PID_Angle.kp, sizeof(PID_Angle.kp));
-        storage.write(0x240, &PID_Angle.ki, sizeof(PID_Angle.ki));
-        storage.write(0x250, &PID_Angle.kd, sizeof(PID_Angle.kd));
+        std::fill_n(storage_buffer, sizeof(storage_buffer), 0);
+        *reinterpret_cast<decltype(PID_Speed.kp) *>(&storage_buffer[0x000]) = PID_Speed.kp;
+        *reinterpret_cast<decltype(PID_Speed.ki) *>(&storage_buffer[0x010]) = PID_Speed.ki;
+        *reinterpret_cast<decltype(PID_Speed.kd) *>(&storage_buffer[0x020]) = PID_Speed.kd;
+        *reinterpret_cast<decltype(PID_Angle.kp) *>(&storage_buffer[0x030]) = PID_Angle.kp;
+        *reinterpret_cast<decltype(PID_Angle.ki) *>(&storage_buffer[0x040]) = PID_Angle.ki;
+        *reinterpret_cast<decltype(PID_Angle.kd) *>(&storage_buffer[0x050]) = PID_Angle.kd;
+        storage.write(0x200, storage_buffer, 0x060);
     }
     if ((storage_type & STORAGE_LIMIT_OK) == STORAGE_LIMIT_OK) {
         // 储存限幅参数
-        storage.write(0x300, &PID_Angle.output_limit_p, sizeof(PID_Angle.output_limit_p));
-        storage.write(0x310, &PID_Speed.output_limit_p, sizeof(PID_Speed.output_limit_p));
+        std::fill_n(storage_buffer, sizeof(storage_buffer), 0);
+        *reinterpret_cast<decltype(PID_Angle.output_limit_p) *>(&storage_buffer[0x000]) = PID_Angle.output_limit_p;
+        *reinterpret_cast<decltype(PID_Speed.output_limit_p) *>(&storage_buffer[0x010]) = PID_Speed.output_limit_p;
+        storage.write(0x300, storage_buffer, 0x020);
     }
     if ((storage_type & STORAGE_PLUG_OK) == STORAGE_PLUG_OK) {
-        // 储存ID
-        storage.write(0x400, &ID, sizeof(ID));
-        // 储存波特率
-        storage.write(0x410, &uart_baud_rate, sizeof(uart_baud_rate));
+        std::fill_n(storage_buffer, sizeof(storage_buffer), 0);
+        *reinterpret_cast<decltype(ID) *>(&storage_buffer[0x000]) = ID;                         // 储存ID
+        *reinterpret_cast<decltype(uart_baud_rate) *>(&storage_buffer[0x010]) = uart_baud_rate; // 储存波特率
+        storage.write(0x400, storage_buffer, 0x020);
     }
     if ((storage_type & STORAGE_ZERO_POS_OK) == STORAGE_ZERO_POS_OK) {
         // 储存位置零点
