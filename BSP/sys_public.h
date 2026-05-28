@@ -60,6 +60,8 @@ extern "C" {
 #define sys_log_error(...)      ((void)0U)
 #endif
 
+extern void version_detect();
+
 #ifdef __cplusplus
 };
 

@@ -189,12 +189,12 @@ void QD4310::load_storage_calibration() {
     }
 }
 
-static uint8_t storage_buffer[0x100];
 /**
  * @brief 储存校准数据
  * @param storage_type 储存数据类型
  */
 void QD4310::freeze_storage_calibration(const StorageStatus storage_type) {
+    static uint8_t storage_buffer[0x100];
     uint8_t storage_magic;
     StorageStatus storage_status;
     storage.read(0x000, &storage_magic, sizeof(storage_magic));
