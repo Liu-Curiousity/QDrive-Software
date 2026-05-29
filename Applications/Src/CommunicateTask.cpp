@@ -63,7 +63,7 @@ public:
 };
 
 extern QD4310 qd4310;
-uint8_t UART_RxBuffer[10]; // UART接收缓冲区
+uint8_t UART_RxBuffer[sizeof(RxCommand::cmd) + 2]; // UART接收缓冲区
 void FDCAN_Filter_INIT(FDCAN_HandleTypeDef *hfdcan);
 void CAN_Transmit(uint8_t length, uint8_t *pdata);
 uint8_t CRC8(const uint8_t *data, uint32_t len, uint8_t polynomial, uint8_t init,

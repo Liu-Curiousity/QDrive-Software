@@ -3,8 +3,8 @@
  * @brief       QD4310电机控制库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-5-5
- * @version     V1.2.1
+ * @date        2026-5-30
+ * @version     V1.3.0
  * @note
  * @warning
  * @par         历史版本:
@@ -14,6 +14,7 @@
  *		        V1.1.0创建于2026-3-9, 添加UART波特率设置功能
  *		        V1.2.0创建于2026-3-29, restore移至QD4310类内
  *		        V1.2.1创建于2026-5-5, 调整PID参数存储位置
+ *		        V1.3.0创建于2026-5-30, 优化初始化时从储存器读取参数的流程,添加清除校准数据的功能
  * @copyright   (c) 2026 QDrive
  */
 
@@ -26,13 +27,14 @@
 using namespace std;
 
 void QD4310::init() {
-    // 1.初始化FOC
-    FOC::init();
-    // 2.初始化flash
+    // 1.初始化flash
     if (!storage.initialized)
         storage.init();
-    // 3.从flash中读取校准数据
+    // 2.从flash中读取校准数据
     load_storage_calibration();
+    // 3.初始化FOC
+    FOC::init();
+    // 4.完成初始化
     HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
     HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
 }
@@ -54,12 +56,18 @@ void QD4310::stop() {
     }
 }
 
-void QD4310::calibrate() {
-    if (!enabled) return; // 如果没有使能,则不能校准
-    if (started) return;  // 如果已经启动,则不能校准
-    FOC::calibrate();
-    if (calibrated)                                            // 如果基础校准成功
+auto QD4310::calibrate() -> CalibrationStatus {
+    if (!enabled) return CalibrationStatus::EnvironmentError; // 如果没有使能,则不能校准
+    if (started) return CalibrationStatus::Busy;              // 如果已经启动,则不能校准
+    const auto status = FOC::calibrate();
+    if (status == CalibrationStatus::Success)                  // 如果基础校准成功
         freeze_storage_calibration(STORAGE_BASE_CALIBRATE_OK); // 保存基础校准数据
+    // else if (status == CalibrationStatus::CurrentSensorError ||
+    //          status == CalibrationStatus::DriverError ||
+    //          status == CalibrationStatus::EncoderError) {
+    //     clear_storage_calibration(STORAGE_BASE_CALIBRATE_OK); // 清除基础校准数据
+    // }
+    return status;
 }
 
 void QD4310::anticogging_calibrate() {
@@ -255,5 +263,26 @@ void QD4310::freeze_storage_calibration(const StorageStatus storage_type) {
 
     // 更新储存状态
     storage_status = static_cast<StorageStatus>(storage_status | storage_type);
+    storage.write(0x010, &storage_status, sizeof(storage_status));
+}
+
+/**
+ * @brief 清除校准数据
+ * @param storage_type 储存数据类型
+ */
+void QD4310::clear_storage_calibration(const StorageStatus storage_type) const {
+    uint8_t storage_magic;
+    StorageStatus storage_status;
+    storage.read(0x000, &storage_magic, sizeof(storage_magic));
+    // 如果魔术字不对,则清零所有储存标志
+    if (storage_magic != STORAGE_MAGIC) {
+        storage_magic = STORAGE_MAGIC;
+        storage_status = STORAGE_NONE;
+        storage.write(0x000, &storage_magic, sizeof(storage_magic));
+        storage.write(0x010, &storage_status, sizeof(storage_status));
+    }
+    // 更新储存状态
+    storage.read(0x010, &storage_status, 1);
+    storage_status = static_cast<StorageStatus>(storage_status & !storage_type);
     storage.write(0x010, &storage_status, sizeof(storage_status));
 }

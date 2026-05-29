@@ -3,8 +3,8 @@
  * @brief       shell 接口函数
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-5-5
- * @version     V1.5.1
+ * @date        2026-5-30
+ * @version     V1.5.2
  * @note
  * @warning
  * @par         历史版本:
@@ -18,6 +18,7 @@
  *		        V1.4.1创建于2026-1-9, 重新实现轻量化atof函数，避免引入庞大的标准库
  *		        V1.5.0创建于2026-3-9, 添加UART波特率设置功能
 *		        V1.5.1创建于2026-5-5, 修复角度步进模式和速度模式均错误显示角度模式的问题
+*		        V1.5.2创建于2026-5-30, 补充打印校准信息
  * @copyright   (c) 2026 QDrive
  */
 
@@ -352,9 +353,18 @@ void foc_calibrate() {
         }
     }
     PRINT("QDrive calibration started, please wait...");
-    qd4310.calibrate();
-    if (qd4310.calibrated)
+    if (const auto status = qd4310.calibrate(); status == QD4310::CalibrationStatus::Success)
         PRINT("QDrive calibration completed");
+    else if (status == QD4310::CalibrationStatus::EnvironmentError)
+        PRINT("QDrive calibration failed: environment error");
+    else if (status == QD4310::CalibrationStatus::Busy)
+        PRINT("QDrive calibration failed: busy");
+    else if (status == QD4310::CalibrationStatus::CurrentSensorError)
+        PRINT("QDrive calibration failed: current sensor error");
+    else if (status == QD4310::CalibrationStatus::DriverError)
+        PRINT("QDrive calibration failed: driver error");
+    else if (status == QD4310::CalibrationStatus::EncoderError)
+        PRINT("QDrive calibration failed: encoder error");
     else
         PRINT("QDrive calibration failed");
 }
