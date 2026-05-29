@@ -91,10 +91,10 @@ void FOC::stop() {
     started = false;
 }
 
-void FOC::calibrate() {
-    if (!enabled) return; // 如果没有使能,则不能校准
-    if (started) return;  // 如果已经启动,则不能校准
-    calibrated = false;   // 标记为未校准(停止isr)
+auto FOC::calibrate() -> CalibrationStatus {
+    if (!enabled) return CalibrationStatus::EnvironmentError; // 如果没有使能,则不能校准
+    if (started) return CalibrationStatus::Busy;              // 如果已经启动,则不能校准
+    calibrated = false;                                       // 标记为未校准(停止isr)
 
     /*1.校准电流*/
     current_calibrate();
@@ -166,11 +166,12 @@ void FOC::calibrate() {
 
     calibrated = true;
     delay(10);
+    return CalibrationStatus::Success;
 }
 
-void FOC::current_calibrate() {
-    if (!enabled) return; // 如果没有使能,则不能校准
-    if (started) return;  // 如果已经启动,则不能校准
+auto FOC::current_calibrate() -> CalibrationStatus {
+    if (!enabled) return CalibrationStatus::EnvironmentError; // 如果没有使能,则不能校准
+    if (started) return CalibrationStatus::Busy;              // 如果已经启动,则不能校准
 
     const auto calibrate_status = calibrated; // 保存当前校准状态
     calibrated = false;                       // 标记为未校准(停止isr)
@@ -186,14 +187,15 @@ void FOC::current_calibrate() {
     }
 
     calibrated = calibrate_status; // 恢复校准状态
+    return CalibrationStatus::Success;
 }
 
-void FOC::anticogging_calibrate() {
-    if (!enabled) return;           // 如果没有使能,则不能校准
-    if (!calibrated) return;        // 如果没有基础校准,则不能校准
-    if (started) return;            // 如果已经启动,则不能校准
-    if (!anticogging_map) return;   // 如果补偿表指针为空,则不能校准
-    anticogging_calibrated = false; // 标记为未校准
+auto FOC::anticogging_calibrate() -> CalibrationStatus {
+    if (!enabled) return CalibrationStatus::Busy;                     // 如果没有使能,则不能校准
+    if (!calibrated) return CalibrationStatus::EnvironmentError;      // 如果没有基础校准,则不能校准
+    if (started) return CalibrationStatus::Busy;                      // 如果已经启动,则不能校准
+    if (!anticogging_map) return CalibrationStatus::EnvironmentError; // 如果补偿表指针为空,则不能校准
+    anticogging_calibrated = false;                                   // 标记为未校准
 
     Ctrl(CtrlType::CurrentCtrl, 0); // 释放电机
     anticogging_calibrating = true; // 开始校准,即开始闭环控制
@@ -230,6 +232,7 @@ void FOC::anticogging_calibrate() {
         anticogging_map[i] -= anticogging_avg;
     }
     anticogging_calibrated = true;
+    return CalibrationStatus::Success;
 }
 
 /**

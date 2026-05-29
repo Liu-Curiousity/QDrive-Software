@@ -51,6 +51,16 @@ public:
         LowSpeedCtrl = 4,
     };
 
+    enum class CalibrationStatus {
+        Success = 0,
+        Busy = 1,
+        EnvironmentError = 2,
+        CurrentSensorError = 3,
+        DriverError = 4,
+        EncoderError = 5,
+        OtherError = 0xFF
+    };
+
     /**
      * @brief 初始化
      * @param pole_pairs 极对数
@@ -93,9 +103,9 @@ public:
     void disable();
     void start();
     void stop();
-    void calibrate();             // 基础校准
-    void current_calibrate();     // 电流偏置校准
-    void anticogging_calibrate(); // 抗齿槽校准
+    CalibrationStatus calibrate();             // 基础校准
+    CalibrationStatus current_calibrate();     // 电流偏置校准
+    CalibrationStatus anticogging_calibrate(); // 抗齿槽校准
 
     /**
      * @brief FOC控制设置函数
@@ -121,9 +131,9 @@ public:
     void updateVoltage(float voltage);
 
     // 初始化配置项
-    const uint8_t pole_pairs;            // 极对数
-    const uint16_t CtrlFrequency;        // 控制频率(速度环、角度环),单位Hz
-    const uint16_t CurrentCtrlFrequency; // 控制频率(电流环),单位Hz
+    const uint8_t pole_pairs{};            // 极对数
+    const uint16_t CtrlFrequency{};        // 控制频率(速度环、角度环),单位Hz
+    const uint16_t CurrentCtrlFrequency{}; // 控制频率(电流环),单位Hz
 
     bool initialized{false};            // 是否初始化
     bool enabled{false};                // 是否使能
@@ -148,7 +158,7 @@ protected:
     float iv_offset{0};                      // V相电流偏置,单位A
     float zero_electric_angle{0};            // 电机零点电角度,单位rad
     static constexpr uint16_t map_len{2000}; // 齿槽转矩校准点数
-    float *anticogging_map;                  // 齿槽转矩补偿表
+    float *anticogging_map{};                // 齿槽转矩补偿表
     bool anticogging_calibrating{false};     // 齿槽转矩是否正在校准
 
     static float wrap(float value, float min, float max);
