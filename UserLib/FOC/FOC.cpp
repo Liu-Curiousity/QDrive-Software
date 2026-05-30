@@ -3,7 +3,7 @@
  * @brief       FOC驱动库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-3-29
+ * @date        2026-5-30
  * @version     V5.3.0
  * @note        此库为中间层库,与硬件完全解耦
  * @warning
@@ -22,7 +22,9 @@
  *		        V5.2.0修改于2025-12-18,添加StepAngleCtrl控制模式,优化AngleCtrl控制模式下的角度环处理逻辑
  *		        V5.2.1修改于2025-12-29,修复使能后间隔小于1ms发送角度控制指令会导致当次指令异常的问题
  *		        V5.2.2修改于2026-1-25,更改角度模式和角度步进模式实现方式
- *		        V5.3.0修改于2026-3-29,添加摩擦力识别与补偿
+ *		        V5.2.3修改于2026-3-29,修复角度控制0点时偶现的突发旋转一周的问题
+ *		        V5.2.4修改于2026-5-2,修复低速模式下每发送一次控制指令都会顿一下的问题
+ *		        V5.3.0修改于2026-5-30,添加校准异常检测,提高校准速度,优化校准效果添加校准异常检测,提高校准速度,优化校准效果
  * @copyright   (c) 2026 QDrive
  */
 
@@ -48,8 +50,10 @@ void FOC::init() {
     if (!bldc_encoder.initialized)
         bldc_encoder.init();
     // 3.初始化电流传感器
-    if (!current_sensor.initialized)
+    if (!current_sensor.initialized) {
         current_sensor.init();
+        current_sensor.set_offset(-iu_offset, -iv_offset, iu_offset + iv_offset);
+    }
     // 4.完成初始化
     initialized = true;
 }
@@ -90,50 +94,115 @@ void FOC::stop() {
     started = false;
 }
 
-void FOC::calibrate() {
-    if (!enabled) return; // 如果没有使能,则不能校准
-    if (started) return;  // 如果已经启动,则不能校准
-    calibrated = false;   // 标记为未校准(停止isr)
+auto FOC::calibrate() -> CalibrationStatus {
+    if (!enabled) return CalibrationStatus::EnvironmentError; // 如果没有使能,则不能校准
+    if (started) return CalibrationStatus::Busy;              // 如果已经启动,则不能校准
+    calibrated = false;                                       // 标记为未校准(停止isr)
+
+    constexpr int SAMPLE_COUNT = 100;
 
     /*1.校准电流*/
-    current_calibrate();
+    if (current_calibrate() != CalibrationStatus::Success) {
+        bldc_driver.set_duty(0, 0, 0);
+        return CalibrationStatus::CurrentSensorError;
+    }
 
-    /*2.测量相电阻,确定后续校准使用电压*/
+    /*2.测量相电阻,测试驱动,确定后续校准使用电压*/
     bldc_driver.set_duty(0, 0, 0);
-    float uu = 0;
-    for (uu = 0; uu < 0.8f && current_sensor.iu - iu_offset < FOC_MAX_CURRENT * 0.9;) {
-        uu += 0.001f;
-        bldc_driver.set_duty(uu, 0, 0);
-        delay(1);
+    float phase_duty = 0;
+    constexpr float MAX_DUTY = 0.8f;
+    constexpr float TARGET_CURRENT_RATIO = 0.9f;
+    float phase_resistance_u{0}, phase_resistance_v{0}, phase_resistance_w{0};
+    // W相测试
+    do {
+        // 升压直到达到目标电流或达到最大占空比
+        for (phase_duty = 0; phase_duty < MAX_DUTY && current_sensor.iw < FOC_MAX_CURRENT * TARGET_CURRENT_RATIO;) {
+            phase_duty += 0.001f;
+            bldc_driver.set_duty(0, 0, phase_duty);
+            delay(1);
+        }
+        // 检测：如果升压到最大占空比但仍未达到目标电流，说明驱动器或电机有问题
+        if (phase_duty >= MAX_DUTY && current_sensor.iw < FOC_MAX_CURRENT * 0.5f) {
+            bldc_driver.set_duty(0, 0, 0);
+            return CalibrationStatus::DriverError; // 驱动能力不足或电机被卡住
+        }
+        // 测量相电阻
+        for (int i = 0; i < SAMPLE_COUNT; ++i) {
+            phase_resistance_w += phase_duty * Voltage / current_sensor.iw / 0.75f / SAMPLE_COUNT;
+            delay(1);
+        }
+    } while (false);
+    // V相测试
+    do {
+        // 升压直到达到目标电流或达到最大占空比
+        for (phase_duty = 0; phase_duty < MAX_DUTY && current_sensor.iv < FOC_MAX_CURRENT * TARGET_CURRENT_RATIO;) {
+            phase_duty += 0.001f;
+            bldc_driver.set_duty(0, phase_duty, 0);
+            delay(1);
+        }
+        // 检测：如果升压到最大占空比但仍未达到目标电流，说明驱动器或电机有问题
+        if (phase_duty >= MAX_DUTY && current_sensor.iv < FOC_MAX_CURRENT * 0.5f) {
+            bldc_driver.set_duty(0, 0, 0);
+            return CalibrationStatus::DriverError; // 驱动能力不足或电机被卡住
+        }
+        // 测量相电阻
+        for (int i = 0; i < SAMPLE_COUNT; ++i) {
+            phase_resistance_v += phase_duty * Voltage / current_sensor.iv / 0.75f / SAMPLE_COUNT;
+            delay(1);
+        }
+    } while (false);
+    // U相测试
+    do {
+        // 升压直到达到目标电流或达到最大占空比
+        for (phase_duty = 0; phase_duty < MAX_DUTY && current_sensor.iu < FOC_MAX_CURRENT * TARGET_CURRENT_RATIO;) {
+            phase_duty += 0.001f;
+            bldc_driver.set_duty(phase_duty, 0, 0);
+            delay(1);
+        }
+        // 检测：如果升压到最大占空比但仍未达到目标电流，说明驱动器或电机有问题
+        if (phase_duty >= MAX_DUTY && current_sensor.iu < FOC_MAX_CURRENT * 0.5f) {
+            bldc_driver.set_duty(0, 0, 0);
+            return CalibrationStatus::DriverError; // 驱动能力不足或电机被卡住
+        }
+        // 测量相电阻
+        for (int i = 0; i < SAMPLE_COUNT; ++i) {
+            phase_resistance_u += phase_duty * Voltage / current_sensor.iu / 0.75f / SAMPLE_COUNT;
+            delay(1);
+        }
+    } while (false);
+
+    // 检测：相电阻异常（开路 < 0.1Ω 或短路 > 100Ω）
+    if (phase_resistance_u < 0.1f || phase_resistance_u > 100.0f ||
+        phase_resistance_v < 0.1f || phase_resistance_v > 100.0f ||
+        phase_resistance_w < 0.1f || phase_resistance_w > 100.0f) {
+        bldc_driver.set_duty(0, 0, 0);
+        return CalibrationStatus::DriverError; // 电机接线异常
     }
-    phase_resistance = 0;
-    for (int i = 0; i < 100; ++i) {
-        phase_resistance += uu * Voltage / (current_sensor.iu - iu_offset) / 3 * 4 / 100;
-        delay(1);
-    }
-    SetPhaseVoltage(0, 0, 0); // 设置电压为0
-    const float voltage_align = clamp(uu * 4 / 3, -1.0f, 1.0f);
+    phase_resistance = (phase_resistance_u + phase_resistance_v + phase_resistance_w) / 3;
+
+    bldc_driver.set_duty(0, 0, 0);
+    const float voltage_align = clamp(phase_duty / 0.75f, -1.0f, 1.0f);
 
     /*3.校准编码器正方向,使其与q轴正方向相同*/
     SetPhaseVoltage(voltage_align * 0.6f, 0, 0);
+    delay(SAMPLE_COUNT);
     // 读取电机角度,100次平均
-    delay(100);
     float begin_angle = 0;
-    for (int i = 0; i < 100; ++i) {
-        begin_angle += bldc_encoder.get_angle() / 100;
+    for (int i = 0; i < SAMPLE_COUNT; ++i) {
+        begin_angle += bldc_encoder.get_angle() / SAMPLE_COUNT;
     }
     // 按q轴正方向硬拖2pi电角度
-    for (int i = 0; i < 500; ++i) {
-        const float angle = 2 * numbers::pi_v<float> * i / 500.0f;
+    for (int i = 0; i < 3 * SAMPLE_COUNT; ++i) {
+        const float angle = 2 * numbers::pi_v<float> * i / (3 * SAMPLE_COUNT);
         SetPhaseVoltage(voltage_align * 0.6f, 0, angle);
         delay(1);
     }
-    // 读取电机角度,100次平均
+    // 读取电机角度,SAMPLE_COUNT次平均
     float end_angle = 0;
-    for (int i = 0; i < 100; ++i) {
-        end_angle += bldc_encoder.get_angle() / 100;
+    for (int i = 0; i < SAMPLE_COUNT; ++i) {
+        end_angle += bldc_encoder.get_angle() / SAMPLE_COUNT;
     }
-    SetPhaseVoltage(0, 0, 0); // 停止电机
+    bldc_driver.set_duty(0, 0, 0); // 停止电机
     if ((end_angle > begin_angle && end_angle < begin_angle + numbers::pi_v<float>) ||
         end_angle < begin_angle - numbers::pi_v<float>) {
         encoder_direction = true;
@@ -143,56 +212,77 @@ void FOC::calibrate() {
 
     /*4.校准电角度零点*/
     float sum_offset_angle = 0;
+    float prev_offset = 0;
+    const float max_allowed_offset_drift = 2 * numbers::pi_v<float> / pole_pairs * 0.2f; // 允许的零点偏差
+
     for (int i = 0; i < pole_pairs; ++i) {
         // 按q轴正方向硬拖2pi电角度
-        for (int j = 0; j < 250; ++j) {
-            const float angle = 2 * numbers::pi_v<float> * j / 250.0f;
+        for (int j = 0; j < 2 * SAMPLE_COUNT; ++j) {
+            const float angle = 2 * numbers::pi_v<float> * j / (2 * SAMPLE_COUNT);
             SetPhaseVoltage(voltage_align * 0.6f, 0, angle);
             delay(1);
         }
         SetPhaseVoltage(voltage_align, 0, 0);
-        delay(300);
-        for (int j = 0; j < 100; ++j) {
-            if (encoder_direction)
-                sum_offset_angle += (2 * numbers::pi_v<float> - bldc_encoder.get_angle()) / 100;
-            else
-                sum_offset_angle += bldc_encoder.get_angle() / 100;
+        // 测量该极对的零点
+        float pole_offset = 0;
+        for (int j = 0; j < 2 * SAMPLE_COUNT; ++j) {
+            pole_offset += (encoder_direction ? 2 * numbers::pi_v<float> - bldc_encoder.get_angle()
+                            : bldc_encoder.get_angle()) / (2 * SAMPLE_COUNT);
             delay(1);
         }
+        // 检测：每次转动角度正常,没有堵转
+        if (i > 0) {
+            const float angle_diff = wrap(pole_offset - prev_offset, -numbers::pi_v<float>, numbers::pi_v<float>);
+            if (abs(angle_diff + 2 * numbers::pi_v<float> / pole_pairs) > max_allowed_offset_drift) {
+                bldc_driver.set_duty(0, 0, 0);
+                return CalibrationStatus::EncoderError; // 编码器测量不稳定
+            }
+        }
+        prev_offset = pole_offset;
+        sum_offset_angle += pole_offset;
     }
-    SetPhaseVoltage(0, 0, 0);
+    bldc_driver.set_duty(0, 0, 0);
     zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (pole_pairs - 1)) / pole_pairs;
 
     calibrated = true;
     delay(10);
+    return CalibrationStatus::Success;
 }
 
-void FOC::current_calibrate() {
-    if (!enabled) return; // 如果没有使能,则不能校准
-    if (started) return;  // 如果已经启动,则不能校准
+auto FOC::current_calibrate() -> CalibrationStatus {
+    if (!enabled) return CalibrationStatus::EnvironmentError; // 如果没有使能,则不能校准
+    if (started) return CalibrationStatus::Busy;              // 如果已经启动,则不能校准
 
+    constexpr int SAMPLE_COUNT = 200;
+    constexpr float MAX_OFFSET_CURRENT = FOC_MAX_CURRENT * 0.1f;
     const auto calibrate_status = calibrated; // 保存当前校准状态
     calibrated = false;                       // 标记为未校准(停止isr)
 
     SetPhaseVoltage(0, 0, 0); // 设置电压为0
     delay(30);
     iu_offset = iv_offset = 0;
-    for (int i = 0; i < 200; ++i) {
+    current_sensor.set_offset(0, 0, 0);
+    for (int i = 0; i < SAMPLE_COUNT; ++i) {
         // 读取电流值,200次平均
-        iu_offset += current_sensor.iu / 200;
-        iv_offset += current_sensor.iv / 200;
+        iu_offset += current_sensor.iu / SAMPLE_COUNT;
+        iv_offset += current_sensor.iv / SAMPLE_COUNT;
         delay(1);
     }
+    bldc_driver.set_duty(0, 0, 0);
 
     calibrated = calibrate_status; // 恢复校准状态
+    if (abs(iu_offset) > MAX_OFFSET_CURRENT || abs(iv_offset) > MAX_OFFSET_CURRENT)
+        return CalibrationStatus::CurrentSensorError;
+    current_sensor.set_offset(-iu_offset, -iv_offset, iu_offset + iv_offset);
+    return CalibrationStatus::Success;
 }
 
-void FOC::anticogging_calibrate() {
-    if (!enabled) return;           // 如果没有使能,则不能校准
-    if (!calibrated) return;        // 如果没有基础校准,则不能校准
-    if (started) return;            // 如果已经启动,则不能校准
-    if (!anticogging_map) return;   // 如果补偿表指针为空,则不能校准
-    anticogging_calibrated = false; // 标记为未校准
+auto FOC::anticogging_calibrate() -> CalibrationStatus {
+    if (!enabled) return CalibrationStatus::Busy;                     // 如果没有使能,则不能校准
+    if (!calibrated) return CalibrationStatus::EnvironmentError;      // 如果没有基础校准,则不能校准
+    if (started) return CalibrationStatus::Busy;                      // 如果已经启动,则不能校准
+    if (!anticogging_map) return CalibrationStatus::EnvironmentError; // 如果补偿表指针为空,则不能校准
+    anticogging_calibrated = false;                                   // 标记为未校准
 
     Ctrl(CtrlType::CurrentCtrl, 0); // 释放电机
     anticogging_calibrating = true; // 开始校准,即开始闭环控制
@@ -229,6 +319,7 @@ void FOC::anticogging_calibrate() {
         anticogging_map[i] -= anticogging_avg;
     }
     anticogging_calibrated = true;
+    return CalibrationStatus::Success;
 }
 
 /**
@@ -303,8 +394,9 @@ void FOC::updateVoltage(const float voltage) {
 void FOC::Ctrl(const CtrlType ctrl_type, float value) {
     switch (ctrl_type) {
         case CtrlType::LowSpeedCtrl:
-            low_speed = value;          // 设置低速控制速度
-            PID_Angle.SetTarget(Angle); // 使用当前角度为低速控制起始角度
+            low_speed = value;                // 设置低速控制速度
+            if (this->ctrl_type != ctrl_type) // 当前控制模式不是低速控制时, 才设置角度
+                PID_Angle.SetTarget(Angle);   // 使用当前角度为低速控制起始角度
             break;
         case CtrlType::StepAngleCtrl:
             if (this->ctrl_type == ctrl_type)
@@ -313,13 +405,8 @@ void FOC::Ctrl(const CtrlType ctrl_type, float value) {
                 PID_Angle.SetTarget(Angle + value);
             break;
         case CtrlType::AngleCtrl:
-            value = wrap(value, 0, 2 * numbers::pi_v<float>); // 限制在0~2pi之间
             // 使电机始终沿差值小于pi的方向转动
-            if (value - Angle > numbers::pi_v<float>)
-                value -= 2 * numbers::pi_v<float>;
-            else if (value - Angle < -numbers::pi_v<float>)
-                value += 2 * numbers::pi_v<float>;
-            PID_Angle.SetTarget(value);
+            PID_Angle.SetTarget(Angle + wrap(value - Angle, -numbers::pi_v<float>, numbers::pi_v<float>));
             break;
         case CtrlType::SpeedCtrl:
             value = clamp(value, PID_Angle.output_limit_n, PID_Angle.output_limit_p); // 限制最大速度
@@ -348,7 +435,7 @@ void FOC::Ctrl_ISR() {
     /**1.速度闭环控制**/
     switch (ctrl_type) {
         case CtrlType::LowSpeedCtrl:
-            // 角度递增实现的低速控制
+            // 角度步进实现的低速控制
             PID_Angle.SetTarget(PID_Angle.target + numbers::pi_v<float> * 2 * low_speed / CtrlFrequency / 60);
         case CtrlType::AngleCtrl:
         case CtrlType::StepAngleCtrl:
@@ -376,14 +463,11 @@ void FOC::Ctrl_ISR() {
 /*CCMRAM加速运行*/
 __attribute__((section(".ccmram_func")))
 void FOC::loopCtrl() {
-    static float temp;
     if (!enabled) return;    // 如果没有使能,则不能运行
     if (!calibrated) return; // 如果没有校准,则不能运行
 
     /**1.电流变换**/
-    UpdateCurrent(current_sensor.iu - iu_offset,
-                  current_sensor.iv - iv_offset,
-                  current_sensor.iw + iu_offset + iv_offset);
+    UpdateCurrent(current_sensor.iu, current_sensor.iv, current_sensor.iw);
 
     /**2.读取编码器角度**/
     Angle = encoder_direction ?
@@ -392,10 +476,8 @@ void FOC::loopCtrl() {
     ElectricalAngle = wrap(Angle * pole_pairs, 0, 2 * numbers::pi_v<float>);
 
     /**3.计算转速**/
-    temp = Angle - PreviousAngle;
-    if (PreviousAngle - Angle > numbers::pi_v<float>) temp += numbers::pi_v<float> * 2;
-    else if (PreviousAngle - Angle < -numbers::pi_v<float>) temp -= numbers::pi_v<float> * 2;
-    Speed = SpeedFilter(temp * 60 * CurrentCtrlFrequency * numbers::inv_pi_v<float> * 0.5f);
+    Speed = SpeedFilter(wrap(Angle - PreviousAngle, -numbers::pi_v<float>, numbers::pi_v<float>)
+                        * 60 * CurrentCtrlFrequency * numbers::inv_pi_v<float> * 0.5f);
     PreviousAngle = Angle;
 
     static float ud = 0;

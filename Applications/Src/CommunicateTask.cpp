@@ -3,8 +3,8 @@
  * @brief       通信任务
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-3-9
- * @version     V1.2.0
+ * @date        2026-5-5
+ * @version     V1.2.3
  * @note
  * @warning
  * @par         历史版本:
@@ -14,6 +14,8 @@
  *		        V1.1.1创建于2025-12-27, 适配新的QD4310类接口
  *		        V1.2.0创建于2026-3-9, 使用union联合替代数组实现命令解析,添加UART通信接口支持
  *		        V1.2.1创建于2026-3-12, 修复CAN通信失效的问题
+ *		        V1.2.2创建于2026-5-4, 修复CAN通信发送超过指令长度帧可能导致的溢出问题
+ *		        V1.2.3创建于2026-5-5, 优化上电初始化后通信开启逻辑
  * @copyright   (c) 2026 QDrive
  */
 
@@ -45,7 +47,7 @@ public:
         SpeedCtrl = 0x04,     // 速度控制
         AngleCtrl = 0x05,     // 角度控制
         LowSpeedCtrl = 0x06,  // 低速控制
-        StepAngleCtrl = 0x07, // 角度递增控制
+        StepAngleCtrl = 0x07, // 角度步进控制
     };
 
     union RxData {
@@ -54,14 +56,14 @@ public:
             int16_t data;     // 命令数据
         } fields;
 
-        uint8_t raw[3]; // 原始数据
+        uint8_t raw[8]; // 原始数据
     } cmd{};
 
     PlugType plug = PlugType::CAN;
 };
 
 extern QD4310 qd4310;
-uint8_t UART_RxBuffer[10]; // UART接收缓冲区
+uint8_t UART_RxBuffer[sizeof(RxCommand::cmd) + 2]; // UART接收缓冲区
 void FDCAN_Filter_INIT(FDCAN_HandleTypeDef *hfdcan);
 void CAN_Transmit(uint8_t length, uint8_t *pdata);
 uint8_t CRC8(const uint8_t *data, uint32_t len, uint8_t polynomial, uint8_t init,
@@ -71,8 +73,8 @@ xQueueHandle xQueue1;
 
 void StartCommunicateTask(void *argument) {
     xQueue1 = xQueueCreate(5, sizeof(RxCommand));
-    // 1.等待foc初始化
-    while (!qd4310.initialized)
+    // 1.等待foc启动
+    while (!qd4310.enabled)
         delay(10);
     // 2.初始化CAN并开启CAN接收
     FDCAN_Filter_INIT(&hfdcan1);
@@ -109,7 +111,7 @@ void StartCommunicateTask(void *argument) {
                 qd4310.Ctrl(QD4310::CtrlType::LowSpeedCtrl,
                             rx_command.cmd.fields.data * 1000.0f / INT16_MAX);
                 break;
-            case RxCommand::CmdType::StepAngleCtrl: // 角度递增
+            case RxCommand::CmdType::StepAngleCtrl: // 角度步进
                 qd4310.Ctrl(QD4310::CtrlType::StepAngleCtrl,
                             rx_command.cmd.fields.data * 2 * numbers::pi_v<float> / INT16_MAX);
                 break;

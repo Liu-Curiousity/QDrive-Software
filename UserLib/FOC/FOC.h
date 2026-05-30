@@ -1,9 +1,9 @@
 /**
- * @file        FOC.h
+ * @file        FOC.cpp
  * @brief       FOC驱动库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-3-29
+ * @date        2026-5-30
  * @version     V5.3.0
  * @note        此库为中间层库,与硬件完全解耦
  * @warning
@@ -22,10 +22,11 @@
  *		        V5.2.0修改于2025-12-18,添加StepAngleCtrl控制模式,优化AngleCtrl控制模式下的角度环处理逻辑
  *		        V5.2.1修改于2025-12-29,修复使能后间隔小于1ms发送角度控制指令会导致当次指令异常的问题
  *		        V5.2.2修改于2026-1-25,更改角度模式和角度步进模式实现方式
- *		        V5.3.0修改于2026-3-29,添加摩擦力识别与补偿
+ *		        V5.2.3修改于2026-3-29,修复角度控制0点时偶现的突发旋转一周的问题
+ *		        V5.2.4修改于2026-5-2,修复低速模式下每发送一次控制指令都会顿一下的问题
+ *		        V5.3.0修改于2026-5-30,添加校准异常检测,提高校准速度,优化校准效果添加校准异常检测,提高校准速度,优化校准效果
  * @copyright   (c) 2026 QDrive
  */
-
 
 #ifndef FOC_H
 #define FOC_H
@@ -48,6 +49,16 @@ public:
         AngleCtrl = 2,
         StepAngleCtrl = 3,
         LowSpeedCtrl = 4,
+    };
+
+    enum class CalibrationStatus {
+        Success = 0,
+        Busy = 1,
+        EnvironmentError = 2,
+        CurrentSensorError = 3,
+        DriverError = 4,
+        EncoderError = 5,
+        OtherError = 0xFF
     };
 
     /**
@@ -92,9 +103,9 @@ public:
     void disable();
     void start();
     void stop();
-    void calibrate();             // 基础校准
-    void current_calibrate();     // 电流偏置校准
-    void anticogging_calibrate(); // 抗齿槽校准
+    CalibrationStatus calibrate();             // 基础校准
+    CalibrationStatus current_calibrate();     // 电流偏置校准
+    CalibrationStatus anticogging_calibrate(); // 抗齿槽校准
 
     /**
      * @brief FOC控制设置函数
@@ -120,9 +131,9 @@ public:
     void updateVoltage(float voltage);
 
     // 初始化配置项
-    const uint8_t pole_pairs;            // 极对数
-    const uint16_t CtrlFrequency;        // 控制频率(速度环、角度环),单位Hz
-    const uint16_t CurrentCtrlFrequency; // 控制频率(电流环),单位Hz
+    const uint8_t pole_pairs{};            // 极对数
+    const uint16_t CtrlFrequency{};        // 控制频率(速度环、角度环),单位Hz
+    const uint16_t CurrentCtrlFrequency{}; // 控制频率(电流环),单位Hz
 
     bool initialized{false};            // 是否初始化
     bool enabled{false};                // 是否使能
@@ -147,7 +158,7 @@ protected:
     float iv_offset{0};                      // V相电流偏置,单位A
     float zero_electric_angle{0};            // 电机零点电角度,单位rad
     static constexpr uint16_t map_len{2000}; // 齿槽转矩校准点数
-    float *anticogging_map;                  // 齿槽转矩补偿表
+    float *anticogging_map{};                // 齿槽转矩补偿表
     bool anticogging_calibrating{false};     // 齿槽转矩是否正在校准
 
     static float wrap(float value, float min, float max);
