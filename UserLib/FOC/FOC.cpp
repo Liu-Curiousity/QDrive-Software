@@ -365,6 +365,11 @@ void FOC::SetPhaseVoltage(float ud, float uq, const float electrical_angle) {
     uq *= 0.99f;
 
     /**1.保存电压值**/
+    if (const float u_join_2 = ud * ud + uq * uq; u_join_2 > 1.0f) {
+        const float scale = 1.0f / sqrt(u_join_2);
+        ud *= scale;
+        uq *= scale;
+    }
     Ud = ud;
     Uq = uq;
 

@@ -50,6 +50,6 @@ void StartStartShell(void *argument) {
     shell.read = shellRead;
     shell.write = shellWrite;
     shellInit(&shell, shellBuffer, sizeof(shellBuffer));
-    xTaskCreate(shellTask, "LetterShellTask", 128, &shell, osPriorityNormal, nullptr);
+    xTaskCreate(shellTask, "LetterShellTask", 512, &shell, osPriorityNormal, nullptr);
     vTaskDelete(nullptr);
 }
