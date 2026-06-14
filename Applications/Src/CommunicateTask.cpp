@@ -48,7 +48,28 @@ public:
         AngleCtrl = 0x05,     // 角度控制
         LowSpeedCtrl = 0x06,  // 低速控制
         StepAngleCtrl = 0x07, // 角度步进控制
+
+        SetZeroPos = 0xFE, // 设置零点
+        ClearError = 0xFB, // 清除错误
     };
+
+    static bool is_CmdType(const CmdType cmd) {
+        switch (cmd) {
+            case CmdType::NOP:
+            case CmdType::Enable:
+            case CmdType::Disable:
+            case CmdType::CurrentCtrl:
+            case CmdType::SpeedCtrl:
+            case CmdType::AngleCtrl:
+            case CmdType::LowSpeedCtrl:
+            case CmdType::StepAngleCtrl:
+            case CmdType::SetZeroPos:
+            case CmdType::ClearError:
+                return true;
+            default:
+                return false;
+        }
+    }
 
     union RxData {
         struct __attribute__((packed)) {
@@ -115,11 +136,14 @@ void StartCommunicateTask(void *argument) {
                 qd4310.Ctrl(QD4310::CtrlType::StepAngleCtrl,
                             rx_command.cmd.fields.data * 2 * numbers::pi_v<float> / INT16_MAX);
                 break;
+            case RxCommand::CmdType::SetZeroPos: // 设置零点
+                qd4310.setZeroPosition();
+                break;
             default:
                 break;
         }
-        // 是合法命令则发送反馈报文
-        if (rx_command.cmd.fields.cmd_type <= RxCommand::CmdType::StepAngleCtrl) {
+        // 如果是合法命令则发送反馈报文
+        if (RxCommand::is_CmdType(rx_command.cmd.fields.cmd_type)) {
             static union TxData {
                 struct __attribute__((packed)) {
                     uint8_t id;          // 电机ID

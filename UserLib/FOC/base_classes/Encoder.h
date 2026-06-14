@@ -24,6 +24,7 @@ public:
 
     bool initialized = false; // true if the driver is initialized
     bool enabled = false;     // true if the driver is enabled
+    float resolution;         // encoder resolution, unit: rad
 
     virtual void init() = 0;    // initialize the driver
     virtual void enable() = 0;  // enable the driver

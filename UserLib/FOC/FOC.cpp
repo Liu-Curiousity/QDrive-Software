@@ -91,6 +91,11 @@ void FOC::start() {
 }
 
 void FOC::stop() {
+    target_iq = 0;
+    PID_CurrentD.reset();
+    PID_CurrentQ.reset();
+    PID_Speed.reset();
+    PID_Angle.reset();
     started = false;
 }
 
@@ -409,11 +414,13 @@ void FOC::Ctrl(const CtrlType ctrl_type, float value) {
             PID_Angle.SetTarget(Angle + wrap(value - Angle, -numbers::pi_v<float>, numbers::pi_v<float>));
             break;
         case CtrlType::SpeedCtrl:
-            value = clamp(value, PID_Angle.output_limit_n, PID_Angle.output_limit_p); // 限制最大速度
+            if (PID_Angle.output_limit_n && PID_Angle.output_limit_p)
+                value = clamp(value, PID_Angle.output_limit_n.value(), PID_Angle.output_limit_p.value()); // 限制最大速度
             PID_Speed.SetTarget(value);
             break;
         case CtrlType::CurrentCtrl:
-            value = clamp(value, PID_Speed.output_limit_n, PID_Speed.output_limit_p); // 限制最大电流
+            if (PID_Speed.output_limit_n && PID_Speed.output_limit_p)
+                value = clamp(value, PID_Speed.output_limit_n.value(), PID_Speed.output_limit_p.value()); // 限制最大电流
             target_iq = value;
             break;
     }
@@ -443,6 +450,7 @@ void FOC::Ctrl_ISR() {
                 PID_Angle.target -= 2 * numbers::pi_v<float>;
             else if (PreviousAngle_ - Angle_ < -numbers::pi_v<float>)
                 PID_Angle.target += 2 * numbers::pi_v<float>;
+            if (abs(PID_Angle.target - Angle_) < bldc_encoder.resolution / 2) PID_Angle.target = Angle_;
             PID_Speed.SetTarget(PID_Angle.calc(Angle_));
         case CtrlType::SpeedCtrl:
             target_iq = PID_Speed.calc(Speed);

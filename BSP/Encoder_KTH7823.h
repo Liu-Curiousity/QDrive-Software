@@ -26,12 +26,13 @@ public:
 
     Encoder_KTH7823(GPIO_TypeDef *CS_GPIO_Port,
                     const uint16_t CS_GPIO_Pin,
-                    SPI_HandleTypeDef *hspi):
+                    SPI_HandleTypeDef *hspi) :
         hspi(hspi),
         CS_GPIO_Port(CS_GPIO_Port),
         CS_GPIO_Pin(CS_GPIO_Pin) {}
 
     void init() override {
+        resolution = 2 * std::numbers::pi_v<float> / 65535.0f;
         HAL_GPIO_WritePin(CS_GPIO_Port, CS_GPIO_Pin, GPIO_PIN_SET);
         initialized = true;
     }
@@ -46,6 +47,7 @@ public:
 
     void disable() override {
         if (!initialized) return;
+        HAL_GPIO_WritePin(CS_GPIO_Port, CS_GPIO_Pin, GPIO_PIN_SET);
         enabled = false;
     }
 
@@ -57,7 +59,7 @@ public:
         HAL_SPI_TransmitReceive(hspi, reinterpret_cast<uint8_t *>(&txData),
                                 reinterpret_cast<uint8_t *>(&rxData), 1, 100);
         HAL_GPIO_WritePin(CS_GPIO_Port, CS_GPIO_Pin, GPIO_PIN_SET);
-        return static_cast<float>(rxData) / 0xFFFF * 2 * std::numbers::pi_v<float>; //转化为弧度制
+        return rxData * resolution; //转化为弧度制
     }
 
 private:

@@ -32,6 +32,7 @@ public:
         CS_GPIO_Pin(CS_GPIO_Pin) {}
 
     void init() override {
+        resolution = 2 * std::numbers::pi_v<float> / 32768.0f;
         initialized = true;
     }
 
@@ -55,8 +56,7 @@ public:
         static uint8_t rxData[4]{};
         if (!enabled) return 0;
         HAL_SPI_Receive(hspi, rxData, 4,HAL_MAX_DELAY);
-        return (rxData[0] << 7 | rxData[1] >> 1) / 32768.0f
-               * 2 * std::numbers::pi_v<float>;
+        return (rxData[0] << 7 | rxData[1] >> 1) * resolution;
     }
 
 private:

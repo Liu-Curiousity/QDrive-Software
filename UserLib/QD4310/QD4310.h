@@ -70,8 +70,9 @@ public:
      * @brief QD4310控制设置函数
      * @param ctrl_type 控制类型
      * @param value 控制值
+     * @return 设置成功返回true,失败返回false
      */
-    void Ctrl(CtrlType ctrl_type, float value);
+    bool Ctrl(CtrlType ctrl_type, float value);
 
     /**
      * @brief 设置电机ID
@@ -82,16 +83,20 @@ public:
 
     /**
      * @brief 设置PID参数
-     * @param pid_speed_kp 速度环比例系数,若为NAN则不更新
-     * @param pid_speed_ki 速度环积分系数,若为NAN则不更新
-     * @param pid_speed_kd 速度环微分系数,若为NAN则不更新
-     * @param pid_angle_kp 角度环比例系数,若为NAN则不更新
-     * @param pid_angle_ki 角度环积分系数,若为NAN则不更新
-     * @param pid_angle_kd 角度环微分系数,若为NAN则不更新
+     * @param pid_speed_kp 速度环比例系数
+     * @param pid_speed_ki 速度环积分系数
+     * @param pid_speed_kd 速度环微分系数
+     * @param pid_angle_kp 角度环比例系数
+     * @param pid_angle_ki 角度环积分系数
+     * @param pid_angle_kd 角度环微分系数
      * @return 设置成功返回true,失败返回false
      */
-    bool setPID(float pid_speed_kp, float pid_speed_ki, float pid_speed_kd,
-                float pid_angle_kp, float pid_angle_ki, float pid_angle_kd);
+    bool setPID(std::optional<float> pid_speed_kp,
+                std::optional<float> pid_speed_ki,
+                std::optional<float> pid_speed_kd,
+                std::optional<float> pid_angle_kp,
+                std::optional<float> pid_angle_ki,
+                std::optional<float> pid_angle_kd);
 
     /**
      * @brief 设置速度和电流限制
@@ -99,14 +104,14 @@ public:
      * @param current_limit 电流限制,单位A
      * @return 设置成功返回true,失败返回false
      */
-    bool setLimit(float speed_limit, float current_limit);
+    bool setLimit(std::optional<float> speed_limit, std::optional<float> current_limit);
 
     /**
      * @brief 设置位置零点
      * @param position 位置零点,单位rad
      * @return 设置成功返回true,失败返回false
      */
-    bool setZeroPosition(float position);
+    bool setZeroPosition(std::optional<float> position = {});
 
     /**
      * @brief 设置UART波特率

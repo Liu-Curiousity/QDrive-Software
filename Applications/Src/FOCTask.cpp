@@ -45,8 +45,9 @@ QD4310 qd4310(FOC_POLE_PAIRS, 5000, 20000,
                   FOC_CURRENT_KP,
                   FOC_CURRENT_KI,
                   FOC_CURRENT_KD,
-                  NAN,
-                  NAN,
+                  0.00005f, // 20kHz
+                  nullopt,
+                  nullopt,
                   1.0f,
                   -1.0f
               ),
@@ -54,8 +55,9 @@ QD4310 qd4310(FOC_POLE_PAIRS, 5000, 20000,
                   FOC_CURRENT_KP,
                   FOC_CURRENT_KI,
                   FOC_CURRENT_KD,
-                  NAN,
-                  NAN,
+                  0.00005f, // 20kHz
+                  nullopt,
+                  nullopt,
                   1.0f,
                   -1.0f
               ),
@@ -63,8 +65,9 @@ QD4310 qd4310(FOC_POLE_PAIRS, 5000, 20000,
                   FOC_SPEED_KP,
                   FOC_SPEED_KI,
                   FOC_SPEED_KD,
-                  1e4f,
-                  -1e4f,
+                  0.0002f, // 5kHz
+                  2.0f,
+                  -2.0f,
                   FOC_MAX_CURRENT,
                   -FOC_MAX_CURRENT
               ),
@@ -72,8 +75,9 @@ QD4310 qd4310(FOC_POLE_PAIRS, 5000, 20000,
                   FOC_ANGLE_KP,
                   FOC_ANGLE_KI,
                   FOC_ANGLE_KD,
-                  NAN,
-                  NAN,
+                  0.0002f, // 5kHz
+                  nullopt,
+                  nullopt,
                   FOC_MAX_SPEED,
                   -FOC_MAX_SPEED
               )
