@@ -3,8 +3,8 @@
  * @brief       QD4310电机控制库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-5-30
- * @version     V1.3.0
+ * @date        2026-6-14
+ * @version     V1.3.1
  * @note
  * @warning
  * @par         历史版本:
@@ -15,6 +15,7 @@
  *		        V1.2.0创建于2026-3-29, restore移至QD4310类内
  *		        V1.2.1创建于2026-5-5, 调整PID参数存储位置
  *		        V1.3.0创建于2026-5-30, 优化初始化时从储存器读取参数的流程,添加清除校准数据的功能
+ *		        V1.3.1修改于2026-6-14,适配PID重构,修复若干问题
  * @copyright   (c) 2026 QDrive
  */
 

@@ -2,14 +2,16 @@
  * @brief   Encoder KTH7823 Version
  * @details
  * @author  Haoqi Liu
- * @date    2025-4-16
- * @version V3.0.0
+ * @date    2026-6-114
+ * @version V3.1.0
  * @note
  * @warning
  * @par     历史版本:
 		    V1.0.0创建于2024-7-3
 		    V2.0.0 on 2025-1-20,refactor by C++
 		    V3.0.0 on 2025-4-16,delete ZeroPosition_Calibration and put it in FOC Class
+		    V3.1.0 on 2026-6-14,add resolution
+ * @copyright   (c) 2026 QDrive
  * */
 
 #ifndef ENCODER_DRIVER_KTH7823_H

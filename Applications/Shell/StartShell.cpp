@@ -3,14 +3,15 @@
  * @brief       启动shell
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-5-6
- * @version     V1.1.1
+ * @date        2026-5-14
+ * @version     V1.1.2
  * @note
  * @warning
  * @par         历史版本:
  *		        V1.0.0创建于2025-6-21
  *		        V1.1.0创建于2025-7-8
  *		        V1.1.1创建于2026-5-6, 使用sizeof()替换定值shell缓冲区大小, 减少误设置风险
+ *		        V1.1.2创建于2026-5-14, 增大LetterShell任务的栈空间分配
  * @copyright   (c) 2026 QDrive
  */
 

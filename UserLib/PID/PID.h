@@ -2,8 +2,8 @@
  * @brief       PID基础控制库(C++)
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-6-13
- * @version     V1.2.0
+ * @date        2026-6-14
+ * @version     V1.2.1
  * @note
  * @warning
  * @par         历史版本
@@ -11,6 +11,7 @@
  *              V1.1.0创建于2025-1-20,添加类初始化默认限幅参数,现在可以在初始化时设置限幅
  *              V1.1.1创建于2025-7-8,修改限幅NAN判断
  *              V1.2.0创建于2026-6-13,添加Ts控制周期,添加可选的dinput输入
+ *              V1.2.1创建于2026-6-14,使用optional作为可选的限幅类型
  * @copyright   (c) 2025 QDrive
  * */
 

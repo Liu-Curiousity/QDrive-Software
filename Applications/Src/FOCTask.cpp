@@ -3,8 +3,8 @@
  * @brief       FOC控制任务
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2025-12-27
- * @version     V1.1.2
+ * @date        2026-6-14
+ * @version     V1.1.3
  * @note
  * @warning
  * @par         历史版本:
@@ -13,7 +13,8 @@
  *		        V1.1.0创建于2025-4-30, 优化启动流程,添加储存功能
  *		        V1.1.1创建于2025-5-4, 优化ADC采样方式
  *		        V1.1.2创建于2025-12-27, 适配QD4310重构
- * @copyright   (c) 2025 QDrive
+ *		        V1.1.3创建于2026-6-14, 适配PID重构
+ * @copyright   (c) 2026 QDrive
  */
 
 #include "task_public.h"
