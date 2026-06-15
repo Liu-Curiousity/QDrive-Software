@@ -3,8 +3,8 @@
  * @brief       QD4310电机控制库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-5-30
- * @version     V1.3.0
+ * @date        2026-6-14
+ * @version     V1.3.1
  * @note
  * @warning
  * @par         历史版本:
@@ -15,6 +15,7 @@
  *		        V1.2.0创建于2026-3-29, restore移至QD4310类内
  *		        V1.2.1创建于2026-5-5, 调整PID参数存储位置
  *		        V1.3.0创建于2026-5-30, 优化初始化时从储存器读取参数的流程,添加清除校准数据的功能
+ *		        V1.3.1修改于2026-6-14,适配PID重构,修复若干问题
  * @copyright   (c) 2026 QDrive
  */
 
@@ -40,7 +41,6 @@ void QD4310::init() {
 }
 
 void QD4310::start() {
-    if (!started) Ctrl(CtrlType::CurrentCtrl, 0);
     FOC::start();
     if (started) {
         HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
@@ -51,6 +51,7 @@ void QD4310::start() {
 void QD4310::stop() {
     FOC::stop();
     if (!started) {
+        FOC::Ctrl(CtrlType::CurrentCtrl, 0);
         HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
         HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
     }
@@ -84,11 +85,13 @@ void QD4310::anticogging_calibrate() {
     return wrap(FOC::getAngle() - zero_pos, 0, 2 * numbers::pi_v<float>);
 }
 
-void QD4310::Ctrl(const CtrlType ctrl_type, float value) {
+bool QD4310::Ctrl(const CtrlType ctrl_type, float value) {
+    if (!started) return false;
     if (ctrl_type == CtrlType::AngleCtrl) {
         value = wrap(value + zero_pos, 0, 2 * numbers::pi_v<float>);
     }
     FOC::Ctrl(ctrl_type, value);
+    return true;
 }
 
 bool QD4310::setID(const uint8_t id) {
@@ -97,31 +100,35 @@ bool QD4310::setID(const uint8_t id) {
     return true;
 }
 
-bool QD4310::setPID(const float pid_speed_kp, const float pid_speed_ki, const float pid_speed_kd,
-                    const float pid_angle_kp, const float pid_angle_ki, const float pid_angle_kd) {
-    if (!isnan(pid_speed_kp)) PID_Speed.kp = pid_speed_kp;
-    if (!isnan(pid_speed_ki)) PID_Speed.ki = pid_speed_ki;
-    if (!isnan(pid_speed_kd)) PID_Speed.kd = pid_speed_kd;
-    if (!isnan(pid_angle_kp)) PID_Angle.kp = pid_angle_kp;
-    if (!isnan(pid_angle_ki)) PID_Angle.ki = pid_angle_ki;
-    if (!isnan(pid_angle_kd)) PID_Angle.kd = pid_angle_kd;
+bool QD4310::setPID(const std::optional<float> pid_speed_kp,
+                    const std::optional<float> pid_speed_ki,
+                    const std::optional<float> pid_speed_kd,
+                    const std::optional<float> pid_angle_kp,
+                    const std::optional<float> pid_angle_ki,
+                    const std::optional<float> pid_angle_kd) {
+    if (pid_speed_kp) PID_Speed.kp = pid_speed_kp.value();
+    if (pid_speed_ki) PID_Speed.ki = pid_speed_ki.value();
+    if (pid_speed_kd) PID_Speed.kd = pid_speed_kd.value();
+    if (pid_angle_kp) PID_Angle.kp = pid_angle_kp.value();
+    if (pid_angle_ki) PID_Angle.ki = pid_angle_ki.value();
+    if (pid_angle_kd) PID_Angle.kd = pid_angle_kd.value();
     return true;
 }
 
-bool QD4310::setLimit(const float speed_limit, const float current_limit) {
-    if (!isnan(speed_limit)) {
-        PID_Angle.output_limit_p = speed_limit;
-        PID_Angle.output_limit_n = -speed_limit;
+bool QD4310::setLimit(const std::optional<float> speed_limit, const std::optional<float> current_limit) {
+    if (speed_limit) {
+        PID_Angle.output_limit_p = speed_limit.value();
+        PID_Angle.output_limit_n = -speed_limit.value();
     }
-    if (!isnan(current_limit)) {
-        PID_Speed.output_limit_p = current_limit;
-        PID_Speed.output_limit_n = -current_limit;
+    if (current_limit) {
+        PID_Speed.output_limit_p = current_limit.value();
+        PID_Speed.output_limit_n = -current_limit.value();
     }
     return true;
 }
 
-bool QD4310::setZeroPosition(const float position) {
-    zero_pos = wrap(zero_pos + position, 0, 2 * numbers::pi_v<float>);
+bool QD4310::setZeroPosition(const std::optional<float> position) {
+    zero_pos = wrap(zero_pos + position.value_or(getAngle()), 0, 2 * numbers::pi_v<float>);
     freeze_storage_calibration(STORAGE_ZERO_POS_OK);
     return true;
 }
@@ -183,9 +190,9 @@ void QD4310::load_storage_calibration() {
     }
     if ((storage_status & STORAGE_LIMIT_OK) == STORAGE_LIMIT_OK) {
         storage.read(0x300, &PID_Angle.output_limit_p, sizeof(PID_Angle.output_limit_p));
-        PID_Angle.output_limit_n = -PID_Angle.output_limit_p;
+        PID_Angle.output_limit_n = -PID_Angle.output_limit_p.value();
         storage.read(0x310, &PID_Speed.output_limit_p, sizeof(PID_Speed.output_limit_p));
-        PID_Speed.output_limit_n = -PID_Speed.output_limit_p;
+        PID_Speed.output_limit_n = -PID_Speed.output_limit_p.value();
     }
     if ((storage_status & STORAGE_PLUG_OK) == STORAGE_PLUG_OK) {
         storage.read(0x400, &ID, sizeof(ID));

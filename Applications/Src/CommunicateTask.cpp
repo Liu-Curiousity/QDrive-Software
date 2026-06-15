@@ -3,8 +3,8 @@
  * @brief       通信任务
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-5-5
- * @version     V1.2.3
+ * @date        2026-5-14
+ * @version     V1.3.0
  * @note
  * @warning
  * @par         历史版本:
@@ -16,6 +16,7 @@
  *		        V1.2.1创建于2026-3-12, 修复CAN通信失效的问题
  *		        V1.2.2创建于2026-5-4, 修复CAN通信发送超过指令长度帧可能导致的溢出问题
  *		        V1.2.3创建于2026-5-5, 优化上电初始化后通信开启逻辑
+ *		        V1.3.0创建于2026-5-14, 添加通过Uart/Can设置零点和重启设备
  * @copyright   (c) 2026 QDrive
  */
 
@@ -48,7 +49,30 @@ public:
         AngleCtrl = 0x05,     // 角度控制
         LowSpeedCtrl = 0x06,  // 低速控制
         StepAngleCtrl = 0x07, // 角度步进控制
+
+        Reboot = 0xFF,     // 重启
+        SetZeroPos = 0xFE, // 设置零点
+        ClearError = 0xFB, // 清除错误
     };
+
+    static bool is_CmdType(const CmdType cmd) {
+        switch (cmd) {
+            case CmdType::NOP:
+            case CmdType::Enable:
+            case CmdType::Disable:
+            case CmdType::CurrentCtrl:
+            case CmdType::SpeedCtrl:
+            case CmdType::AngleCtrl:
+            case CmdType::LowSpeedCtrl:
+            case CmdType::StepAngleCtrl:
+            case CmdType::Reboot:
+            case CmdType::SetZeroPos:
+            case CmdType::ClearError:
+                return true;
+            default:
+                return false;
+        }
+    }
 
     union RxData {
         struct __attribute__((packed)) {
@@ -115,11 +139,17 @@ void StartCommunicateTask(void *argument) {
                 qd4310.Ctrl(QD4310::CtrlType::StepAngleCtrl,
                             rx_command.cmd.fields.data * 2 * numbers::pi_v<float> / INT16_MAX);
                 break;
+            case RxCommand::CmdType::Reboot: // 重启
+                NVIC_SystemReset();
+                break;
+            case RxCommand::CmdType::SetZeroPos: // 设置零点
+                qd4310.setZeroPosition();
+                break;
             default:
                 break;
         }
-        // 是合法命令则发送反馈报文
-        if (rx_command.cmd.fields.cmd_type <= RxCommand::CmdType::StepAngleCtrl) {
+        // 如果是合法命令则发送反馈报文
+        if (RxCommand::is_CmdType(rx_command.cmd.fields.cmd_type)) {
             static union TxData {
                 struct __attribute__((packed)) {
                     uint8_t id;          // 电机ID

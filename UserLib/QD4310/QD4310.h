@@ -3,8 +3,8 @@
  * @brief       QD4310电机控制库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-5-30
- * @version     V1.3.0
+ * @date        2026-6-14
+ * @version     V1.3.1
  * @note
  * @warning
  * @par         历史版本:
@@ -15,6 +15,7 @@
  *		        V1.2.0创建于2026-3-29, restore移至QD4310类内
  *		        V1.2.1创建于2026-5-5, 调整PID参数存储位置
  *		        V1.3.0创建于2026-5-30, 优化初始化时从储存器读取参数的流程,添加清除校准数据的功能
+ *		        V1.3.1修改于2026-6-14,适配PID重构,修复若干问题
  * @copyright   (c) 2026 QDrive
  */
 
@@ -70,8 +71,9 @@ public:
      * @brief QD4310控制设置函数
      * @param ctrl_type 控制类型
      * @param value 控制值
+     * @return 设置成功返回true,失败返回false
      */
-    void Ctrl(CtrlType ctrl_type, float value);
+    bool Ctrl(CtrlType ctrl_type, float value);
 
     /**
      * @brief 设置电机ID
@@ -82,16 +84,20 @@ public:
 
     /**
      * @brief 设置PID参数
-     * @param pid_speed_kp 速度环比例系数,若为NAN则不更新
-     * @param pid_speed_ki 速度环积分系数,若为NAN则不更新
-     * @param pid_speed_kd 速度环微分系数,若为NAN则不更新
-     * @param pid_angle_kp 角度环比例系数,若为NAN则不更新
-     * @param pid_angle_ki 角度环积分系数,若为NAN则不更新
-     * @param pid_angle_kd 角度环微分系数,若为NAN则不更新
+     * @param pid_speed_kp 速度环比例系数
+     * @param pid_speed_ki 速度环积分系数
+     * @param pid_speed_kd 速度环微分系数
+     * @param pid_angle_kp 角度环比例系数
+     * @param pid_angle_ki 角度环积分系数
+     * @param pid_angle_kd 角度环微分系数
      * @return 设置成功返回true,失败返回false
      */
-    bool setPID(float pid_speed_kp, float pid_speed_ki, float pid_speed_kd,
-                float pid_angle_kp, float pid_angle_ki, float pid_angle_kd);
+    bool setPID(std::optional<float> pid_speed_kp,
+                std::optional<float> pid_speed_ki,
+                std::optional<float> pid_speed_kd,
+                std::optional<float> pid_angle_kp,
+                std::optional<float> pid_angle_ki,
+                std::optional<float> pid_angle_kd);
 
     /**
      * @brief 设置速度和电流限制
@@ -99,14 +105,14 @@ public:
      * @param current_limit 电流限制,单位A
      * @return 设置成功返回true,失败返回false
      */
-    bool setLimit(float speed_limit, float current_limit);
+    bool setLimit(std::optional<float> speed_limit, std::optional<float> current_limit);
 
     /**
      * @brief 设置位置零点
      * @param position 位置零点,单位rad
      * @return 设置成功返回true,失败返回false
      */
-    bool setZeroPosition(float position);
+    bool setZeroPosition(std::optional<float> position = {});
 
     /**
      * @brief 设置UART波特率

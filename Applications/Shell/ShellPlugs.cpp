@@ -171,14 +171,14 @@ void foc_config_list() {
         PRINT("pid.angle.kd = 0.000");
     else
         PRINT("pid.angle.kd = %.3g", qd4310.PID_Angle.kd);
-    if (std::isnan(qd4310.PID_Angle.output_limit_p))
+    if (!qd4310.PID_Angle.output_limit_p)
         PRINT("limit.speed = no limit");
     else
-        PRINT("limit.speed = %.3g rpm", qd4310.PID_Angle.output_limit_p);
-    if (std::isnan(qd4310.PID_Speed.output_limit_p))
+        PRINT("limit.speed = %.3g rpm", qd4310.PID_Angle.output_limit_p.value());
+    if (!qd4310.PID_Speed.output_limit_p)
         PRINT("limit.current = no limit");
     else
-        PRINT("limit.current = %.3g A", qd4310.PID_Speed.output_limit_p);
+        PRINT("limit.current = %.3g A", qd4310.PID_Speed.output_limit_p.value());
     PRINT("can.id = %03d", qd4310.ID);
     // TODO: 波特率不可更改
     PRINT("can.baud_rate = 1'000'000");
@@ -219,21 +219,21 @@ void foc_config(int argc, char *argv[]) {
     } else if (value) {
         float valf = atof_lite(value);
         if (strcmp(key, "pid.speed.kp") == 0) {
-            qd4310.setPID(valf,NAN,NAN,NAN,NAN,NAN);
+            qd4310.setPID(valf, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt);
         } else if (strcmp(key, "pid.speed.ki") == 0) {
-            qd4310.setPID(NAN, valf,NAN,NAN,NAN,NAN);
+            qd4310.setPID(std::nullopt, valf, std::nullopt, std::nullopt, std::nullopt, std::nullopt);
         } else if (strcmp(key, "pid.speed.kd") == 0) {
-            qd4310.setPID(NAN,NAN, valf,NAN,NAN,NAN);
+            qd4310.setPID(std::nullopt, std::nullopt, valf, std::nullopt, std::nullopt, std::nullopt);
         } else if (strcmp(key, "pid.angle.kp") == 0) {
-            qd4310.setPID(NAN,NAN,NAN, valf,NAN,NAN);
+            qd4310.setPID(std::nullopt, std::nullopt, std::nullopt, valf, std::nullopt, std::nullopt);
         } else if (strcmp(key, "pid.angle.ki") == 0) {
-            qd4310.setPID(NAN,NAN,NAN, NAN, valf,NAN);
+            qd4310.setPID(std::nullopt, std::nullopt, std::nullopt, std::nullopt, valf, std::nullopt);
         } else if (strcmp(key, "pid.angle.kd") == 0) {
-            qd4310.setPID(NAN,NAN,NAN, NAN,NAN, valf);
+            qd4310.setPID(std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt, valf);
         } else if (strcmp(key, "limit.speed") == 0) {
-            qd4310.setLimit(valf, NAN);
+            qd4310.setLimit(valf, std::nullopt);
         } else if (strcmp(key, "limit.current") == 0) {
-            qd4310.setLimit(NAN, valf);
+            qd4310.setLimit(std::nullopt, valf);
         } else if (strcmp(key, "can.id") == 0) {
             if (!qd4310.setID(valf)) {
                 PRINT("Invalid CAN ID: %d, must be between 0 and 7", static_cast<int>(valf));
@@ -298,29 +298,33 @@ void foc_ctrl(int argc, char *argv[]) {
         value = argv[2];
     }
 
-    if (value) {
-        float valf = atof_lite(value);
-        if (strcmp(key, "current") == 0) {
-            PRINT("Setting current = %.2f A", valf);
-            qd4310.Ctrl(QD4310::CtrlType::CurrentCtrl, valf);
-        } else if (strcmp(key, "speed") == 0) {
-            PRINT("Setting speed = %.2f rpm", valf);
-            qd4310.Ctrl(QD4310::CtrlType::SpeedCtrl, valf);
-        } else if (strcmp(key, "angle") == 0) {
-            PRINT("Setting angle = %.2f rad", valf);
-            qd4310.Ctrl(QD4310::CtrlType::AngleCtrl, valf);
-        } else if (strcmp(key, "step_angle") == 0) {
-            PRINT("Stepping %.2f rad angle", valf);
-            qd4310.Ctrl(QD4310::CtrlType::StepAngleCtrl, valf);
-        } else if (strcmp(key, "low_speed") == 0) {
-            PRINT("Setting low_speed = %.2f rpm", valf);
-            qd4310.Ctrl(QD4310::CtrlType::LowSpeedCtrl, valf);
-        } else {
-            PRINT("Unknown ctrl target: %s", key);
-            foc_ctrl_help();
-        }
-    } else {
+    if (!value) {
         PRINT("Missing value for ctrl [%s]", key);
+        return;
+    }
+    if (!qd4310.started) {
+        PRINT("QDrive is not running, please enable it first");
+        return;
+    }
+    float valf = atof_lite(value);
+    if (strcmp(key, "current") == 0) {
+        PRINT("Setting current = %.2f A", valf);
+        qd4310.Ctrl(QD4310::CtrlType::CurrentCtrl, valf);
+    } else if (strcmp(key, "speed") == 0) {
+        PRINT("Setting speed = %.2f rpm", valf);
+        qd4310.Ctrl(QD4310::CtrlType::SpeedCtrl, valf);
+    } else if (strcmp(key, "angle") == 0) {
+        PRINT("Setting angle = %.2f rad", valf);
+        qd4310.Ctrl(QD4310::CtrlType::AngleCtrl, valf);
+    } else if (strcmp(key, "step_angle") == 0) {
+        PRINT("Stepping %.2f rad angle", valf);
+        qd4310.Ctrl(QD4310::CtrlType::StepAngleCtrl, valf);
+    } else if (strcmp(key, "low_speed") == 0) {
+        PRINT("Setting low_speed = %.2f rpm", valf);
+        qd4310.Ctrl(QD4310::CtrlType::LowSpeedCtrl, valf);
+    } else {
+        PRINT("Unknown ctrl target: %s", key);
+        foc_ctrl_help();
     }
 }
 

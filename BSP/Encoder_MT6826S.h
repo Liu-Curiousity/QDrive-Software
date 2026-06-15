@@ -2,14 +2,16 @@
  * @brief   Encoder MT6826S Version
  * @details
  * @author  Haoqi Liu
- * @date    2025-4-16
- * @version V3.0.0
+ * @date    2026-6-14
+ * @version V3.1.0
  * @note
  * @warning
  * @par     历史版本:
 		    V1.0.0创建于2024-7-3
 		    V2.0.0 on 2025-1-20,refactor by C++
 		    V3.0.0 on 2025-4-16,delete ZeroPosition_Calibration and put it in FOC Class
+            V3.1.0 on 2026-6-14,add resolution
+ * @copyright   (c) 2026 QDrive
  * */
 
 #ifndef ENCODER_DRIVER_MT6826S_H
@@ -32,6 +34,7 @@ public:
         CS_GPIO_Pin(CS_GPIO_Pin) {}
 
     void init() override {
+        resolution = 2 * std::numbers::pi_v<float> / 32768.0f;
         initialized = true;
     }
 
@@ -55,8 +58,7 @@ public:
         static uint8_t rxData[4]{};
         if (!enabled) return 0;
         HAL_SPI_Receive(hspi, rxData, 4,HAL_MAX_DELAY);
-        return (rxData[0] << 7 | rxData[1] >> 1) / 32768.0f
-               * 2 * std::numbers::pi_v<float>;
+        return (rxData[0] << 7 | rxData[1] >> 1) * resolution;
     }
 
 private:

@@ -3,8 +3,8 @@
  * @brief       FOC驱动库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-5-30
- * @version     V5.3.0
+ * @date        2026-6-14
+ * @version     V5.3.1
  * @note        此库为中间层库,与硬件完全解耦
  * @warning
  * @par         历史版本:
@@ -25,9 +25,9 @@
  *		        V5.2.3修改于2026-3-29,修复角度控制0点时偶现的突发旋转一周的问题
  *		        V5.2.4修改于2026-5-2,修复低速模式下每发送一次控制指令都会顿一下的问题
  *		        V5.3.0修改于2026-5-30,添加校准异常检测,提高校准速度,优化校准效果添加校准异常检测,提高校准速度,优化校准效果
+ *		        V5.3.1修改于2026-6-14,适配PID重构,修复若干问题
  * @copyright   (c) 2026 QDrive
  */
-
 
 #include <algorithm>
 #include <numbers>
@@ -91,6 +91,11 @@ void FOC::start() {
 }
 
 void FOC::stop() {
+    target_iq = 0;
+    PID_CurrentD.reset();
+    PID_CurrentQ.reset();
+    PID_Speed.reset();
+    PID_Angle.reset();
     started = false;
 }
 
@@ -360,6 +365,11 @@ void FOC::SetPhaseVoltage(float ud, float uq, const float electrical_angle) {
     uq *= 0.99f;
 
     /**1.保存电压值**/
+    if (const float u_join_2 = ud * ud + uq * uq; u_join_2 > 1.0f) {
+        const float scale = 1.0f / sqrt(u_join_2);
+        ud *= scale;
+        uq *= scale;
+    }
     Ud = ud;
     Uq = uq;
 
@@ -409,11 +419,13 @@ void FOC::Ctrl(const CtrlType ctrl_type, float value) {
             PID_Angle.SetTarget(Angle + wrap(value - Angle, -numbers::pi_v<float>, numbers::pi_v<float>));
             break;
         case CtrlType::SpeedCtrl:
-            value = clamp(value, PID_Angle.output_limit_n, PID_Angle.output_limit_p); // 限制最大速度
+            if (PID_Angle.output_limit_n && PID_Angle.output_limit_p)
+                value = clamp(value, PID_Angle.output_limit_n.value(), PID_Angle.output_limit_p.value()); // 限制最大速度
             PID_Speed.SetTarget(value);
             break;
         case CtrlType::CurrentCtrl:
-            value = clamp(value, PID_Speed.output_limit_n, PID_Speed.output_limit_p); // 限制最大电流
+            if (PID_Speed.output_limit_n && PID_Speed.output_limit_p)
+                value = clamp(value, PID_Speed.output_limit_n.value(), PID_Speed.output_limit_p.value()); // 限制最大电流
             target_iq = value;
             break;
     }
@@ -443,6 +455,7 @@ void FOC::Ctrl_ISR() {
                 PID_Angle.target -= 2 * numbers::pi_v<float>;
             else if (PreviousAngle_ - Angle_ < -numbers::pi_v<float>)
                 PID_Angle.target += 2 * numbers::pi_v<float>;
+            if (abs(PID_Angle.target - Angle_) < bldc_encoder.resolution / 2) PID_Angle.target = Angle_;
             PID_Speed.SetTarget(PID_Angle.calc(Angle_));
         case CtrlType::SpeedCtrl:
             target_iq = PID_Speed.calc(Speed);
