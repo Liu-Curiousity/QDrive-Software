@@ -1,0 +1,155 @@
+name: CMake on a single platform
+
+on:
+  push:
+    branches: [ "release" ]
+  pull_request:
+    branches: [ "release" ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+  PRODUCT_NAME: QD4310
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Code
+        # Check out the code from the repository so that it can be built. This step is required for all workflows that build code from the repository.
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare Compiler
+        # Install the compiler.
+        run: sudo apt install gcc-arm-none-eabi
+
+      - name: Merge to DFU Branch
+        # Check out the dfu branch, which contains the necessary CMake toolchain file and other files required to build the project.
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git switch dfu
+          git merge -
+
+      - name: Configure CMake
+        # Configure CMake in a 'build' subdirectory.
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+      - name: Build
+        # Build program with the given configuration
+        run: | 
+          cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+      - name: Fetch HEX File
+        id: fetch_hex
+        working-directory: ${{github.workspace}}/build
+        # Fetch the generated hex file from the build directory.
+        run: |
+          HEX_FILE=$(find . -maxdepth 1 -type f -name '*.hex' | head -n 1)
+          if [ -z "$HEX_FILE" ]; then
+            echo "No HEX file found in $(pwd)"
+            exit 1
+          fi
+          echo "Using HEX: $HEX_FILE"
+          cp "$HEX_FILE" "./${{env.PRODUCT_NAME}}_no_bootloader.hex"
+
+      - name: Upload HEX File
+        # Upload the generated hex file as an artifact of the workflow.
+        uses: actions/upload-artifact@v5
+        with:
+          name: mid-hex-file
+          path: ${{github.workspace}}/build/${{env.PRODUCT_NAME}}_no_bootloader.hex
+
+
+  make-dfu-file:
+    name: Generate DFU File
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: build
+    steps:
+      - name: Install dfu-util
+        # Install dfu-util, which is required to flash the generated DFU file to device.
+        run: sudo apt install dfu-util
+
+      - name: Install Intel Hex
+        # Install the Intel Hex Python package, which is required to generate the DFU file.
+        run: sudo apt install python3-intelhex
+
+      - name: Download HEX File
+        # Download the generated hex file from the previous step.
+        uses: actions/download-artifact@v5
+        with:
+          name: mid-hex-file
+
+      - name: Make DFU File
+        # Generate a DFU file from the generated hex file.
+        run: |
+          HEX_FILE=$(find . -maxdepth 1 -type f -name '*.hex' | head -n 1)
+          if [ -z "$HEX_FILE" ]; then
+            echo "No HEX file found in $(pwd)"
+            exit 1
+          fi
+          dfuse-pack -i "$HEX_FILE" -D 0x0483:0xdf12 -d "${{env.PRODUCT_NAME}}.dfu"
+
+      - name: Upload DFU File
+        # Upload the generated dfu file as an artifact of the workflow.
+        uses: actions/upload-artifact@v5
+        with:
+          name: dfu-file
+          path: ${{env.PRODUCT_NAME}}.dfu
+
+
+  make-hex-file:
+    name: Splice HEX File
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: build
+    steps:
+      - name: Download HEX File
+        # Download the generated hex file from the previous step.
+        uses: actions/download-artifact@v5
+        with:
+          name: mid-hex-file
+
+      - name: Splice HEX File
+        run: |
+          HEX_FILE=$(find . -maxdepth 1 -type f -name '*.hex' | head -n 1)
+          if [ -z "$HEX_FILE" ]; then
+            echo "No HEX file found in $(pwd)"
+            exit 1
+          fi
+          cp "$HEX_FILE" "./${{env.PRODUCT_NAME}}.hex"
+
+      - name: Upload HEX File
+        # Upload the generated hex file as an artifact of the workflow.
+        uses: actions/upload-artifact@v5
+        with:
+          name: hex-file
+          path: ${{env.PRODUCT_NAME}}.hex
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: [make-dfu-file, make-hex-file]
+    steps:
+      - name: Download HEX File
+        # Download the generated HEX file from the previous step.
+        uses: actions/download-artifact@v5
+        with:
+          name: hex-file
+
+      - name: Download DFU File
+        # Download the generated DFU file from the previous step.
+        uses: actions/download-artifact@v5
+        with:
+          name: dfu-file
+
+      - name: Deploy to Device
+        run: |
+          ls ${{env.PRODUCT_NAME}}.*
+          echo ${{ github.ref }}
