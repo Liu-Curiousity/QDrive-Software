@@ -246,6 +246,10 @@ auto FOC::calibrate() -> CalibrationStatus {
     }
     bldc_driver.set_duty(0, 0, 0);
     zero_electric_angle = (sum_offset_angle - numbers::pi_v<float> * (pole_pairs - 1)) / pole_pairs;
+    if (const auto remainder = fmod(zero_electric_angle, bldc_encoder.resolution); remainder < bldc_encoder.resolution / 2)
+        zero_electric_angle -= remainder;
+    else
+        zero_electric_angle += bldc_encoder.resolution - remainder;
 
     calibrated = true;
     delay(10);
