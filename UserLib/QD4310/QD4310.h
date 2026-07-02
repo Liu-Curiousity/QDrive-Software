@@ -1,10 +1,10 @@
 /**
- * @file        QD4310.cpp
+ * @file        QD4310.h
  * @brief       QD4310电机控制库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-6-14
- * @version     V1.3.1
+ * @date        2026-7-2
+ * @version     V1.4.0
  * @note
  * @warning
  * @par         历史版本:
@@ -16,6 +16,7 @@
  *		        V1.2.1创建于2026-5-5, 调整PID参数存储位置
  *		        V1.3.0创建于2026-5-30, 优化初始化时从储存器读取参数的流程,添加清除校准数据的功能
  *		        V1.3.1修改于2026-6-14,适配PID重构,修复若干问题
+ *		        V1.4.0修改于2026-7-2,添加错误检测
  * @copyright   (c) 2026 QDrive
  */
 
@@ -28,6 +29,13 @@
 
 class QD4310 : public FOC {
 public:
+    enum ErrorCode : uint8_t {
+        NoError = 0b0000'0000,
+        CalibrationError = 0b0000'0001,
+        VoltageError = 0b0000'0010,
+        TemperatureError = 0b0000'0100,
+    } error_code = NoError;
+
     /**
      * @brief 初始化
      * @param pole_pairs 极对数
@@ -59,8 +67,8 @@ public:
     uint32_t uart_baud_rate{115200}; // UART波特率
 
     void init();
-    void start();
-    void stop();
+    bool start();
+    bool stop();
     CalibrationStatus calibrate();
     void anticogging_calibrate();
 
@@ -74,6 +82,11 @@ public:
      * @return 设置成功返回true,失败返回false
      */
     bool Ctrl(CtrlType ctrl_type, float value);
+
+    /**
+     * @brief FOC控制(速度环、角度环)中断服务函数
+     */
+    void Ctrl_ISR();
 
     /**
      * @brief 设置电机ID
@@ -147,6 +160,7 @@ private:
     Storage& storage;     //存储器
     float zero_pos{0.0f}; //位置零点
 
+    ErrorCode error_detect();
     void restore_calibration();
     void load_storage_calibration();
     void freeze_storage_calibration(StorageStatus storage_type);

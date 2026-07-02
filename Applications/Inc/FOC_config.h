@@ -26,33 +26,36 @@ inline constexpr const char *FOC_HARDWARE_VERSIONS[] = {
 inline const char *FOC_HARDWARE_VERSION = FOC_HARDWARE_VERSIONS[0]; // 硬件版本
 
 extern "C" {
+
 #endif
 
-#define FOC_SOFTWARE_VERSION "6.2.2"     // 软件版本
+#define FOC_SOFTWARE_VERSION "6.2.3"     // 软件版本
 
 /*==========================电机参数==========================*/
-#define FOC_KV                  33.0f   // KV值,单位rpm/V
-#define FOC_POLE_PAIRS          14      // 极对数
-#define FOC_NOMINAL_VOLTAGE     24      // 额定电压,单位V
-#define FOC_PHASE_INDUCTANCE    4.74f   // 相电感,单位mH
-#define FOC_PHASE_RESISTANCE    10.9f   // 相电阻,单位Ω
-#define FOC_TORQUE_CONSTANT     0.27f   // 转矩常数,单位Nm/A
+#define FOC_KV                      33.0f   // KV值,单位rpm/V
+#define FOC_POLE_PAIRS              14      // 极对数
+#define FOC_NOMINAL_VOLTAGE         24      // 额定电压,单位V
+#define FOC_PHASE_INDUCTANCE        4.74f   // 相电感,单位mH
+#define FOC_PHASE_RESISTANCE        10.9f   // 相电阻,单位Ω
+#define FOC_TORQUE_CONSTANT         0.27f   // 转矩常数,单位Nm/A
 
 /*=========================驱动板参数==========================*/
-#define FOC_MAX_CURRENT         1.65f   // 最大电流,单位A
+#define FOC_MAX_CURRENT             1.65f   // 最大电流,单位A
+#define FOC_ABSOLUTE_MIN_VOLTAGE    6.0f    // 绝对最小电压,单位V
+#define FOC_ABSOLUTE_MAX_VOLTAGE    27.0f   // 绝对最大电压,单位V
 
 /*==========================配置参数==========================*/
-#define FOC_MAX_SPEED           1000.0f // 最大转速,单位rpm
+#define FOC_MAX_SPEED               1000.0f // 最大转速,单位rpm
 
-#define FOC_CURRENT_KP          10.0f
-#define FOC_CURRENT_KI          20000.0f
-#define FOC_CURRENT_KD          0.0f
-#define FOC_SPEED_KP            3e-3f
-#define FOC_SPEED_KI            0.39f
-#define FOC_SPEED_KD            0.0f
-#define FOC_ANGLE_KP            1200.0f
-#define FOC_ANGLE_KI            0.0f
-#define FOC_ANGLE_KD            0.0f
+#define FOC_CURRENT_KP              10.0f
+#define FOC_CURRENT_KI              20000.0f
+#define FOC_CURRENT_KD              0.0f
+#define FOC_SPEED_KP                3e-3f
+#define FOC_SPEED_KI                0.39f
+#define FOC_SPEED_KD                0.0f
+#define FOC_ANGLE_KP                1200.0f
+#define FOC_ANGLE_KI                0.0f
+#define FOC_ANGLE_KD                0.0f
 
 #ifdef __cplusplus
 }

@@ -3,8 +3,8 @@
  * @brief       FOC驱动库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-6-14
- * @version     V5.3.1
+ * @date        2026-7-2
+ * @version     V5.3.2
  * @note        此库为中间层库,与硬件完全解耦
  * @warning
  * @par         历史版本:
@@ -26,6 +26,7 @@
  *		        V5.2.4修改于2026-5-2,修复低速模式下每发送一次控制指令都会顿一下的问题
  *		        V5.3.0修改于2026-5-30,添加校准异常检测,提高校准速度,优化校准效果添加校准异常检测,提高校准速度,优化校准效果
  *		        V5.3.1修改于2026-6-14,适配PID重构,修复若干问题
+ *		        V5.3.2修改于2026-7-2,优化driver error检测方式,修复低速模式下停转的问题
  * @copyright   (c) 2026 QDrive
  */
 
@@ -126,15 +127,14 @@ auto FOC::calibrate() -> CalibrationStatus {
             bldc_driver.set_duty(0, 0, phase_duty);
             delay(1);
         }
-        // 检测：如果升压到最大占空比但仍未达到目标电流，说明驱动器或电机有问题
-        if (phase_duty >= MAX_DUTY && current_sensor.iw < FOC_MAX_CURRENT * 0.5f) {
-            bldc_driver.set_duty(0, 0, 0);
-            return CalibrationStatus::DriverError; // 驱动能力不足或电机被卡住
-        }
         // 测量相电阻
         for (int i = 0; i < SAMPLE_COUNT; ++i) {
             phase_resistance_w += phase_duty * Voltage / current_sensor.iw / 0.75f / SAMPLE_COUNT;
             delay(1);
+        }
+        if (abs(phase_resistance_w - FOC_PHASE_RESISTANCE) > 3) {
+            bldc_driver.set_duty(0, 0, 0);
+            return CalibrationStatus::DriverError; // 驱动器异常
         }
     } while (false);
     // V相测试
@@ -145,15 +145,14 @@ auto FOC::calibrate() -> CalibrationStatus {
             bldc_driver.set_duty(0, phase_duty, 0);
             delay(1);
         }
-        // 检测：如果升压到最大占空比但仍未达到目标电流，说明驱动器或电机有问题
-        if (phase_duty >= MAX_DUTY && current_sensor.iv < FOC_MAX_CURRENT * 0.5f) {
-            bldc_driver.set_duty(0, 0, 0);
-            return CalibrationStatus::DriverError; // 驱动能力不足或电机被卡住
-        }
         // 测量相电阻
         for (int i = 0; i < SAMPLE_COUNT; ++i) {
             phase_resistance_v += phase_duty * Voltage / current_sensor.iv / 0.75f / SAMPLE_COUNT;
             delay(1);
+        }
+        if (abs(phase_resistance_v - FOC_PHASE_RESISTANCE) > 3) {
+            bldc_driver.set_duty(0, 0, 0);
+            return CalibrationStatus::DriverError; // 驱动器异常
         }
     } while (false);
     // U相测试
@@ -164,15 +163,14 @@ auto FOC::calibrate() -> CalibrationStatus {
             bldc_driver.set_duty(phase_duty, 0, 0);
             delay(1);
         }
-        // 检测：如果升压到最大占空比但仍未达到目标电流，说明驱动器或电机有问题
-        if (phase_duty >= MAX_DUTY && current_sensor.iu < FOC_MAX_CURRENT * 0.5f) {
-            bldc_driver.set_duty(0, 0, 0);
-            return CalibrationStatus::DriverError; // 驱动能力不足或电机被卡住
-        }
         // 测量相电阻
         for (int i = 0; i < SAMPLE_COUNT; ++i) {
             phase_resistance_u += phase_duty * Voltage / current_sensor.iu / 0.75f / SAMPLE_COUNT;
             delay(1);
+        }
+        if (abs(phase_resistance_u - FOC_PHASE_RESISTANCE) > 3) {
+            bldc_driver.set_duty(0, 0, 0);
+            return CalibrationStatus::DriverError; // 驱动器异常
         }
     } while (false);
 
@@ -283,7 +281,7 @@ auto FOC::current_calibrate() -> CalibrationStatus {
 }
 
 auto FOC::anticogging_calibrate() -> CalibrationStatus {
-    if (!enabled) return CalibrationStatus::Busy;                     // 如果没有使能,则不能校准
+    if (!enabled) return CalibrationStatus::EnvironmentError;         // 如果没有使能,则不能校准
     if (!calibrated) return CalibrationStatus::EnvironmentError;      // 如果没有基础校准,则不能校准
     if (started) return CalibrationStatus::Busy;                      // 如果已经启动,则不能校准
     if (!anticogging_map) return CalibrationStatus::EnvironmentError; // 如果补偿表指针为空,则不能校准
@@ -455,7 +453,9 @@ void FOC::Ctrl_ISR() {
                 PID_Angle.target -= 2 * numbers::pi_v<float>;
             else if (PreviousAngle_ - Angle_ < -numbers::pi_v<float>)
                 PID_Angle.target += 2 * numbers::pi_v<float>;
-            if (abs(PID_Angle.target - Angle_) < bldc_encoder.resolution / 2) PID_Angle.target = Angle_;
+            if ((ctrl_type != CtrlType::LowSpeedCtrl || low_speed == 0) && // 利用C/C++短路机制
+                abs(PID_Angle.target - Angle_) < bldc_encoder.resolution / 2)
+                PID_Angle.target = Angle_;
             PID_Speed.SetTarget(PID_Angle.calc(Angle_));
         case CtrlType::SpeedCtrl:
             target_iq = PID_Speed.calc(Speed);

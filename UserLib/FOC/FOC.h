@@ -1,10 +1,10 @@
 /**
- * @file        FOC.cpp
+ * @file        FOC.h
  * @brief       FOC驱动库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-6-14
- * @version     V5.3.1
+ * @date        2026-7-2
+ * @version     V5.3.2
  * @note        此库为中间层库,与硬件完全解耦
  * @warning
  * @par         历史版本:
@@ -26,6 +26,7 @@
  *		        V5.2.4修改于2026-5-2,修复低速模式下每发送一次控制指令都会顿一下的问题
  *		        V5.3.0修改于2026-5-30,添加校准异常检测,提高校准速度,优化校准效果添加校准异常检测,提高校准速度,优化校准效果
  *		        V5.3.1修改于2026-6-14,适配PID重构,修复若干问题
+ *		        V5.3.2修改于2026-7-2,优化driver error检测方式,修复低速模式下停转的问题
  * @copyright   (c) 2026 QDrive
  */
 
@@ -151,6 +152,8 @@ protected:
     PID PID_Angle;         //角度PID
     float target_iq{0.0f}; //目标Q轴电流
 
+    float Voltage{1};      //母线电压
+
     // 校准参数
     bool encoder_direction{true};            // true if the encoder is in the same direction as the motor(Uq)
     float phase_resistance{NAN};             // 相电阻,单位Ω
@@ -196,8 +199,6 @@ private:
     float Ib{0}; //B轴电流,单位A
     float Iq{0}; //Q轴电流,单位A
     float Id{0}; //D轴电流,单位A
-
-    float Voltage{1}; //母线电压
 
     void UpdateCurrent(float iu, float iv, float iw);
     void SetPhaseVoltage(float ud, float uq, float electrical_angle);
