@@ -3,8 +3,8 @@
  * @brief       通信任务
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-5-14
- * @version     V1.3.0
+ * @date        2026-7-2
+ * @version     V1.4.0
  * @note
  * @warning
  * @par         历史版本:
@@ -17,6 +17,8 @@
  *		        V1.2.2创建于2026-5-4, 修复CAN通信发送超过指令长度帧可能导致的溢出问题
  *		        V1.2.3创建于2026-5-5, 优化上电初始化后通信开启逻辑
  *		        V1.3.0创建于2026-5-14, 添加通过Uart/Can设置零点和重启设备
+ *		        V1.4.0创建于2026-7-2, 收到重启命令后先发送反馈报文再执行重启
+ *		                             反馈报文添加控制状态反馈和错误码反馈
  * @copyright   (c) 2026 QDrive
  */
 
@@ -27,7 +29,6 @@
 #include "usart.h"
 #include "QD4310.h"
 #include "queue.h"
-#include "task.h"
 #include <numbers>
 
 using namespace std;
@@ -81,13 +82,27 @@ public:
         } fields;
 
         uint8_t raw[8]; // 原始数据
-    } cmd{};
+    } rx_data{};
 
     PlugType plug = PlugType::CAN;
 };
 
+union TxData {
+    struct __attribute__((packed)) {
+        uint8_t id;          // 电机ID
+        uint8_t motor_state; // 电机状态
+        uint8_t error_code;  // 错误码(预留)
+        int16_t current;     // Q轴电流
+        int16_t speed;       // 电机转速
+        int16_t angle;       // 电机角度
+        uint8_t crc8;        // CRC8校验
+    } data;
+
+    uint8_t raw[10]; // 原始数据
+};
+
 extern QD4310 qd4310;
-uint8_t UART_RxBuffer[sizeof(RxCommand::cmd) + 2]; // UART接收缓冲区
+uint8_t UART_RxBuffer[sizeof(RxCommand::rx_data) + 2]; // UART接收缓冲区
 void FDCAN_Filter_INIT(FDCAN_HandleTypeDef *hfdcan);
 void CAN_Transmit(uint8_t length, uint8_t *pdata);
 uint8_t CRC8(const uint8_t *data, uint32_t len, uint8_t polynomial, uint8_t init,
@@ -109,80 +124,68 @@ void StartCommunicateTask(void *argument) {
     RxCommand rx_command;
     while (true) {
         xQueueReceive(xQueue1, &rx_command, portMAX_DELAY);
+        if (!RxCommand::is_CmdType(rx_command.rx_data.fields.cmd_type)) continue;
 
-        switch (rx_command.cmd.fields.cmd_type) {
+        bool status = false;
+        switch (rx_command.rx_data.fields.cmd_type) {
             case RxCommand::CmdType::NOP: // NOP指令,只发送反馈报文
+                status = true;
                 break;
             case RxCommand::CmdType::Enable: // 使能指令
-                qd4310.start();
+                status = qd4310.start();
                 break;
             case RxCommand::CmdType::Disable: // 失能指令
-                qd4310.stop();
+                status = qd4310.stop();
                 break;
             case RxCommand::CmdType::CurrentCtrl: // 电流控制
-                qd4310.Ctrl(QD4310::CtrlType::CurrentCtrl,
-                            rx_command.cmd.fields.data * 10.0f / INT16_MAX);
+                status = qd4310.Ctrl(QD4310::CtrlType::CurrentCtrl,
+                                     rx_command.rx_data.fields.data * 10.0f / INT16_MAX);
                 break;
             case RxCommand::CmdType::SpeedCtrl: // 速度控制
-                qd4310.Ctrl(QD4310::CtrlType::SpeedCtrl,
-                            rx_command.cmd.fields.data * 1000.0f / INT16_MAX);
+                status = qd4310.Ctrl(QD4310::CtrlType::SpeedCtrl,
+                                     rx_command.rx_data.fields.data * 1000.0f / INT16_MAX);
                 break;
             case RxCommand::CmdType::AngleCtrl: // 角度控制
-                qd4310.Ctrl(QD4310::CtrlType::AngleCtrl,
-                            rx_command.cmd.fields.data * 2 * numbers::pi_v<float> / UINT16_MAX);
+                status = qd4310.Ctrl(QD4310::CtrlType::AngleCtrl,
+                                     rx_command.rx_data.fields.data * 2 * numbers::pi_v<float> / UINT16_MAX);
                 break;
             case RxCommand::CmdType::LowSpeedCtrl: // 低速控制
-                qd4310.Ctrl(QD4310::CtrlType::LowSpeedCtrl,
-                            rx_command.cmd.fields.data * 1000.0f / INT16_MAX);
+                status = qd4310.Ctrl(QD4310::CtrlType::LowSpeedCtrl,
+                                     rx_command.rx_data.fields.data * 1000.0f / INT16_MAX);
                 break;
             case RxCommand::CmdType::StepAngleCtrl: // 角度步进
-                qd4310.Ctrl(QD4310::CtrlType::StepAngleCtrl,
-                            rx_command.cmd.fields.data * 2 * numbers::pi_v<float> / INT16_MAX);
+                status = qd4310.Ctrl(QD4310::CtrlType::StepAngleCtrl,
+                                     rx_command.rx_data.fields.data * 2 * numbers::pi_v<float> / INT16_MAX);
                 break;
             case RxCommand::CmdType::Reboot: // 重启
-                NVIC_SystemReset();
+                status = true;
                 break;
             case RxCommand::CmdType::SetZeroPos: // 设置零点
-                qd4310.setZeroPosition();
+                status = qd4310.setZeroPosition();
                 break;
             default:
+                status = false;
                 break;
         }
-        // 如果是合法命令则发送反馈报文
-        if (RxCommand::is_CmdType(rx_command.cmd.fields.cmd_type)) {
-            static union TxData {
-                struct __attribute__((packed)) {
-                    uint8_t id;          // 电机ID
-                    uint8_t motor_state; // 电机状态
-                    uint8_t error_code;  // 错误码(预留)
-                    int16_t current;     // Q轴电流
-                    int16_t speed;       // 电机转速
-                    int16_t angle;       // 电机角度
-                    uint8_t crc8;        // CRC8校验
-                } data;
+        static TxData tx_data{};
+        tx_data.data.id = qd4310.ID;
+        tx_data.data.motor_state = qd4310.started | status << 1 |
+                                   static_cast<uint8_t>(qd4310.getCtrlType()) << 4;       // 电机状态
+        tx_data.data.error_code = qd4310.error_code;                                      // 错误码
+        tx_data.data.current = qd4310.getCurrent() / 10 * INT16_MAX;                      // Q轴电流
+        tx_data.data.speed = qd4310.getSpeed() / 1000 * INT16_MAX;                        // 电机转速
+        tx_data.data.angle = qd4310.getAngle() / (2 * numbers::pi_v<float>) * UINT16_MAX; // 电机角度
+        tx_data.data.crc8 = CRC8(tx_data.raw, sizeof(tx_data.raw) - 1, 0x07, 0x00, 0x00, false, false);
+        // 根据不同的接口类型发送反馈报文
+        if (rx_command.plug == RxCommand::PlugType::CAN) {
+            CAN_Transmit(sizeof(tx_data.raw) - 2, tx_data.raw + 1);
+        } else if (rx_command.plug == RxCommand::PlugType::UART) {
+            HAL_UART_Transmit_DMA(&huart3, tx_data.raw, sizeof(tx_data.raw));
+        } else if (rx_command.plug == RxCommand::PlugType::PWM) {} else {}
 
-                uint8_t raw[10]; // 原始数据
-            } TxData{};
-
-            TxData.data.id = qd4310.ID;
-            // 电机状态
-            TxData.data.motor_state = qd4310.started ? 0x01 : 0x00;
-            // 错误码(预留)
-            TxData.data.error_code = 0x00;
-            // Q轴电流
-            TxData.data.current = qd4310.getCurrent() / 10 * INT16_MAX;
-            // 电机转速
-            TxData.data.speed = qd4310.getSpeed() / 1000 * INT16_MAX;
-            // 电机角度
-            TxData.data.angle = qd4310.getAngle() / (2 * numbers::pi_v<float>) * UINT16_MAX;
-            // CRC8校验
-            TxData.data.crc8 = CRC8(TxData.raw, sizeof(TxData.raw) - 1, 0x07, 0x00, 0x00, false, false);
-            // 根据不同的接口类型发送反馈报文
-            if (rx_command.plug == RxCommand::PlugType::CAN) {
-                CAN_Transmit(sizeof(TxData.raw) - 2, TxData.raw + 1);
-            } else if (rx_command.plug == RxCommand::PlugType::UART) {
-                HAL_UART_Transmit_DMA(&huart3, TxData.raw, sizeof(TxData.raw));
-            } else if (rx_command.plug == RxCommand::PlugType::PWM) {} else {}
+        // 发送完毕后如果是重启指令则重启设备
+        if (rx_command.rx_data.fields.cmd_type == RxCommand::CmdType::Reboot) {
+            NVIC_SystemReset();
         }
     }
 }
@@ -212,11 +215,11 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
     BaseType_t xHigherPriorityTaskWoken;
     if (hfdcan == &hfdcan1) {
         static FDCAN_RxHeaderTypeDef RxHeader;
-        static RxCommand rx_command{.cmd = {}, .plug = RxCommand::PlugType::CAN};
+        static RxCommand rx_command{.rx_data = {}, .plug = RxCommand::PlugType::CAN};
         /*如果FIFO中有数据*/
         if (HAL_FDCAN_GetRxFifoFillLevel(hfdcan, FDCAN_RX_FIFO0)) {
             /*读取数据*/
-            HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, rx_command.cmd.raw);
+            HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, rx_command.rx_data.raw);
             // 如果是自己ID的报文且数据长度匹配,进行处理
             if (RxHeader.Identifier == 0x400 + qd4310.ID && RxHeader.DataLength == 3) {
                 xQueueSendToBackFromISR(xQueue1, &rx_command, &xHigherPriorityTaskWoken);
@@ -232,12 +235,12 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size) {
     BaseType_t xHigherPriorityTaskWoken;
     if (huart->Instance == huart3.Instance) {
-        static RxCommand rx_command{.cmd = {}, .plug = RxCommand::PlugType::UART};
+        static RxCommand rx_command{.rx_data = {}, .plug = RxCommand::PlugType::UART};
         // 如果是自己ID的报文、数据长度匹配且CRC8校验通过,进行处理
         // id:1 byte, cmd:1 byte, data:2 bytes, crc8:1 byte
         if (UART_RxBuffer[0] == qd4310.ID && Size == 5 &&
             CRC8(UART_RxBuffer, 4, 0x07, 0x00, 0x00, false, false) == UART_RxBuffer[4]) {
-            std::copy_n(UART_RxBuffer + 1, 3, rx_command.cmd.raw);
+            std::copy_n(UART_RxBuffer + 1, 3, rx_command.rx_data.raw);
             xQueueSendToBackFromISR(xQueue1, &rx_command, &xHigherPriorityTaskWoken);
             portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
         }

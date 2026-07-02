@@ -3,8 +3,8 @@
  * @brief       shell 接口函数
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-5-30
- * @version     V1.5.2
+ * @date        2026-7-2
+ * @version     V1.5.3
  * @note
  * @warning
  * @par         历史版本:
@@ -17,8 +17,9 @@
  *		        V1.4.0创建于2025-12-28, 适配QD4310类
  *		        V1.4.1创建于2026-1-9, 重新实现轻量化atof函数，避免引入庞大的标准库
  *		        V1.5.0创建于2026-3-9, 添加UART波特率设置功能
-*		        V1.5.1创建于2026-5-5, 修复角度步进模式和速度模式均错误显示角度模式的问题
-*		        V1.5.2创建于2026-5-30, 补充打印校准信息
+ *		        V1.5.1创建于2026-5-5, 修复角度步进模式和速度模式均错误显示角度模式的问题
+ *		        V1.5.2创建于2026-5-30, 补充打印校准信息
+ *		        V1.5.3创建于2026-7-2, 补充打印错误信息
  * @copyright   (c) 2026 QDrive
  */
 
@@ -214,8 +215,10 @@ void foc_config(int argc, char *argv[]) {
     }
 
     if (strcmp(key, "zero_pos") == 0) {
-        qd4310.setZeroPosition(value ? atof_lite(value) : qd4310.getAngle());
-        PRINT("Setting config [zero_pos]");
+        if (qd4310.setZeroPosition(value ? atof_lite(value) : qd4310.getAngle()))
+            PRINT("Setting config [zero_pos]");
+        else
+            PRINT("QDrive is running, please disable it first");
     } else if (value) {
         float valf = atof_lite(value);
         if (strcmp(key, "pid.speed.kp") == 0) {
@@ -329,11 +332,15 @@ void foc_ctrl(int argc, char *argv[]) {
 }
 
 void foc_enable() {
-    qd4310.start();
-    if (qd4310.started) {
+    if (qd4310.start()) {
         PRINT("QDrive enabled");
-    } else
+    } else if (qd4310.error_code & QD4310::CalibrationError) {
         PRINT("enable failed, please calibrate first");
+    } else if (qd4310.error_code & QD4310::VoltageError) {
+        PRINT("enable failed, voltage error");
+    } else {
+        PRINT("enable failed, unknown error");
+    }
 }
 
 void foc_disable() {
