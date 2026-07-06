@@ -34,422 +34,554 @@
 extern QD4310 qd4310;
 extern Shell shell;
 
-static float atof_lite(const char *s) {
-    if (!s) return 0.0f;
+class ShellPlugs : public QD4310 {
+public:
+    static float atof_lite(const char *s) {
+        if (!s) return 0.0f;
 
-    // 可选符号
-    int sign = 1;
-    if (*s == '+') {
-        ++s;
-    } else if (*s == '-') {
-        sign = -1;
-        ++s;
-    }
-
-    // 解析整数部分
-    float int_part = 0.0f;
-    bool has_digit = false;
-    while (*s >= '0' && *s <= '9') {
-        has_digit = true;
-        int_part = int_part * 10.0f + static_cast<float>(*s - '0');
-        ++s;
-    }
-
-    // 解析小数部分
-    float frac_part = 0.0f;
-    float scale = 1.0f;
-    if (*s == '.') {
-        ++s;
-        while (*s >= '0' && *s <= '9') {
-            has_digit = true;
-            frac_part = frac_part * 10.0f + static_cast<float>(*s - '0');
-            scale *= 10.0f;
+        // 可选符号
+        int sign = 1;
+        if (*s == '+') {
+            ++s;
+        } else if (*s == '-') {
+            sign = -1;
             ++s;
         }
-    }
 
-    if (!has_digit) return 0.0f;
+        // 解析整数部分
+        float int_part = 0.0f;
+        bool has_digit = false;
+        while (*s >= '0' && *s <= '9') {
+            has_digit = true;
+            int_part = int_part * 10.0f + static_cast<float>(*s - '0');
+            ++s;
+        }
 
-    const float result = int_part + (frac_part / scale);
-    return (sign < 0) ? -result : result;
-}
-
-signed short silent(char *data, unsigned short len) {
-    return 0;
-}
-
-// 打印单行
-#define PRINT(...)                          \
-    do {                                    \
-        if (shell.write != silent) {        \
-        printf(__VA_ARGS__);                \
-        printf("\r\n");}                    \
-    } while (0)
-
-void print_version() {
-    PRINT("Hardware version %s", FOC_HARDWARE_VERSION);
-    PRINT("Software version %s", FOC_SOFTWARE_VERSION);
-}
-
-void foc_info() {
-    PRINT("Hardware Info:");
-    PRINT("  Pole pairs       : %d ", FOC_POLE_PAIRS);
-    PRINT("  KV rating        : %.1f rpm/V", FOC_KV);
-    PRINT("  Nominal voltage  : %d V", FOC_NOMINAL_VOLTAGE);
-    PRINT("  Phase inductance : %.2f mH", FOC_PHASE_INDUCTANCE);
-    PRINT("  Phase resistance : %.2f Ω", FOC_PHASE_RESISTANCE);
-    PRINT("  Torque constant  : %.2f Nm/A", FOC_TORQUE_CONSTANT);
-    PRINT("  Max current      : %.2f A", FOC_MAX_CURRENT);
-}
-
-void foc_status() {
-    PRINT("Motor Status:");
-    PRINT("  CAN ID       : %03d", qd4310.ID);
-    PRINT("  Status       : %s", qd4310.started ? "enabled" : "disabled");
-    PRINT("  CtrlMode     : %s",
-          qd4310.getCtrlType() == QD4310::CtrlType::CurrentCtrl ? "CurrentCtrl" :
-          qd4310.getCtrlType() == QD4310::CtrlType::SpeedCtrl ? "SpeedCtrl" :
-          qd4310.getCtrlType() == QD4310::CtrlType::AngleCtrl ? "AngleCtrl" :
-          qd4310.getCtrlType() == QD4310::CtrlType::StepAngleCtrl ? "StepAngleCtrl" :
-          qd4310.getCtrlType() == QD4310::CtrlType::LowSpeedCtrl ? "LowSpeedCtrl" : "Unknown");
-    PRINT("  Current      : %.2f A", qd4310.getCurrent());
-    PRINT("  Speed        : %.2f rpm", qd4310.getSpeed());
-    PRINT("  Angle        : %.2f rad", qd4310.getAngle());
-    PRINT("  Voltage      : %.2f V", qd4310.getVoltage());
-}
-
-void foc_config_help() {
-    PRINT("Usage: config [--list | PARAM_PATH VALUE | key=value]");
-    PRINT("");
-    PRINT("Examples:");
-    PRINT("  config pid.speed.kp 0.1");
-    PRINT("  config pid.speed.ki=0.1");
-    PRINT("  config --help");
-    PRINT("  config --list");
-    PRINT("");
-    PRINT("Configuration Parameters:");
-    PRINT("  pid.speed.kp       : Speed PID proportional gain");
-    PRINT("  pid.speed.ki       : Speed PID integral gain");
-    PRINT("  pid.speed.kd       : Speed PID derivative gain");
-    PRINT("  pid.angle.kp       : Angle PID proportional gain");
-    PRINT("  pid.angle.ki       : Angle PID integral gain");
-    PRINT("  pid.angle.kd       : Angle PID derivative gain");
-    PRINT("  limit.speed        : Speed limit in rpm");
-    PRINT("  limit.current      : Current limit in A");
-    PRINT("  can.id             : CAN ID of the motor (0-7)");
-    PRINT("  uart.baud_rate     : UART BaudRate of the motor (50K-10M)");
-    PRINT("  zero_pos           : Position zero offset in rad");
-
-    // TODO:部分不可调
-    // PRINT("  can.baud_rate      : CAN bus baud rate");
-}
-
-void foc_config_list() {
-    PRINT("QDrive Configuration:");
-    PRINT("pid.speed.kp = %.3g", qd4310.PID_Speed.kp);
-    PRINT("pid.speed.ki = %.3g", qd4310.PID_Speed.ki);
-    PRINT("pid.speed.kd = %.3g", qd4310.PID_Speed.kd);
-    PRINT("pid.angle.kp = %.3g", qd4310.PID_Angle.kp);
-    PRINT("pid.angle.ki = %.3g", qd4310.PID_Angle.ki);
-    PRINT("pid.angle.kd = %.3g", qd4310.PID_Angle.kd);
-    PRINT("limit.speed = %.3g rpm", qd4310.PID_Angle.output_limit_p.value());
-    if (!qd4310.PID_Speed.output_limit_p)
-        PRINT("limit.current = no limit");
-    else
-        PRINT("limit.current = %.3g A", qd4310.PID_Speed.output_limit_p.value());
-    PRINT("can.id = %03d", qd4310.ID);
-    // TODO: 波特率不可更改
-    PRINT("can.baud_rate = 1'000'000");
-    PRINT("uart.baud_rate = %u", qd4310.uart_baud_rate);
-}
-
-void foc_config(int argc, char *argv[]) {
-    if (argc < 2 || strcmp(argv[1], "--help") == 0) {
-        foc_config_help();
-        return;
-    }
-
-    if (strcmp(argv[1], "--list") == 0) {
-        foc_config_list();
-        return;
-    }
-
-    const char *key = argv[1];
-    const char *value = nullptr;
-
-    if (strchr(key, '=') != nullptr) {
-        // 解析 key=value 格式
-        static char keybuf[128];
-        strncpy(keybuf, key, sizeof(keybuf) - 1);
-        keybuf[sizeof(keybuf) - 1] = '\0';
-
-        char *eq = strchr(keybuf, '=');
-        *eq = '\0';
-        key = keybuf;
-        value = eq + 1;
-    } else if (argc >= 3) {
-        value = argv[2];
-    }
-
-    if (strcmp(key, "zero_pos") == 0) {
-        if (qd4310.setZeroPosition(value ? atof_lite(value) : qd4310.getAngle()))
-            PRINT("Setting config [zero_pos]");
-        else
-            PRINT("QDrive is running, please disable it first");
-    } else if (value) {
-        float valf = atof_lite(value);
-        if (strcmp(key, "pid.speed.kp") == 0) {
-            qd4310.setPID(valf, std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt);
-        } else if (strcmp(key, "pid.speed.ki") == 0) {
-            qd4310.setPID(std::nullopt, valf, std::nullopt, std::nullopt, std::nullopt, std::nullopt);
-        } else if (strcmp(key, "pid.speed.kd") == 0) {
-            qd4310.setPID(std::nullopt, std::nullopt, valf, std::nullopt, std::nullopt, std::nullopt);
-        } else if (strcmp(key, "pid.angle.kp") == 0) {
-            qd4310.setPID(std::nullopt, std::nullopt, std::nullopt, valf, std::nullopt, std::nullopt);
-        } else if (strcmp(key, "pid.angle.ki") == 0) {
-            qd4310.setPID(std::nullopt, std::nullopt, std::nullopt, std::nullopt, valf, std::nullopt);
-        } else if (strcmp(key, "pid.angle.kd") == 0) {
-            qd4310.setPID(std::nullopt, std::nullopt, std::nullopt, std::nullopt, std::nullopt, valf);
-        } else if (strcmp(key, "limit.speed") == 0) {
-            qd4310.setLimit(valf, std::nullopt);
-        } else if (strcmp(key, "limit.current") == 0) {
-            qd4310.setLimit(std::nullopt, valf);
-        } else if (strcmp(key, "can.id") == 0) {
-            if (!qd4310.setID(valf)) {
-                PRINT("Invalid CAN ID: %d, must be between 0 and 7", static_cast<int>(valf));
-                return;
+        // 解析小数部分
+        float frac_part = 0.0f;
+        float scale = 1.0f;
+        if (*s == '.') {
+            ++s;
+            while (*s >= '0' && *s <= '9') {
+                has_digit = true;
+                frac_part = frac_part * 10.0f + static_cast<float>(*s - '0');
+                scale *= 10.0f;
+                ++s;
             }
-        } else if (strcmp(key, "uart.baud_rate") == 0) {
-            if (!qd4310.setUartBaudRate(valf)) {
-                PRINT("Invalid UART baud rate: %d, must be between 10'000 and 10'000'000", static_cast<int>(valf));
-                return;
+        }
+
+        if (!has_digit) return 0.0f;
+
+        const float result = int_part + (frac_part / scale);
+        return (sign < 0) ? -result : result;
+    }
+
+    static void print_len(const char *format, ...) {
+        if (shell.write != silent) {
+            va_list args;
+            va_start(args, format);
+            vprintf(format, args);
+            va_end(args);
+            printf("\r\n");
+        }
+    }
+
+    static void print(const char *format, ...) {
+        if (shell.write != silent) {
+            va_list args;
+            va_start(args, format);
+            vprintf(format, args);
+            va_end(args);
+        }
+    }
+
+    struct ConfigItem {
+        const char *name;
+        const char *description;
+        const char *unit;
+        const char *format;
+        void (*print_value)(const ConfigItem&);
+        bool (*set_value)(float);
+    };
+
+    inline static const ConfigItem ConfigItems[12] = {
+        {
+            "pid.speed.kp", "Speed PID proportional gain", nullptr, "%.3g",
+            [](const ConfigItem& self) {
+                print(self.format, qd4310.PID_Speed.kp);
+            },
+            [](float value) {
+                qd4310.setPID(value, std::nullopt, std::nullopt,
+                              std::nullopt, std::nullopt, std::nullopt);
+                return true;
             }
-            PRINT("UART baud rate will be set after storing and rebooting");
-        } else {
-            PRINT("Unknown config target: %s", key);
+        },
+        {
+            "pid.speed.ki", "Speed PID integral gain", nullptr, "%.3g",
+            [](const ConfigItem& self) {
+                print(self.format, qd4310.PID_Speed.ki);
+            },
+            [](float value) {
+                qd4310.setPID(std::nullopt, value, std::nullopt,
+                              std::nullopt, std::nullopt, std::nullopt);
+                return true;
+            }
+        },
+        {
+            "pid.speed.kd", "Speed PID derivative gain", nullptr, "%.3g",
+            [](const ConfigItem& self) {
+                print(self.format, qd4310.PID_Speed.kd);
+            },
+            [](float value) {
+                qd4310.setPID(std::nullopt, std::nullopt, value,
+                              std::nullopt, std::nullopt, std::nullopt);
+                return true;
+            }
+        },
+        {
+            "pid.angle.kp", "Angle PID proportional gain", nullptr, "%.3g",
+            [](const ConfigItem& self) {
+                print(self.format, qd4310.PID_Angle.kp);
+            },
+            [](float value) {
+                qd4310.setPID(std::nullopt, std::nullopt, std::nullopt,
+                              value, std::nullopt, std::nullopt);
+                return true;
+            }
+        },
+        {
+            "pid.angle.ki", "Angle PID integral gain", nullptr, "%.3g",
+            [](const ConfigItem& self) {
+                print(self.format, qd4310.PID_Angle.ki);
+            },
+            [](float value) {
+                qd4310.setPID(std::nullopt, std::nullopt, std::nullopt,
+                              std::nullopt, value, std::nullopt);
+                return true;
+            }
+        },
+        {
+            "pid.angle.kd", "Angle PID derivative gain", nullptr, "%.3g",
+            [](const ConfigItem& self) {
+                print(self.format, qd4310.PID_Angle.kd);
+            },
+            [](float value) {
+                qd4310.setPID(std::nullopt, std::nullopt, std::nullopt,
+                              std::nullopt, std::nullopt, value);
+                return true;
+            }
+        },
+        {
+            "limit.speed", "Speed limit in rpm", "rpm", "%.3g",
+            [](const ConfigItem& self) {
+                if (!qd4310.PID_Angle.output_limit_p)
+                    print("no limit");
+                else
+                    print(self.format, qd4310.PID_Angle.output_limit_p.value());
+            },
+            [](float value) {
+                return qd4310.setLimit(value, std::nullopt);
+            }
+        },
+        {
+            "limit.current", "Current limit in A", "A", "%.3g",
+            [](const ConfigItem& self) {
+                if (!qd4310.PID_Speed.output_limit_p)
+                    print("no limit");
+                else
+                    print(self.format, qd4310.PID_Speed.output_limit_p.value());
+            },
+            [](const float value) {
+                return qd4310.setLimit(std::nullopt, value);
+            }
+        },
+        {
+            "can.id", "CAN ID of the motor (0-7)", nullptr, "%03u",
+            [](const ConfigItem& self) {
+                print(self.format, qd4310.ID);
+            },
+            [](const float value) {
+                if (!qd4310.setID(value)) {
+                    print_len("Invalid CAN ID: %d, must be between 0 and 7", static_cast<int>(value));
+                    return false;
+                }
+                return true;
+            }
+        },
+        {
+            "uart.baud_rate", "UART BaudRate of the motor (50K-10M)", "bps", "%u",
+            [](const ConfigItem& self) {
+                print(self.format, qd4310.uart_baud_rate);
+            },
+            [](const float value) {
+                if (!qd4310.setUartBaudRate(value)) {
+                    print_len("Invalid UART baud rate: %d, must be between 10'000 and 10'000'000",
+                              static_cast<int>(value));
+                    return false;
+                }
+                print_len("UART baud rate will be set after storing and rebooting");
+                return true;
+            }
+        },
+        {
+            "zero_pos", "Position zero offset in rad", nullptr, nullptr,
+            nullptr,
+            [](const float value) {
+                if (qd4310.started) {
+                    print_len("QDrive is running, please disable it first");
+                    return false;
+                }
+                return qd4310.setZeroPosition(std::isnan(value) ? qd4310.getAngle() : value);
+            }
+        },
+        {
+            "can.baud_rate", "CAN bus baud rate (fixed)", "bps", "%u",
+            [](const ConfigItem& self) {
+                (void)self;
+                print("1'000'000");
+            },
+            nullptr
+        },
+    };
+
+    static const ConfigItem* find_config_item(const char *key) {
+        for (const auto& config_item : ConfigItems) {
+            if (strcmp(config_item.name, key) == 0) return &config_item;
+        }
+        return nullptr;
+    }
+
+    static signed short silent(char *data, unsigned short len) { // NOLINT(readability-non-const-parameter)
+        (void)data;
+        (void)len;
+        return 0;
+    }
+
+    static void print_version() {
+        print_len("Hardware version %s", FOC_HARDWARE_VERSION);
+        print_len("Software version %s", FOC_SOFTWARE_VERSION);
+    }
+
+
+    static void foc_info() {
+        print_len("Hardware Info:");
+        print_len("  Pole pairs       : %d ", FOC_POLE_PAIRS);
+        print_len("  KV rating        : %.1f rpm/V", FOC_KV);
+        print_len("  Nominal voltage  : %d V", FOC_NOMINAL_VOLTAGE);
+        print_len("  Phase inductance : %.2f mH", FOC_PHASE_INDUCTANCE);
+        print_len("  Phase resistance : %.2f Ω", FOC_PHASE_RESISTANCE);
+        print_len("  Torque constant  : %.2f Nm/A", FOC_TORQUE_CONSTANT);
+        print_len("  Max current      : %.2f A", FOC_MAX_CURRENT);
+    }
+
+    static void foc_status() {
+        print_len("Motor Status:");
+        print_len("  CAN ID       : %03d", qd4310.ID);
+        print_len("  Status       : %s", qd4310.started ? "enabled" : "disabled");
+        print_len("  CtrlMode     : %s",
+                  qd4310.getCtrlType() == CtrlType::CurrentCtrl ? "CurrentCtrl" :
+                  qd4310.getCtrlType() == CtrlType::SpeedCtrl ? "SpeedCtrl" :
+                  qd4310.getCtrlType() == CtrlType::AngleCtrl ? "AngleCtrl" :
+                  qd4310.getCtrlType() == CtrlType::StepAngleCtrl ? "StepAngleCtrl" :
+                  qd4310.getCtrlType() == CtrlType::LowSpeedCtrl ? "LowSpeedCtrl" : "Unknown");
+        print_len("  Current      : %.2f A", qd4310.getCurrent());
+        print_len("  Speed        : %.2f rpm", qd4310.getSpeed());
+        print_len("  Angle        : %.2f rad", qd4310.getAngle());
+        print_len("  Voltage      : %.2f V", qd4310.getVoltage());
+    }
+
+    static void foc_config_help() {
+        print_len("Usage: config [--list | PARAM_PATH VALUE | key=value]");
+        print_len("");
+        print_len("Examples:");
+        print_len("  config %s 0.1", ConfigItems[0].name);
+        print_len("  config %s=0.1", ConfigItems[1].name);
+        print_len("  config --help");
+        print_len("  config --list");
+        print_len("");
+        print_len("Configuration Parameters:");
+        for (const auto& config_item : ConfigItems) {
+            print_len("  %-18s : %s", config_item.name, config_item.description);
+        }
+    }
+
+    static void foc_config_list() {
+        print_len("QDrive Configuration:");
+        for (const auto& config_item : ConfigItems) {
+            if (config_item.print_value) {
+                print("%s = ", config_item.name);
+                config_item.print_value(config_item);
+                print_len(" %s", config_item.unit ? config_item.unit : "");
+            }
+        }
+    }
+
+    static void foc_config(int argc, char *argv[]) {
+        if (argc < 2 || strcmp(argv[1], "--help") == 0) {
+            foc_config_help();
             return;
         }
-        PRINT("Setting config [%s] = %.3g", key, valf);
-    } else {
-        PRINT("Missing value for config [%s]", key);
+
+        if (strcmp(argv[1], "--list") == 0) {
+            foc_config_list();
+            return;
+        }
+
+        const char *key = argv[1];
+        const char *value = nullptr;
+
+        if (strchr(key, '=') != nullptr) {
+            // 解析 key=value 格式
+            static char keybuf[128];
+            strncpy(keybuf, key, sizeof(keybuf) - 1);
+            keybuf[sizeof(keybuf) - 1] = '\0';
+
+            char *eq = strchr(keybuf, '=');
+            *eq = '\0';
+            key = keybuf;
+            value = eq + 1;
+        } else if (argc >= 3) {
+            value = argv[2];
+        }
+
+        const auto *config_item = find_config_item(key);
+        if (!config_item || !config_item->set_value) {
+            print_len("Unknown config target: %s", key);
+            return;
+        }
+        if (!value && find_config_item("zero_pos") != config_item) {
+            print_len("Missing value for config [%s]", key);
+            return;
+        }
+        const float valf = value ? atof_lite(value) : NAN;
+        if (!config_item->set_value(valf)) {
+            print_len("Config [%s] failed", key);
+            return;
+        }
+        if (std::isnan(valf)) {
+            print_len("Config [%s]", key);
+        } else {
+            print_len("Config [%s] = %.3g", key, valf);
+        }
     }
-}
 
-void foc_ctrl_help() {
-    PRINT("Usage: ctrl [current VALUE | low_speed VALUE  | speed VALUE  | step_angle VALUE | angle VALUE | key=value]");
-    PRINT("");
-    PRINT("Examples:");
-    PRINT("  ctrl speed 100");
-    PRINT("  ctrl speed=100");
-    PRINT("  ctrl --help");
-    PRINT("");
-    PRINT("Control Parameters:");
-    PRINT("  current           : Set current in Q axis (A)");
-    PRINT("  low_speed         : Set speed by increasing angle (rpm)");
-    PRINT("  speed             : Set speed (rpm)");
-    PRINT("  angle             : Set angle (rad)");
-    PRINT("  step_angle        : Step an specific angle (rad)");
-}
-
-void foc_ctrl(int argc, char *argv[]) {
-    if (argc < 2 || strcmp(argv[1], "--help") == 0) {
-        foc_ctrl_help();
-        return;
+    static void foc_ctrl_help() {
+        print_len(
+            "Usage: ctrl [current VALUE | low_speed VALUE  | speed VALUE  | step_angle VALUE | angle VALUE | key=value]");
+        print_len("");
+        print_len("Examples:");
+        print_len("  ctrl speed 100");
+        print_len("  ctrl speed=100");
+        print_len("  ctrl --help");
+        print_len("");
+        print_len("Control Parameters:");
+        print_len("  current           : Set current in Q axis (A)");
+        print_len("  low_speed         : Set speed by increasing angle (rpm)");
+        print_len("  speed             : Set speed (rpm)");
+        print_len("  angle             : Set angle (rad)");
+        print_len("  step_angle        : Step an specific angle (rad)");
     }
 
-    const char *key = argv[1];
-    const char *value = nullptr;
+    static void foc_ctrl(int argc, char *argv[]) {
+        if (argc < 2 || strcmp(argv[1], "--help") == 0) {
+            foc_ctrl_help();
+            return;
+        }
 
-    if (strchr(key, '=') != nullptr) {
-        // 解析 key=value 格式
-        static char keybuf[128];
-        strncpy(keybuf, key, sizeof(keybuf) - 1);
-        keybuf[sizeof(keybuf) - 1] = '\0';
+        const char *key = argv[1];
+        const char *value = nullptr;
 
-        char *eq = strchr(keybuf, '=');
-        *eq = '\0';
-        key = keybuf;
-        value = eq + 1;
-    } else if (argc >= 3) {
-        value = argv[2];
+        if (strchr(key, '=') != nullptr) {
+            // 解析 key=value 格式
+            static char keybuf[128];
+            strncpy(keybuf, key, sizeof(keybuf) - 1);
+            keybuf[sizeof(keybuf) - 1] = '\0';
+
+            char *eq = strchr(keybuf, '=');
+            *eq = '\0';
+            key = keybuf;
+            value = eq + 1;
+        } else if (argc >= 3) {
+            value = argv[2];
+        }
+
+        if (!value) {
+            print_len("Missing value for ctrl [%s]", key);
+            return;
+        }
+        if (!qd4310.started) {
+            print_len("QDrive is not running, please enable it first");
+            return;
+        }
+        float valf = atof_lite(value);
+        if (strcmp(key, "current") == 0) {
+            print_len("Setting current = %.2f A", valf);
+            qd4310.Ctrl(CtrlType::CurrentCtrl, valf);
+        } else if (strcmp(key, "speed") == 0) {
+            print_len("Setting speed = %.2f rpm", valf);
+            qd4310.Ctrl(CtrlType::SpeedCtrl, valf);
+        } else if (strcmp(key, "angle") == 0) {
+            print_len("Setting angle = %.2f rad", valf);
+            qd4310.Ctrl(CtrlType::AngleCtrl, valf);
+        } else if (strcmp(key, "step_angle") == 0) {
+            print_len("Stepping %.2f rad angle", valf);
+            qd4310.Ctrl(CtrlType::StepAngleCtrl, valf);
+        } else if (strcmp(key, "low_speed") == 0) {
+            print_len("Setting low_speed = %.2f rpm", valf);
+            qd4310.Ctrl(CtrlType::LowSpeedCtrl, valf);
+        } else {
+            print_len("Unknown ctrl target: %s", key);
+            foc_ctrl_help();
+        }
     }
 
-    if (!value) {
-        PRINT("Missing value for ctrl [%s]", key);
-        return;
+    static void foc_enable() {
+        if (qd4310.start()) {
+            print_len("QDrive enabled");
+        } else if (qd4310.error_code & CalibrationError) {
+            print_len("Enable failed, please calibrate first");
+        } else if (qd4310.error_code & VoltageError) {
+            print_len("Enable failed, voltage error");
+        } else {
+            print_len("Enable failed, unknown error");
+        }
     }
-    if (!qd4310.started) {
-        PRINT("QDrive is not running, please enable it first");
-        return;
-    }
-    float valf = atof_lite(value);
-    if (strcmp(key, "current") == 0) {
-        PRINT("Setting current = %.2f A", valf);
-        qd4310.Ctrl(QD4310::CtrlType::CurrentCtrl, valf);
-    } else if (strcmp(key, "speed") == 0) {
-        PRINT("Setting speed = %.2f rpm", valf);
-        qd4310.Ctrl(QD4310::CtrlType::SpeedCtrl, valf);
-    } else if (strcmp(key, "angle") == 0) {
-        PRINT("Setting angle = %.2f rad", valf);
-        qd4310.Ctrl(QD4310::CtrlType::AngleCtrl, valf);
-    } else if (strcmp(key, "step_angle") == 0) {
-        PRINT("Stepping %.2f rad angle", valf);
-        qd4310.Ctrl(QD4310::CtrlType::StepAngleCtrl, valf);
-    } else if (strcmp(key, "low_speed") == 0) {
-        PRINT("Setting low_speed = %.2f rpm", valf);
-        qd4310.Ctrl(QD4310::CtrlType::LowSpeedCtrl, valf);
-    } else {
-        PRINT("Unknown ctrl target: %s", key);
-        foc_ctrl_help();
-    }
-}
 
-void foc_enable() {
-    if (qd4310.start()) {
-        PRINT("QDrive enabled");
-    } else if (qd4310.error_code & QD4310::CalibrationError) {
-        PRINT("enable failed, please calibrate first");
-    } else if (qd4310.error_code & QD4310::VoltageError) {
-        PRINT("enable failed, voltage error");
-    } else {
-        PRINT("enable failed, unknown error");
+    static void foc_disable() {
+        qd4310.stop();
+        print_len("QDrive disabled");
     }
-}
 
-void foc_disable() {
-    qd4310.stop();
-    PRINT("QDrive disabled");
-}
-
-void foc_calibrate(int argc, char *argv[]) {
-    if (qd4310.started) {
-        PRINT("QDrive is running, please disable it first");
-        return;
+    static void foc_calibrate() {
+        if (qd4310.started) {
+            print_len("QDrive is running, please disable it first");
+            return;
+        }
+        if (qd4310.calibrated) {
+            print_len("QDrive already calibrated,do you want to re-calibrate? (y/n)");
+            char response;
+            while (!shellRead(&response, 1)) {
+                delay(1);
+            }
+            if (response != 'y' && response != 'Y') {
+                print_len("Calibration aborted");
+                return;
+            }
+        }
+        print_len("Calibration started, please wait...");
+        if (const auto status = qd4310.calibrate(); status == CalibrationStatus::Success)
+            print_len("Calibration completed");
+        else {
+            print("Calibration failed: ");
+            if (status == CalibrationStatus::EnvironmentError)
+                print_len("environment error");
+            else if (status == CalibrationStatus::VoltageError)
+                print_len("voltage error");
+            else if (status == CalibrationStatus::Busy)
+                print_len("busy");
+            else if (status == CalibrationStatus::CurrentSensorError)
+                print_len("current sensor error");
+            else if (status == CalibrationStatus::DriverError)
+                print_len("driver error");
+            else if (status == CalibrationStatus::EncoderError)
+                print_len("encoder error");
+            else
+                print_len("unknown error");
+        }
     }
-    if (qd4310.calibrated) {
-        PRINT("QDrive already calibrated,do you want to re-calibrate? (y/n)");
+
+    static void foc_restore() {
+        print_len("Are you sure you want to restore factory settings? (y/n)");
         char response;
         while (!shellRead(&response, 1)) {
             delay(1);
         }
         if (response != 'y' && response != 'Y') {
-            PRINT("calibration aborted");
+            print_len("Factory restore cancelled");
             return;
         }
+        qd4310.restore_calibration(); // 恢复出厂设置
+        print_len("QDrive factory restore completed");
+        foc_config_list();
     }
-    PRINT("calibration started, please wait...");
-    if (const auto status = qd4310.calibrate(); status == QD4310::CalibrationStatus::Success)
-        PRINT("calibration completed");
-    else {
-        printf("calibration failed: ");
-        if (status == QD4310::CalibrationStatus::EnvironmentError)
-            PRINT("environment error");
-        else if (status == QD4310::CalibrationStatus::VoltageError)
-            PRINT("voltage error");
-        else if (status == QD4310::CalibrationStatus::Busy)
-            PRINT("busy");
-        else if (status == QD4310::CalibrationStatus::CurrentSensorError)
-            PRINT("current sensor error");
-        else if (status == QD4310::CalibrationStatus::DriverError)
-            PRINT("driver error");
-        else if (status == QD4310::CalibrationStatus::EncoderError)
-            PRINT("encoder error");
-        else
-            PRINT("unknown error");
-    }
-}
 
-void foc_restore() {
-    PRINT("Are you sure you want to restore factory settings? (y/n)");
-    char response;
-    while (!shellRead(&response, 1)) {
-        delay(1);
+    static void foc_store() {
+        if (qd4310.started) {
+            print_len("QDrive is running, please disable it first");
+            return;
+        }
+        foc_config_list();
+        print_len("Are you sure you want to store configurations? (y/n)");
+        char response;
+        while (!shellRead(&response, 1)) {
+            delay(1);
+        }
+        if (response != 'y' && response != 'Y') {
+            print_len("Store operation cancelled");
+            return;
+        }
+        qd4310.freeze_storage_calibration(
+            static_cast<StorageStatus>(STORAGE_PID_PARAMETER_OK | // 储存PID参数
+                                       STORAGE_LIMIT_OK |         // 储存限制参数
+                                       STORAGE_PLUG_OK)           // 储存ID
+        );
+        print_len("Store configuration completed");
     }
-    if (response != 'y' && response != 'Y') {
-        PRINT("Factory restore cancelled");
-        return;
-    }
-    qd4310.restore_calibration(); // 恢复出厂设置
-    PRINT("QDrive factory restore completed");
-    foc_config_list();
-}
 
-void foc_store() {
-    if (qd4310.started) {
-        PRINT("QDrive is running, please disable it first");
-        return;
+    static void shell_reboot() {
+        NVIC_SystemReset();
     }
-    foc_config_list();
-    PRINT("Are you sure you want to store configurations? (y/n)");
-    char response;
-    while (!shellRead(&response, 1)) {
-        delay(1);
-    }
-    if (response != 'y' && response != 'Y') {
-        PRINT("Store operation cancelled");
-        return;
-    }
-    qd4310.freeze_storage_calibration(
-        static_cast<QD4310::StorageStatus>(QD4310::STORAGE_PID_PARAMETER_OK | // 储存PID参数
-                                           QD4310::STORAGE_LIMIT_OK |         // 储存限制参数
-                                           QD4310::STORAGE_PLUG_OK)           // 储存ID
-    );
-    PRINT("Store configuration completed");
-}
 
-void shell_reboot() {
-    NVIC_SystemReset();
-}
-
-void shell_silent() {
-    shell.write = silent; // 禁止输出
-}
+    static void shell_silent() {
+        shell.write = silent; // 禁止输出
+    }
+};
 
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-    silent, shell_silent, "Disable shell output, reboot to enable again"
+    silent, ShellPlugs::shell_silent, "Disable shell output, reboot to enable again"
 );
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-    version, print_version, Show version info
+    version, ShellPlugs::print_version, Show version info
 );
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-    reboot, shell_reboot, reboot system
+    reboot, ShellPlugs::shell_reboot, reboot system
 );
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-    store, foc_store, Store configurations
+    store, ShellPlugs::foc_store, Store configurations
 );
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-    restore, foc_restore, Factory restore
+    restore, ShellPlugs::foc_restore, Factory restore
 );
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-    ctrl, foc_ctrl, Set control targets
+    ctrl, ShellPlugs::foc_ctrl, Set control targets
 );
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-    config, foc_config, Configure system parameters
+    config, ShellPlugs::foc_config, Configure system parameters
 );
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-    calibrate, foc_calibrate, Calibrate FOC system
+    calibrate, ShellPlugs::foc_calibrate, Calibrate FOC system
 );
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-    disable, foc_disable, Disable FOC control
+    disable, ShellPlugs::foc_disable, Disable FOC control
 );
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-    enable, foc_enable, Enable FOC control
+    enable, ShellPlugs::foc_enable, Enable FOC control
 );
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-    status, foc_status, Show current motor status
+    status, ShellPlugs::foc_status, Show current motor status
 );
 SHELL_EXPORT_CMD(
     SHELL_CMD_DISABLE_RETURN|SHELL_CMD_PERMISSION(0)|SHELL_CMD_TYPE(SHELL_TYPE_CMD_MAIN),
-    info, foc_info, Show hardware information
+    info, ShellPlugs::foc_info, Show hardware information
 );

@@ -161,7 +161,7 @@ auto QD4310::error_detect() -> ErrorCode {
         stop();
         HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
         static uint16_t count = 0;
-        count = (count + 1) % 500; // 5kHz/500/2 = 5Hz
+        count = (count + 1) % 100; // 1kHz/100/2 = 5Hz
         if (count == 0) HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
     } else if (started) {
         HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);

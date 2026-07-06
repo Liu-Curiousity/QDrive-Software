@@ -136,10 +136,8 @@ public:
      */
     bool setUartBaudRate(uint32_t baud_rate);
 
-private:
-    friend void foc_config_list();
-    friend void foc_store();
-    friend void foc_restore();
+protected:
+    friend class ShellPlugs;
 
     enum StorageStatus:uint8_t {
         STORAGE_NONE = 0b0000'0000,
