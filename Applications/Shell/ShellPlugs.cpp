@@ -368,6 +368,8 @@ void foc_calibrate() {
         PRINT("QDrive calibration completed");
     else if (status == QD4310::CalibrationStatus::EnvironmentError)
         PRINT("QDrive calibration failed: environment error");
+    else if (status == QD4310::CalibrationStatus::VoltageError)
+        PRINT("QDrive calibration failed: voltage error");
     else if (status == QD4310::CalibrationStatus::Busy)
         PRINT("QDrive calibration failed: busy");
     else if (status == QD4310::CalibrationStatus::CurrentSensorError)

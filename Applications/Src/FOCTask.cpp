@@ -96,6 +96,7 @@ void StartFOCTask(void *argument) {
             qd4310.updateVoltage(hadc1.Instance->DR / 4095.0f * 3.3f / 2 * 17);
             LL_ADC_REG_StartConversion(hadc1.Instance);
         }
+        qd4310.error_detect();
         delay(1);
     }
 }

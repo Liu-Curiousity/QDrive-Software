@@ -57,9 +57,10 @@ public:
         Success = 0,
         Busy = 1,
         EnvironmentError = 2,
-        CurrentSensorError = 3,
-        DriverError = 4,
-        EncoderError = 5,
+        VoltageError = 3,
+        CurrentSensorError = 4,
+        DriverError = 5,
+        EncoderError = 6,
         OtherError = 0xFF
     };
 
@@ -152,7 +153,7 @@ protected:
     PID PID_Angle;         //角度PID
     float target_iq{0.0f}; //目标Q轴电流
 
-    float Voltage{1};      //母线电压
+    float Voltage{1}; //母线电压
 
     // 校准参数
     bool encoder_direction{true};            // true if the encoder is in the same direction as the motor(Uq)

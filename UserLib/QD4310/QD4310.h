@@ -72,6 +72,8 @@ public:
     CalibrationStatus calibrate();
     void anticogging_calibrate();
 
+    ErrorCode error_detect();
+
     // 获取电机角度,单位rad
     [[nodiscard]] float getAngle() const;
 
@@ -160,7 +162,6 @@ private:
     Storage& storage;     //存储器
     float zero_pos{0.0f}; //位置零点
 
-    ErrorCode error_detect();
     void restore_calibration();
     void load_storage_calibration();
     void freeze_storage_calibration(StorageStatus storage_type);

@@ -54,9 +54,8 @@ bool QD4310::stop() {
 }
 
 auto QD4310::calibrate() -> CalibrationStatus {
-    if (!enabled) return CalibrationStatus::EnvironmentError;                       // 如果没有使能,则不能校准
+    if (error_code & VoltageError) return CalibrationStatus::VoltageError;          // 如果电压异常,则不能校准
     if (error_code & ~CalibrationError) return CalibrationStatus::EnvironmentError; // 如果有错误,则不能校准
-    if (started) return CalibrationStatus::Busy;                                    // 如果已经启动,则不能校准
     const auto status = FOC::calibrate();
     if (status == CalibrationStatus::Success)                  // 如果基础校准成功
         freeze_storage_calibration(STORAGE_BASE_CALIBRATE_OK); // 保存基础校准数据
@@ -69,11 +68,7 @@ auto QD4310::calibrate() -> CalibrationStatus {
 }
 
 void QD4310::anticogging_calibrate() {
-    if (!enabled) return;              // 如果没有使能,则不能校准
     if (error_code != NoError) return; // 如果有错误,则不能校准
-    if (!calibrated) return;           // 如果没有基础校准,则不能校准
-    if (started) return;               // 如果已经启动,则不能校准
-    if (!anticogging_map) return;      // 如果补偿表指针为空,则不能校准
     FOC::anticogging_calibrate();
     if (anticogging_calibrated)                                       // 如果齿槽转矩补偿校准成功
         freeze_storage_calibration(STORAGE_ANTICOGGING_CALIBRATE_OK); // 储存齿槽转矩补偿表
@@ -94,7 +89,6 @@ bool QD4310::Ctrl(const CtrlType ctrl_type, float value) {
 }
 
 void QD4310::Ctrl_ISR() {
-    error_detect();
     FOC::Ctrl_ISR();
 }
 
