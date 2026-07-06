@@ -30,7 +30,6 @@
 #include "retarget/retarget.h"
 #include "QD4310.h"
 #include "FOC_config.h"
-#include "main.h"
 
 extern QD4310 qd4310;
 extern Shell shell;
@@ -146,35 +145,14 @@ void foc_config_help() {
 }
 
 void foc_config_list() {
-    PRINT("Current Configuration:");
-    if (qd4310.PID_Speed.kp == 0)
-        PRINT("pid.speed.kp = 0.000");
-    else
-        PRINT("pid.speed.kp = %.3g", qd4310.PID_Speed.kp);
-    if (qd4310.PID_Speed.ki == 0)
-        PRINT("pid.speed.ki = 0.000");
-    else
-        PRINT("pid.speed.ki = %.3g", qd4310.PID_Speed.ki);
-    if (qd4310.PID_Speed.kd == 0)
-        PRINT("pid.speed.kd = 0.000");
-    else
-        PRINT("pid.speed.kd = %.3g", qd4310.PID_Speed.kd);
-    if (qd4310.PID_Angle.kp == 0)
-        PRINT("pid.angle.kp = 0.000");
-    else
-        PRINT("pid.angle.kp = %.3g", qd4310.PID_Angle.kp);
-    if (qd4310.PID_Angle.ki == 0)
-        PRINT("pid.angle.ki = 0.000");
-    else
-        PRINT("pid.angle.ki = %.3g", qd4310.PID_Angle.ki);
-    if (qd4310.PID_Angle.kd == 0)
-        PRINT("pid.angle.kd = 0.000");
-    else
-        PRINT("pid.angle.kd = %.3g", qd4310.PID_Angle.kd);
-    if (!qd4310.PID_Angle.output_limit_p)
-        PRINT("limit.speed = no limit");
-    else
-        PRINT("limit.speed = %.3g rpm", qd4310.PID_Angle.output_limit_p.value());
+    PRINT("QDrive Configuration:");
+    PRINT("pid.speed.kp = %.3g", qd4310.PID_Speed.kp);
+    PRINT("pid.speed.ki = %.3g", qd4310.PID_Speed.ki);
+    PRINT("pid.speed.kd = %.3g", qd4310.PID_Speed.kd);
+    PRINT("pid.angle.kp = %.3g", qd4310.PID_Angle.kp);
+    PRINT("pid.angle.ki = %.3g", qd4310.PID_Angle.ki);
+    PRINT("pid.angle.kd = %.3g", qd4310.PID_Angle.kd);
+    PRINT("limit.speed = %.3g rpm", qd4310.PID_Angle.output_limit_p.value());
     if (!qd4310.PID_Speed.output_limit_p)
         PRINT("limit.current = no limit");
     else
@@ -251,11 +229,7 @@ void foc_config(int argc, char *argv[]) {
             PRINT("Unknown config target: %s", key);
             return;
         }
-        if (valf == 0) {
-            PRINT("Setting config [%s] = 0.000", key);
-        } else {
-            PRINT("Setting config [%s] = %.3g", key, valf);
-        }
+        PRINT("Setting config [%s] = %.3g", key, valf);
     } else {
         PRINT("Missing value for config [%s]", key);
     }
@@ -347,7 +321,7 @@ void foc_disable() {
     PRINT("QDrive disabled");
 }
 
-void foc_calibrate() {
+void foc_calibrate(int argc, char *argv[]) {
     if (qd4310.started) {
         PRINT("QDrive is running, please disable it first");
         return;
@@ -359,27 +333,30 @@ void foc_calibrate() {
             delay(1);
         }
         if (response != 'y' && response != 'Y') {
-            PRINT("Calibration aborted");
+            PRINT("calibration aborted");
             return;
         }
     }
-    PRINT("QDrive calibration started, please wait...");
+    PRINT("calibration started, please wait...");
     if (const auto status = qd4310.calibrate(); status == QD4310::CalibrationStatus::Success)
-        PRINT("QDrive calibration completed");
-    else if (status == QD4310::CalibrationStatus::EnvironmentError)
-        PRINT("QDrive calibration failed: environment error");
-    else if (status == QD4310::CalibrationStatus::VoltageError)
-        PRINT("QDrive calibration failed: voltage error");
-    else if (status == QD4310::CalibrationStatus::Busy)
-        PRINT("QDrive calibration failed: busy");
-    else if (status == QD4310::CalibrationStatus::CurrentSensorError)
-        PRINT("QDrive calibration failed: current sensor error");
-    else if (status == QD4310::CalibrationStatus::DriverError)
-        PRINT("QDrive calibration failed: driver error");
-    else if (status == QD4310::CalibrationStatus::EncoderError)
-        PRINT("QDrive calibration failed: encoder error");
-    else
-        PRINT("QDrive calibration failed");
+        PRINT("calibration completed");
+    else {
+        printf("calibration failed: ");
+        if (status == QD4310::CalibrationStatus::EnvironmentError)
+            PRINT("environment error");
+        else if (status == QD4310::CalibrationStatus::VoltageError)
+            PRINT("voltage error");
+        else if (status == QD4310::CalibrationStatus::Busy)
+            PRINT("busy");
+        else if (status == QD4310::CalibrationStatus::CurrentSensorError)
+            PRINT("current sensor error");
+        else if (status == QD4310::CalibrationStatus::DriverError)
+            PRINT("driver error");
+        else if (status == QD4310::CalibrationStatus::EncoderError)
+            PRINT("encoder error");
+        else
+            PRINT("unknown error");
+    }
 }
 
 void foc_restore() {

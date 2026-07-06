@@ -472,7 +472,7 @@ static size_t
 _etoa(out_fct_type out, char *buffer, size_t idx, size_t maxlen, double value, unsigned int prec, unsigned int width,
       unsigned int flags) {
     // check for NaN and special values
-    if ((value != value) || (value > DBL_MAX) || (value < -DBL_MAX)) {
+    if ((value != value) || (value > DBL_MAX) || (value < -DBL_MAX) || (value == 0.0)) {
         return _ftoa(out, buffer, idx, maxlen, value, prec, width, flags);
     }
 
