@@ -1,0 +1,9 @@
+[submodule "UserLib/PID"]
+	path = UserLib/PID
+	url = ../../Liu-Curiousity/pid.git
+[submodule "UserLib/QDrive"]
+	path = UserLib/QDrive
+	url = ../../Liu-Curiousity/QDrive-Core.git
+[submodule "UserLib/LetterShell"]
+	path = UserLib/LetterShell
+	url = ../../Liu-Curiousity/letter-shell.git

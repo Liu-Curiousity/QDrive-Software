@@ -27,7 +27,7 @@
 #include "Storage.h"
 #include "main.h"
 
-class QD4310 : public QDrive{
+class QD4310 : public QDrive {
 public:
     enum ErrorCode : uint8_t {
         NoError = 0b0000'0000,
