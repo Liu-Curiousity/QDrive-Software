@@ -34,6 +34,8 @@
 extern QD4310 qd4310;
 extern Shell shell;
 
+#include "span"
+
 class ShellPlugs : public QD4310 {
 public:
     static float atof_lite(const char *s) {
@@ -95,19 +97,32 @@ public:
         }
     }
 
-    struct ConfigItem {
+    class Item {
+    public:
         const char *name;
         const char *description;
         const char *unit;
         const char *format;
-        void (*print_value)(const ConfigItem&);
+        void (*print_value)(const Item&);
         bool (*set_value)(float);
+
+        template <size_t N>
+        static const Item* find_item(const Item (&items)[N], const char *key) {
+            return find_item(items, N, key);
+        }
+
+        static const Item* find_item(const Item items[], const size_t N, const char *key) {
+            for (size_t i = 0; i < N; ++i) {
+                if (strcmp(items[N].name, key) == 0) return &items[N];
+            }
+            return nullptr;
+        }
     };
 
-    inline static const ConfigItem ConfigItems[12] = {
+    inline static const Item ConfigItems[] = {
         {
             "pid.speed.kp", "Speed PID proportional gain", nullptr, "%.3g",
-            [](const ConfigItem& self) {
+            [](const Item& self) {
                 print(self.format, qd4310.PID_Speed.kp);
             },
             [](float value) {
@@ -118,7 +133,7 @@ public:
         },
         {
             "pid.speed.ki", "Speed PID integral gain", nullptr, "%.3g",
-            [](const ConfigItem& self) {
+            [](const Item& self) {
                 print(self.format, qd4310.PID_Speed.ki);
             },
             [](float value) {
@@ -129,7 +144,7 @@ public:
         },
         {
             "pid.speed.kd", "Speed PID derivative gain", nullptr, "%.3g",
-            [](const ConfigItem& self) {
+            [](const Item& self) {
                 print(self.format, qd4310.PID_Speed.kd);
             },
             [](float value) {
@@ -140,7 +155,7 @@ public:
         },
         {
             "pid.angle.kp", "Angle PID proportional gain", nullptr, "%.3g",
-            [](const ConfigItem& self) {
+            [](const Item& self) {
                 print(self.format, qd4310.PID_Angle.kp);
             },
             [](float value) {
@@ -151,7 +166,7 @@ public:
         },
         {
             "pid.angle.ki", "Angle PID integral gain", nullptr, "%.3g",
-            [](const ConfigItem& self) {
+            [](const Item& self) {
                 print(self.format, qd4310.PID_Angle.ki);
             },
             [](float value) {
@@ -162,7 +177,7 @@ public:
         },
         {
             "pid.angle.kd", "Angle PID derivative gain", nullptr, "%.3g",
-            [](const ConfigItem& self) {
+            [](const Item& self) {
                 print(self.format, qd4310.PID_Angle.kd);
             },
             [](float value) {
@@ -173,7 +188,7 @@ public:
         },
         {
             "limit.speed", "Speed limit in rpm", "rpm", "%.3g",
-            [](const ConfigItem& self) {
+            [](const Item& self) {
                 if (!qd4310.PID_Angle.output_limit_p)
                     print("no limit");
                 else
@@ -185,7 +200,7 @@ public:
         },
         {
             "limit.current", "Current limit in A", "A", "%.3g",
-            [](const ConfigItem& self) {
+            [](const Item& self) {
                 if (!qd4310.PID_Speed.output_limit_p)
                     print("no limit");
                 else
@@ -197,7 +212,7 @@ public:
         },
         {
             "can.id", "CAN ID of the motor (0-7)", nullptr, "%03u",
-            [](const ConfigItem& self) {
+            [](const Item& self) {
                 print(self.format, qd4310.ID);
             },
             [](const float value) {
@@ -210,7 +225,7 @@ public:
         },
         {
             "uart.baud_rate", "UART BaudRate of the motor (50K-10M)", "bps", "%u",
-            [](const ConfigItem& self) {
+            [](const Item& self) {
                 print(self.format, qd4310.uart_baud_rate);
             },
             [](const float value) {
@@ -236,7 +251,7 @@ public:
         },
         {
             "can.baud_rate", "CAN bus baud rate (fixed)", "bps", "%u",
-            [](const ConfigItem& self) {
+            [](const Item& self) {
                 (void)self;
                 print("1'000'000");
             },
@@ -244,12 +259,48 @@ public:
         },
     };
 
-    static const ConfigItem* find_config_item(const char *key) {
-        for (const auto& config_item : ConfigItems) {
-            if (strcmp(config_item.name, key) == 0) return &config_item;
-        }
-        return nullptr;
-    }
+    inline static const Item CtrlItems[] = {
+        {
+            "current", "Set current in Q axis", "A", "%.3g",
+            nullptr,
+            [](const float value) {
+                qd4310.Ctrl(CtrlType::CurrentCtrl, value);
+                return true;
+            }
+        },
+        {
+            "speed", "Set speed", "rpm", "%.3g",
+            nullptr,
+            [](const float value) {
+                qd4310.Ctrl(CtrlType::SpeedCtrl, value);
+                return true;
+            }
+        },
+        {
+            "angle", "Set angle", "rad", "%.3g",
+            nullptr,
+            [](const float value) {
+                qd4310.Ctrl(CtrlType::AngleCtrl, value);
+                return true;
+            }
+        },
+        {
+            "step_angle", "Step an specific angle", "rad", "%.3g",
+            nullptr,
+            [](const float value) {
+                qd4310.Ctrl(CtrlType::StepAngleCtrl, value);
+                return true;
+            }
+        },
+        {
+            "low_speed", "Set speed by increasing angle", "rpm", "%.3g",
+            nullptr,
+            [](const float value) {
+                qd4310.Ctrl(CtrlType::LowSpeedCtrl, value);
+                return true;
+            }
+        },
+    };
 
     static signed short silent(char *data, unsigned short len) { // NOLINT(readability-non-const-parameter)
         (void)data;
@@ -261,7 +312,6 @@ public:
         print_len("Hardware version %s", FOC_HARDWARE_VERSION);
         print_len("Software version %s", FOC_SOFTWARE_VERSION);
     }
-
 
     static void foc_info() {
         print_len("Hardware Info:");
@@ -300,18 +350,18 @@ public:
         print_len("  config --list");
         print_len("");
         print_len("Configuration Parameters:");
-        for (const auto& config_item : ConfigItems) {
-            print_len("  %-18s : %s", config_item.name, config_item.description);
+        for (const auto& item : ConfigItems) {
+            print_len("  %-18s : %s", item.name, item.description);
         }
     }
 
     static void foc_config_list() {
         print_len("QDrive Configuration:");
-        for (const auto& config_item : ConfigItems) {
-            if (config_item.print_value) {
-                print("%s = ", config_item.name);
-                config_item.print_value(config_item);
-                print_len(" %s", config_item.unit ? config_item.unit : "");
+        for (const auto& item : ConfigItems) {
+            if (item.print_value) {
+                print("%s = ", item.name);
+                item.print_value(item);
+                print_len(" %s", item.unit ? item.unit : "");
             }
         }
     }
@@ -333,12 +383,12 @@ public:
             value = argv[2];
         }
 
-        const auto *config_item = find_config_item(key);
+        const auto *config_item = Item::find_item(ConfigItems, key);
         if (!config_item || !config_item->set_value) {
             print_len("Unknown config target: %s", key);
             return;
         }
-        if (!value && find_config_item("zero_pos") != config_item) {
+        if (!value && Item::find_item(ConfigItems, "zero_pos") != config_item) {
             print_len("Missing value for config [%s]", key);
             return;
         }
@@ -347,11 +397,9 @@ public:
             print_len("Config [%s] failed", key);
             return;
         }
-        if (std::isnan(valf)) {
-            print_len("Config [%s]", key);
-        } else {
-            print_len("Config [%s] = %.3g", key, valf);
-        }
+        print("Config [%s]", key);
+        if (std::isnan(valf)) print(config_item->format, valf);
+        print_len("");
     }
 
     static void foc_ctrl_help() {
@@ -359,16 +407,14 @@ public:
             "Usage: ctrl [current VALUE | low_speed VALUE  | speed VALUE  | step_angle VALUE | angle VALUE | key=value]");
         print_len("");
         print_len("Examples:");
-        print_len("  ctrl speed 100");
-        print_len("  ctrl speed=100");
+        print_len("  ctrl %s 100", CtrlItems[1].name);
+        print_len("  ctrl %s=100", CtrlItems[1].name);
         print_len("  ctrl --help");
         print_len("");
         print_len("Control Parameters:");
-        print_len("  current           : Set current in Q axis (A)");
-        print_len("  low_speed         : Set speed by increasing angle (rpm)");
-        print_len("  speed             : Set speed (rpm)");
-        print_len("  angle             : Set angle (rad)");
-        print_len("  step_angle        : Step an specific angle (rad)");
+        for (const auto& item : CtrlItems) {
+            print_len("  %-18s : %s (%s)", item.name, item.description, item.unit);
+        }
     }
 
     static void foc_ctrl(const int argc, char *argv[]) {
@@ -382,34 +428,46 @@ public:
         if (!value && argc >= 3)
             value = argv[2];
 
-        if (!value) {
-            print_len("Missing value for ctrl [%s]", key);
-            return;
-        }
         if (!qd4310.started) {
             print_len("QDrive is not running, please enable it first");
             return;
         }
-        const float valf = atof_lite(value);
-        if (strcmp(key, "current") == 0) {
-            print_len("Setting %s = %.2f A", key, valf);
-            qd4310.Ctrl(CtrlType::CurrentCtrl, valf);
-        } else if (strcmp(key, "speed") == 0) {
-            print_len("Setting %s = %.2f rpm", key, valf);
-            qd4310.Ctrl(CtrlType::SpeedCtrl, valf);
-        } else if (strcmp(key, "angle") == 0) {
-            print_len("Setting %s = %.2f rad", key, valf);
-            qd4310.Ctrl(CtrlType::AngleCtrl, valf);
-        } else if (strcmp(key, "step_angle") == 0) {
-            print_len("Setting %s = %.2f rad", key, valf);
-            qd4310.Ctrl(CtrlType::StepAngleCtrl, valf);
-        } else if (strcmp(key, "low_speed") == 0) {
-            print_len("Setting %s = %.2f rpm", key, valf);
-            qd4310.Ctrl(CtrlType::LowSpeedCtrl, valf);
-        } else {
+        const auto *ctrl_item = Item::find_item(CtrlItems, key);
+        if (!ctrl_item || !ctrl_item->set_value) {
             print_len("Unknown ctrl target: %s", key);
-            foc_ctrl_help();
+            return;
         }
+        if (!value) {
+            print_len("Missing value for ctrl [%s]", key);
+            return;
+        }
+        const float valf = atof_lite(value);
+        if (!ctrl_item->set_value(valf)) {
+            print_len("Ctrl [%s] failed", key);
+            return;
+        }
+        print("Setting [%s]", key);
+        print_len(ctrl_item->format, valf);
+
+        // if (strcmp(key, "current") == 0) {
+        //     print_len("Setting %s = %.2f A", key, valf);
+        //     qd4310.Ctrl(CtrlType::CurrentCtrl, valf);
+        // } else if (strcmp(key, "speed") == 0) {
+        //     print_len("Setting %s = %.2f rpm", key, valf);
+        //     qd4310.Ctrl(CtrlType::SpeedCtrl, valf);
+        // } else if (strcmp(key, "angle") == 0) {
+        //     print_len("Setting %s = %.2f rad", key, valf);
+        //     qd4310.Ctrl(CtrlType::AngleCtrl, valf);
+        // } else if (strcmp(key, "step_angle") == 0) {
+        //     print_len("Setting %s = %.2f rad", key, valf);
+        //     qd4310.Ctrl(CtrlType::StepAngleCtrl, valf);
+        // } else if (strcmp(key, "low_speed") == 0) {
+        //     print_len("Setting %s = %.2f rpm", key, valf);
+        //     qd4310.Ctrl(CtrlType::LowSpeedCtrl, valf);
+        // } else {
+        //     print_len("Unknown ctrl target: %s", key);
+        //     foc_ctrl_help();
+        // }
     }
 
     static void foc_enable() {
