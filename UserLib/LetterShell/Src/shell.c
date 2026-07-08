@@ -80,20 +80,15 @@ enum
 #endif
 };
 
-
 static const char *shellText[] =
 {
 #if SHELL_SHOW_INFO == 1
     [SHELL_TEXT_INFO] =
         "\r\n"
-        "  ____    ____          _           \r\n"
-        " / __ \\  |  _ \\  _ __ (_)__   ___   \r\n"
-        "| |  | | | | | || '__|| \\ \\ / / _ \\ \r\n"
-        "| |__| | | |_| || |   | |\\ V /  __/ \r\n"
-        " \\___\\_\\ |____/ |_|   |_| \\_/ \\___| \r\n"
+        SHELL_TITLE
         "\r\n"
         "Build:       "__DATE__" "__TIME__"\r\n"
-        "Version:     "FOC_SOFTWARE_VERSION"\r\n"
+        "Version:     "SHELL_VERSION"\r\n"
         "Copyright:   (c) 2026 QDrive\r\n",
 #endif
     [SHELL_TEXT_CMD_TOO_LONG] = 

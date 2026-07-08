@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.30)
 
-project(pid)
+project(PID)
 
-add_library(pid INTERFACE)
+add_library(PID INTERFACE)
 
-target_sources(pid INTERFACE)
+target_sources(PID INTERFACE)
 
-target_include_directories(pid INTERFACE
+target_include_directories(PID INTERFACE
         ./
 )

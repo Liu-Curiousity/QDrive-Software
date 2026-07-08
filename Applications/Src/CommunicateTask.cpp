@@ -28,8 +28,10 @@
 #include "fdcan.h"
 #include "usart.h"
 #include "QD4310.h"
-#include "queue.h"
 #include <numbers>
+
+#include "FreeRTOS.h"
+#include "queue.h"
 
 using namespace std;
 

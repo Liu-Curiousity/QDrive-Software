@@ -35,19 +35,19 @@ void QD4310::init() {
     // 2.从flash中读取校准数据
     load_storage_calibration();
     // 3.初始化FOC
-    FOC::init();
+    QDrive::init();
 }
 
 bool QD4310::start() {
-    if (error_code == NoError) FOC::start();
+    if (error_code == NoError) QDrive::start();
     if (started) return true;
     else return false;
 }
 
 bool QD4310::stop() {
-    FOC::stop();
+    QDrive::stop();
     if (!started) {
-        FOC::Ctrl(CtrlType::CurrentCtrl, 0);
+        QDrive::Ctrl(CtrlType::CurrentCtrl, 0);
         return true;
     }
     return false;
@@ -56,7 +56,7 @@ bool QD4310::stop() {
 auto QD4310::calibrate() -> CalibrationStatus {
     if (error_code & VoltageError) return CalibrationStatus::VoltageError;          // 如果电压异常,则不能校准
     if (error_code & ~CalibrationError) return CalibrationStatus::EnvironmentError; // 如果有错误,则不能校准
-    const auto status = FOC::calibrate();
+    const auto status = QDrive::calibrate();
     if (status == CalibrationStatus::Success)                  // 如果基础校准成功
         freeze_storage_calibration(STORAGE_BASE_CALIBRATE_OK); // 保存基础校准数据
     // else if (status == CalibrationStatus::CurrentSensorError ||
@@ -69,13 +69,13 @@ auto QD4310::calibrate() -> CalibrationStatus {
 
 void QD4310::anticogging_calibrate() {
     if (error_code != NoError) return; // 如果有错误,则不能校准
-    FOC::anticogging_calibrate();
+    QDrive::anticogging_calibrate();
     if (anticogging_calibrated)                                       // 如果齿槽转矩补偿校准成功
         freeze_storage_calibration(STORAGE_ANTICOGGING_CALIBRATE_OK); // 储存齿槽转矩补偿表
 }
 
 [[nodiscard]] float QD4310::getAngle() const {
-    return wrap(FOC::getAngle() - zero_pos, 0, 2 * numbers::pi_v<float>);
+    return wrap(QDrive::getAngle() - zero_pos, 0, 2 * numbers::pi_v<float>);
 }
 
 bool QD4310::Ctrl(const CtrlType ctrl_type, float value) {
@@ -84,12 +84,12 @@ bool QD4310::Ctrl(const CtrlType ctrl_type, float value) {
     if (ctrl_type == CtrlType::AngleCtrl) {
         value = wrap(value + zero_pos, 0, 2 * numbers::pi_v<float>);
     }
-    FOC::Ctrl(ctrl_type, value);
+    QDrive::Ctrl(ctrl_type, value);
     return true;
 }
 
 void QD4310::Ctrl_ISR() {
-    FOC::Ctrl_ISR();
+    QDrive::Ctrl_ISR();
 }
 
 bool QD4310::setID(const uint8_t id) {

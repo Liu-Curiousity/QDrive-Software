@@ -12,10 +12,21 @@
 #ifndef     __SHELL_H__
 #define     __SHELL_H__
 
+#include <stddef.h>
 #include "shell_cfg.h"
 
-#define     SHELL_VERSION               "3.2.4"                 /**< 版本号 */
+#ifndef     SHELL_TITLE
+#define     SHELL_TITLE     \
+            " _         _   _                  _          _ _ \r\n"\
+            "| |    ___| |_| |_ ___ _ __   ___| |__   ___| | |\r\n"\
+            "| |   / _ \\ __| __/ _ \\ '__| / __| '_ \\ / _ \\ | |\r\n"\
+            "| |__|  __/ |_| ||  __/ |    \\__ \\ | | |  __/ | |\r\n"\
+            "|_____\\___|\\__|\\__\\___|_|    |___/_| |_|\\___|_|_|\r\n"
+#endif
 
+#ifndef     SHELL_VERSION
+#define     SHELL_VERSION               "3.2.4"                 /**< 版本号 */
+#endif
 
 /**
  * @brief shell 断言

@@ -130,8 +130,11 @@ public:
             print_len("Config [%s] failed", key);
             return;
         }
-        print("Config [%s] = ", key);
-        if (!std::isnan(valf)) print(config_item->format, valf);
+        print("Config [%s]", key);
+        if (!std::isnan(valf)) {
+            print(" = ");
+            config_item->print_value(*config_item);
+        }
         print_len("");
     }
 

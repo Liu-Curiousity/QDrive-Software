@@ -23,11 +23,11 @@
 #ifndef FOC_QD4310_QD4310_H
 #define FOC_QD4310_QD4310_H
 
-#include "FOC.h"
+#include "QDrive.h"
 #include "Storage.h"
 #include "main.h"
 
-class QD4310 : public FOC {
+class QD4310 : public QDrive{
 public:
     enum ErrorCode : uint8_t {
         NoError = 0b0000'0000,
@@ -57,7 +57,7 @@ public:
            Filter& CurrentQFilter, Filter& CurrentDFilter, Filter& SpeedFilter,
            BLDC_Driver& driver, Encoder& encoder, Storage& storage, CurrentSensor& current_sensor,
            const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Angle) :
-        FOC(pole_pairs, CtrlFrequency, CurrentCtrlFrequency,
+        QDrive(pole_pairs, CtrlFrequency, CurrentCtrlFrequency,
             CurrentQFilter, CurrentDFilter, SpeedFilter,
             driver, encoder, current_sensor,
             PID_CurrentQ, PID_CurrentD, PID_Speed, PID_Angle),
