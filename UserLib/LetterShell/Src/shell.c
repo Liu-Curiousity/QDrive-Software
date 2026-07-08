@@ -15,8 +15,6 @@
 #include "stdarg.h"
 #include "shell_ext.h"
 
-#include "FOC_config.h"
-
 #if SHELL_USING_CMD_EXPORT == 1
 /**
  * @brief 默认用户

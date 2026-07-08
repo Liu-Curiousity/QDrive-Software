@@ -316,7 +316,7 @@ public:
         }
     }
 
-    static void foc_config(int argc, char *argv[]) {
+    static void foc_config(const int argc, char *argv[]) {
         if (argc < 2 || strcmp(argv[1], "--help") == 0) {
             foc_config_help();
             return;
@@ -327,20 +327,9 @@ public:
             return;
         }
 
-        const char *key = argv[1];
-        const char *value = nullptr;
-
-        if (strchr(key, '=') != nullptr) {
-            // 解析 key=value 格式
-            static char keybuf[128];
-            strncpy(keybuf, key, sizeof(keybuf) - 1);
-            keybuf[sizeof(keybuf) - 1] = '\0';
-
-            char *eq = strchr(keybuf, '=');
-            *eq = '\0';
-            key = keybuf;
-            value = eq + 1;
-        } else if (argc >= 3) {
+        char *key = argv[1];
+        const char *value = parse_key_value_arg(key);
+        if (!value && argc >= 3) {
             value = argv[2];
         }
 
@@ -382,28 +371,16 @@ public:
         print_len("  step_angle        : Step an specific angle (rad)");
     }
 
-    static void foc_ctrl(int argc, char *argv[]) {
+    static void foc_ctrl(const int argc, char *argv[]) {
         if (argc < 2 || strcmp(argv[1], "--help") == 0) {
             foc_ctrl_help();
             return;
         }
 
-        const char *key = argv[1];
-        const char *value = nullptr;
-
-        if (strchr(key, '=') != nullptr) {
-            // 解析 key=value 格式
-            static char keybuf[128];
-            strncpy(keybuf, key, sizeof(keybuf) - 1);
-            keybuf[sizeof(keybuf) - 1] = '\0';
-
-            char *eq = strchr(keybuf, '=');
-            *eq = '\0';
-            key = keybuf;
-            value = eq + 1;
-        } else if (argc >= 3) {
+        char *key = argv[1];
+        const char *value = parse_key_value_arg(key);
+        if (!value && argc >= 3)
             value = argv[2];
-        }
 
         if (!value) {
             print_len("Missing value for ctrl [%s]", key);
@@ -413,21 +390,21 @@ public:
             print_len("QDrive is not running, please enable it first");
             return;
         }
-        float valf = atof_lite(value);
+        const float valf = atof_lite(value);
         if (strcmp(key, "current") == 0) {
-            print_len("Setting current = %.2f A", valf);
+            print_len("Setting %s = %.2f A", key, valf);
             qd4310.Ctrl(CtrlType::CurrentCtrl, valf);
         } else if (strcmp(key, "speed") == 0) {
-            print_len("Setting speed = %.2f rpm", valf);
+            print_len("Setting %s = %.2f rpm", key, valf);
             qd4310.Ctrl(CtrlType::SpeedCtrl, valf);
         } else if (strcmp(key, "angle") == 0) {
-            print_len("Setting angle = %.2f rad", valf);
+            print_len("Setting %s = %.2f rad", key, valf);
             qd4310.Ctrl(CtrlType::AngleCtrl, valf);
         } else if (strcmp(key, "step_angle") == 0) {
-            print_len("Stepping %.2f rad angle", valf);
+            print_len("Setting %s = %.2f rad", key, valf);
             qd4310.Ctrl(CtrlType::StepAngleCtrl, valf);
         } else if (strcmp(key, "low_speed") == 0) {
-            print_len("Setting low_speed = %.2f rpm", valf);
+            print_len("Setting %s = %.2f rpm", key, valf);
             qd4310.Ctrl(CtrlType::LowSpeedCtrl, valf);
         } else {
             print_len("Unknown ctrl target: %s", key);
@@ -534,6 +511,17 @@ public:
 
     static void shell_silent() {
         shell.write = silent; // 禁止输出
+    }
+
+private
+:
+    // 解析 key=value 格式
+    static char* parse_key_value_arg(char *arg) {
+        if (!arg) return nullptr;
+        char *eq = strchr(arg, '=');
+        if (!eq) return nullptr;
+        *eq = '\0';
+        return eq + 1;
     }
 };
 
