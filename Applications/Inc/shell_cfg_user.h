@@ -1,6 +1,7 @@
 #pragma once
 
-#include "FOC_config.h"
+#include "main.h"
+#include "QDrive_cfg.h"
 
 #define     SHELL_TITLE                 \
             "  ____    ____          _           \r\n"\

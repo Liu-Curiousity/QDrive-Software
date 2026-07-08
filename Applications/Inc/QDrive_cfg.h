@@ -25,8 +25,11 @@ inline constexpr const char *FOC_HARDWARE_VERSIONS[] = {
 };
 inline const char *FOC_HARDWARE_VERSION = FOC_HARDWARE_VERSIONS[0]; // 硬件版本
 
-extern "C" {
+/*==========================环境配置==========================*/
+void qdrive_delay_ms(uint32_t ms);
+#define QDRIVE_DELAY_MS(ms)         qdrive_delay_ms(ms) // 延时函数,单位ms
 
+extern "C" {
 #endif
 
 #define FOC_SOFTWARE_VERSION "6.2.4-alpha"     // 软件版本

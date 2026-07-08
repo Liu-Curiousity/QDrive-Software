@@ -78,10 +78,15 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
         stm32cubemx
 
         # Add user defined libraries
-        qdrive
+        QDrive
         qd4310
         PID
         LetterShell
+)
+
+target_include_directories(QDrive PUBLIC
+        ${CMAKE_SOURCE_DIR}/Applications/Inc
+        ${CMAKE_SOURCE_DIR}/BSP
 )
 
 target_include_directories(LetterShell PUBLIC
@@ -92,12 +97,16 @@ target_compile_definitions(LetterShell PUBLIC
         SHELL_CFG_USER="shell_cfg_user.h"
 )
 
+target_link_libraries(LetterShell PUBLIC
+        stm32cubemx
+)
+
 target_compile_options(LetterShell PRIVATE
         -Os
 )
 
 # 查找 UserLib 下的所有源文件
-file(GLOB_RECURSE USERLIB_SOURCES "UserLib/QDrive/*.*" "Applications/*.*" "BSP/*.*")
+file(GLOB_RECURSE USERLIB_SOURCES "Applications/*.*" "BSP/*.*")
 
 # 为每个 UserLib 源文件添加编译选项 -include public.h
 foreach (SRC ${USERLIB_SOURCES})

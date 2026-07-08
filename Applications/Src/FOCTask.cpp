@@ -20,7 +20,7 @@
 #include "task_public.h"
 #include "FreeRTOS.h"
 #include "QDrive.h"
-#include "FOC_config.h"
+#include "QDrive_cfg.h"
 #include "tim.h"
 #include "spi.h"
 #include "adc.h"

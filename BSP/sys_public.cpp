@@ -17,9 +17,14 @@
  * */
 
 #include <cmath>
-#include "FOC_config.h"
+#include "sys_public.h"
+#include "QDrive_cfg.h"
 #include "adc.h"
 #include "main.h"
+
+void qdrive_delay_ms(const uint32_t ms) {
+    delay_ms(ms);
+}
 
 void version_detect() {
     if (HAL_GPIO_ReadPin(VersionDetect_D_GPIO_Port, VersionDetect_D_Pin) == GPIO_PIN_SET) {

@@ -29,7 +29,7 @@
 #include "usbd_cdc_if.h"
 #include "retarget/retarget.h"
 #include "QD4310.h"
-#include "FOC_config.h"
+#include "QDrive_cfg.h"
 
 extern QD4310 qd4310;
 extern Shell shell;

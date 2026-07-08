@@ -21,7 +21,7 @@
  */
 
 #include "QD4310.h"
-#include "FOC_config.h"
+#include "QDrive_cfg.h"
 #include <algorithm>
 #include <numbers>
 #include "usart.h"
