@@ -34,10 +34,261 @@
 extern QD4310 qd4310;
 extern Shell shell;
 
-#include "span"
+#define PROMPT_DISABLE_FIRST "QDrive is running, please disable it first"
+#define PROMPT_ENABLE_FIRST "QDrive is not running, please enable it first"
+#define PROMPT_UNKNOW_TARGET(cmd, key) "Unknown "#cmd" target: %s", key
+#define PROMPT_MISSING_VALUE_FOR(cmd, key) ("Missing value for "#cmd" [%s]", key)
 
 class ShellPlugs : public QD4310 {
 public:
+    static void print_version() {
+        print_len("Hardware version %s", FOC_HARDWARE_VERSION);
+        print_len("Software version %s", FOC_SOFTWARE_VERSION);
+    }
+
+    static void foc_info() {
+        print_len("Hardware Info:");
+        print_len("  Pole pairs       : %d ", FOC_POLE_PAIRS);
+        print_len("  KV rating        : %.1f rpm/V", FOC_KV);
+        print_len("  Nominal voltage  : %d V", FOC_NOMINAL_VOLTAGE);
+        print_len("  Phase inductance : %.2f mH", FOC_PHASE_INDUCTANCE);
+        print_len("  Phase resistance : %.2f Ω", FOC_PHASE_RESISTANCE);
+        print_len("  Torque constant  : %.2f Nm/A", FOC_TORQUE_CONSTANT);
+        print_len("  Max current      : %.2f A", FOC_MAX_CURRENT);
+    }
+
+    static void foc_status() {
+        print_len("Motor Status:");
+        print_len("  CAN ID       : %03d", qd4310.ID);
+        print_len("  Status       : %s", qd4310.started ? "enabled" : "disabled");
+        print_len("  CtrlMode     : %s ctrl",
+                  qd4310.getCtrlType() == CtrlType::CurrentCtrl ? CtrlItems[0].name :
+                  qd4310.getCtrlType() == CtrlType::SpeedCtrl ? CtrlItems[1].name :
+                  qd4310.getCtrlType() == CtrlType::AngleCtrl ? CtrlItems[2].name :
+                  qd4310.getCtrlType() == CtrlType::StepAngleCtrl ? CtrlItems[3].name :
+                  qd4310.getCtrlType() == CtrlType::LowSpeedCtrl ? CtrlItems[4].name : "Unknown");
+        print_len("  Current      : %.2f A", qd4310.getCurrent());
+        print_len("  Speed        : %.2f rpm", qd4310.getSpeed());
+        print_len("  Angle        : %.2f rad", qd4310.getAngle());
+        print_len("  Voltage      : %.2f V", qd4310.getVoltage());
+    }
+
+    static void foc_config_help() {
+        print_len("Usage: config [--list | CONFIG_PARAM VALUE | key=value]");
+        print_len("");
+        print_len("Examples:");
+        print_len("  config %s 0.1", ConfigItems[0].name);
+        print_len("  config %s=0.1", ConfigItems[1].name);
+        print_len("  config --help");
+        print_len("  config --list");
+        print_len("");
+        print_len("Configuration Parameters:");
+        for (const auto& item : ConfigItems) {
+            print_len("  %-18s : %s", item.name, item.description);
+        }
+    }
+
+    static void foc_config_list() {
+        print_len("QDrive Configuration:");
+        for (const auto& item : ConfigItems) {
+            if (item.print_value) {
+                print("%s = ", item.name);
+                item.print_value(item);
+                print_len(" %s", item.unit ? item.unit : "");
+            }
+        }
+    }
+
+    static void foc_config(const int argc, char *argv[]) {
+        if (argc < 2 || strcmp(argv[1], "--help") == 0) {
+            foc_config_help();
+            return;
+        }
+
+        if (strcmp(argv[1], "--list") == 0) {
+            foc_config_list();
+            return;
+        }
+
+        char *key = argv[1];
+        const char *value = parse_key_value_arg(key);
+        if (!value && argc >= 3) {
+            value = argv[2];
+        }
+
+        const auto *config_item = Item::find_item(ConfigItems, key);
+        if (!config_item || !config_item->set_value) {
+            print_len(PROMPT_UNKNOW_TARGET(config, key));
+            return;
+        }
+        if (!value && Item::find_item(ConfigItems, "zero_pos") != config_item) {
+            print_len(PROMPT_MISSING_VALUE_FOR(config, key));
+            return;
+        }
+        const float valf = value ? atof_lite(value) : NAN;
+        if (!config_item->set_value(valf)) {
+            print_len("Config [%s] failed", key);
+            return;
+        }
+        print("Config [%s] = ", key);
+        if (!std::isnan(valf)) print(config_item->format, valf);
+        print_len("");
+    }
+
+    static void foc_ctrl_help() {
+        print_len(
+            "Usage: ctrl [CONFIG_PARAM VALUE | key=value]");
+        print_len("");
+        print_len("Examples:");
+        print_len("  ctrl %s 100", CtrlItems[1].name);
+        print_len("  ctrl %s=100", CtrlItems[1].name);
+        print_len("  ctrl --help");
+        print_len("");
+        print_len("Control Parameters:");
+        for (const auto& item : CtrlItems) {
+            print_len("  %-18s : %s (%s)", item.name, item.description, item.unit);
+        }
+    }
+
+    static void foc_ctrl(const int argc, char *argv[]) {
+        if (argc < 2 || strcmp(argv[1], "--help") == 0) {
+            foc_ctrl_help();
+            return;
+        }
+
+        char *key = argv[1];
+        const char *value = parse_key_value_arg(key);
+        if (!value && argc >= 3)
+            value = argv[2];
+
+        if (!qd4310.started) {
+            print_len(PROMPT_ENABLE_FIRST);
+            return;
+        }
+        const auto *ctrl_item = Item::find_item(CtrlItems, key);
+        if (!ctrl_item || !ctrl_item->set_value) {
+            print_len(PROMPT_UNKNOW_TARGET(ctrl, key));
+            return;
+        }
+        if (!value) {
+            print_len(PROMPT_MISSING_VALUE_FOR(ctrl, key));
+            return;
+        }
+        const float valf = atof_lite(value);
+        if (!ctrl_item->set_value(valf)) {
+            print_len("Ctrl [%s] failed", key);
+            return;
+        }
+        print("Setting [%s] = ", key);
+        print_len(ctrl_item->format, valf);
+    }
+
+    static void foc_enable() {
+        if (qd4310.start()) {
+            print_len("QDrive enabled");
+        } else if (qd4310.error_code & CalibrationError) {
+            print_len("Enable failed, please calibrate first");
+        } else if (qd4310.error_code & VoltageError) {
+            print_len("Enable failed, voltage error");
+        } else {
+            print_len("Enable failed, unknown error");
+        }
+    }
+
+    static void foc_disable() {
+        qd4310.stop();
+        print_len("QDrive disabled");
+    }
+
+    static void foc_calibrate() {
+        if (qd4310.started) {
+            print_len(PROMPT_DISABLE_FIRST);
+            return;
+        }
+        if (qd4310.calibrated) {
+            print_len("QDrive already calibrated,do you want to re-calibrate? (y/n)");
+            char response;
+            while (!shellRead(&response, 1)) {
+                delay(1);
+            }
+            if (response != 'y' && response != 'Y') {
+                print_len("Calibration cancelled");
+                return;
+            }
+        }
+        print_len("Calibration started, please wait...");
+        if (const auto status = qd4310.calibrate(); status == CalibrationStatus::Success)
+            print_len("Calibration completed");
+        else {
+            print("Calibration failed: ");
+            if (status == CalibrationStatus::EnvironmentError)
+                print_len("environment error");
+            else if (status == CalibrationStatus::VoltageError)
+                print_len("voltage error");
+            else if (status == CalibrationStatus::Busy)
+                print_len("busy");
+            else if (status == CalibrationStatus::CurrentSensorError)
+                print_len("current sensor error");
+            else if (status == CalibrationStatus::DriverError)
+                print_len("driver error");
+            else if (status == CalibrationStatus::EncoderError)
+                print_len("encoder error");
+            else
+                print_len("unknown error");
+        }
+    }
+
+    static void foc_restore() {
+        if (qd4310.started) {
+            print_len(PROMPT_DISABLE_FIRST);
+            return;
+        }
+        print_len("Are you sure you want to restore factory settings? (y/n)");
+        char response;
+        while (!shellRead(&response, 1)) {
+            delay(1);
+        }
+        if (response != 'y' && response != 'Y') {
+            print_len("Factory restore cancelled");
+            return;
+        }
+        qd4310.restore_calibration(); // 恢复出厂设置
+        print_len("Factory restore completed");
+        foc_config_list();
+    }
+
+    static void foc_store() {
+        if (qd4310.started) {
+            print_len(PROMPT_DISABLE_FIRST);
+            return;
+        }
+        foc_config_list();
+        print_len("Are you sure you want to store configurations? (y/n)");
+        char response;
+        while (!shellRead(&response, 1)) {
+            delay(1);
+        }
+        if (response != 'y' && response != 'Y') {
+            print_len("Store operation cancelled");
+            return;
+        }
+        qd4310.freeze_storage_calibration(
+            static_cast<StorageStatus>(STORAGE_PID_PARAMETER_OK | // 储存PID参数
+                                       STORAGE_LIMIT_OK |         // 储存限制参数
+                                       STORAGE_PLUG_OK)           // 储存ID
+        );
+        print_len("Store operation completed");
+    }
+
+    static void shell_reboot() {
+        NVIC_SystemReset();
+    }
+
+    static void shell_silent() {
+        shell.write = silent; // 禁止输出
+    }
+
+private:
     static float atof_lite(const char *s) {
         if (!s) return 0.0f;
 
@@ -97,6 +348,21 @@ public:
         }
     }
 
+    static signed short silent(char *data, unsigned short len) {
+        (void)data;
+        (void)len;
+        return 0;
+    }
+
+    // 解析 key=value 格式
+    static char* parse_key_value_arg(char *arg) {
+        if (!arg) return nullptr;
+        char *eq = strchr(arg, '=');
+        if (!eq) return nullptr;
+        *eq = '\0';
+        return eq + 1;
+    }
+
     class Item {
     public:
         const char *name;
@@ -113,7 +379,7 @@ public:
 
         static const Item* find_item(const Item items[], const size_t N, const char *key) {
             for (size_t i = 0; i < N; ++i) {
-                if (strcmp(items[N].name, key) == 0) return &items[N];
+                if (strcmp(items[i].name, key) == 0) return &items[i];
             }
             return nullptr;
         }
@@ -216,7 +482,7 @@ public:
                 print(self.format, qd4310.ID);
             },
             [](const float value) {
-                if (!qd4310.setID(value)) {
+                if (!qd4310.setID(static_cast<uint8_t>(value))) {
                     print_len("Invalid CAN ID: %d, must be between 0 and 7", static_cast<int>(value));
                     return false;
                 }
@@ -229,7 +495,7 @@ public:
                 print(self.format, qd4310.uart_baud_rate);
             },
             [](const float value) {
-                if (!qd4310.setUartBaudRate(value)) {
+                if (!qd4310.setUartBaudRate(static_cast<uint32_t>(value))) {
                     print_len("Invalid UART baud rate: %d, must be between 10'000 and 10'000'000",
                               static_cast<int>(value));
                     return false;
@@ -243,7 +509,7 @@ public:
             nullptr,
             [](const float value) {
                 if (qd4310.started) {
-                    print_len("QDrive is running, please disable it first");
+                    print_len(PROMPT_DISABLE_FIRST);
                     return false;
                 }
                 return qd4310.setZeroPosition(std::isnan(value) ? qd4310.getAngle() : value);
@@ -301,286 +567,6 @@ public:
             }
         },
     };
-
-    static signed short silent(char *data, unsigned short len) { // NOLINT(readability-non-const-parameter)
-        (void)data;
-        (void)len;
-        return 0;
-    }
-
-    static void print_version() {
-        print_len("Hardware version %s", FOC_HARDWARE_VERSION);
-        print_len("Software version %s", FOC_SOFTWARE_VERSION);
-    }
-
-    static void foc_info() {
-        print_len("Hardware Info:");
-        print_len("  Pole pairs       : %d ", FOC_POLE_PAIRS);
-        print_len("  KV rating        : %.1f rpm/V", FOC_KV);
-        print_len("  Nominal voltage  : %d V", FOC_NOMINAL_VOLTAGE);
-        print_len("  Phase inductance : %.2f mH", FOC_PHASE_INDUCTANCE);
-        print_len("  Phase resistance : %.2f Ω", FOC_PHASE_RESISTANCE);
-        print_len("  Torque constant  : %.2f Nm/A", FOC_TORQUE_CONSTANT);
-        print_len("  Max current      : %.2f A", FOC_MAX_CURRENT);
-    }
-
-    static void foc_status() {
-        print_len("Motor Status:");
-        print_len("  CAN ID       : %03d", qd4310.ID);
-        print_len("  Status       : %s", qd4310.started ? "enabled" : "disabled");
-        print_len("  CtrlMode     : %s",
-                  qd4310.getCtrlType() == CtrlType::CurrentCtrl ? "CurrentCtrl" :
-                  qd4310.getCtrlType() == CtrlType::SpeedCtrl ? "SpeedCtrl" :
-                  qd4310.getCtrlType() == CtrlType::AngleCtrl ? "AngleCtrl" :
-                  qd4310.getCtrlType() == CtrlType::StepAngleCtrl ? "StepAngleCtrl" :
-                  qd4310.getCtrlType() == CtrlType::LowSpeedCtrl ? "LowSpeedCtrl" : "Unknown");
-        print_len("  Current      : %.2f A", qd4310.getCurrent());
-        print_len("  Speed        : %.2f rpm", qd4310.getSpeed());
-        print_len("  Angle        : %.2f rad", qd4310.getAngle());
-        print_len("  Voltage      : %.2f V", qd4310.getVoltage());
-    }
-
-    static void foc_config_help() {
-        print_len("Usage: config [--list | PARAM_PATH VALUE | key=value]");
-        print_len("");
-        print_len("Examples:");
-        print_len("  config %s 0.1", ConfigItems[0].name);
-        print_len("  config %s=0.1", ConfigItems[1].name);
-        print_len("  config --help");
-        print_len("  config --list");
-        print_len("");
-        print_len("Configuration Parameters:");
-        for (const auto& item : ConfigItems) {
-            print_len("  %-18s : %s", item.name, item.description);
-        }
-    }
-
-    static void foc_config_list() {
-        print_len("QDrive Configuration:");
-        for (const auto& item : ConfigItems) {
-            if (item.print_value) {
-                print("%s = ", item.name);
-                item.print_value(item);
-                print_len(" %s", item.unit ? item.unit : "");
-            }
-        }
-    }
-
-    static void foc_config(const int argc, char *argv[]) {
-        if (argc < 2 || strcmp(argv[1], "--help") == 0) {
-            foc_config_help();
-            return;
-        }
-
-        if (strcmp(argv[1], "--list") == 0) {
-            foc_config_list();
-            return;
-        }
-
-        char *key = argv[1];
-        const char *value = parse_key_value_arg(key);
-        if (!value && argc >= 3) {
-            value = argv[2];
-        }
-
-        const auto *config_item = Item::find_item(ConfigItems, key);
-        if (!config_item || !config_item->set_value) {
-            print_len("Unknown config target: %s", key);
-            return;
-        }
-        if (!value && Item::find_item(ConfigItems, "zero_pos") != config_item) {
-            print_len("Missing value for config [%s]", key);
-            return;
-        }
-        const float valf = value ? atof_lite(value) : NAN;
-        if (!config_item->set_value(valf)) {
-            print_len("Config [%s] failed", key);
-            return;
-        }
-        print("Config [%s]", key);
-        if (std::isnan(valf)) print(config_item->format, valf);
-        print_len("");
-    }
-
-    static void foc_ctrl_help() {
-        print_len(
-            "Usage: ctrl [current VALUE | low_speed VALUE  | speed VALUE  | step_angle VALUE | angle VALUE | key=value]");
-        print_len("");
-        print_len("Examples:");
-        print_len("  ctrl %s 100", CtrlItems[1].name);
-        print_len("  ctrl %s=100", CtrlItems[1].name);
-        print_len("  ctrl --help");
-        print_len("");
-        print_len("Control Parameters:");
-        for (const auto& item : CtrlItems) {
-            print_len("  %-18s : %s (%s)", item.name, item.description, item.unit);
-        }
-    }
-
-    static void foc_ctrl(const int argc, char *argv[]) {
-        if (argc < 2 || strcmp(argv[1], "--help") == 0) {
-            foc_ctrl_help();
-            return;
-        }
-
-        char *key = argv[1];
-        const char *value = parse_key_value_arg(key);
-        if (!value && argc >= 3)
-            value = argv[2];
-
-        if (!qd4310.started) {
-            print_len("QDrive is not running, please enable it first");
-            return;
-        }
-        const auto *ctrl_item = Item::find_item(CtrlItems, key);
-        if (!ctrl_item || !ctrl_item->set_value) {
-            print_len("Unknown ctrl target: %s", key);
-            return;
-        }
-        if (!value) {
-            print_len("Missing value for ctrl [%s]", key);
-            return;
-        }
-        const float valf = atof_lite(value);
-        if (!ctrl_item->set_value(valf)) {
-            print_len("Ctrl [%s] failed", key);
-            return;
-        }
-        print("Setting [%s]", key);
-        print_len(ctrl_item->format, valf);
-
-        // if (strcmp(key, "current") == 0) {
-        //     print_len("Setting %s = %.2f A", key, valf);
-        //     qd4310.Ctrl(CtrlType::CurrentCtrl, valf);
-        // } else if (strcmp(key, "speed") == 0) {
-        //     print_len("Setting %s = %.2f rpm", key, valf);
-        //     qd4310.Ctrl(CtrlType::SpeedCtrl, valf);
-        // } else if (strcmp(key, "angle") == 0) {
-        //     print_len("Setting %s = %.2f rad", key, valf);
-        //     qd4310.Ctrl(CtrlType::AngleCtrl, valf);
-        // } else if (strcmp(key, "step_angle") == 0) {
-        //     print_len("Setting %s = %.2f rad", key, valf);
-        //     qd4310.Ctrl(CtrlType::StepAngleCtrl, valf);
-        // } else if (strcmp(key, "low_speed") == 0) {
-        //     print_len("Setting %s = %.2f rpm", key, valf);
-        //     qd4310.Ctrl(CtrlType::LowSpeedCtrl, valf);
-        // } else {
-        //     print_len("Unknown ctrl target: %s", key);
-        //     foc_ctrl_help();
-        // }
-    }
-
-    static void foc_enable() {
-        if (qd4310.start()) {
-            print_len("QDrive enabled");
-        } else if (qd4310.error_code & CalibrationError) {
-            print_len("Enable failed, please calibrate first");
-        } else if (qd4310.error_code & VoltageError) {
-            print_len("Enable failed, voltage error");
-        } else {
-            print_len("Enable failed, unknown error");
-        }
-    }
-
-    static void foc_disable() {
-        qd4310.stop();
-        print_len("QDrive disabled");
-    }
-
-    static void foc_calibrate() {
-        if (qd4310.started) {
-            print_len("QDrive is running, please disable it first");
-            return;
-        }
-        if (qd4310.calibrated) {
-            print_len("QDrive already calibrated,do you want to re-calibrate? (y/n)");
-            char response;
-            while (!shellRead(&response, 1)) {
-                delay(1);
-            }
-            if (response != 'y' && response != 'Y') {
-                print_len("Calibration aborted");
-                return;
-            }
-        }
-        print_len("Calibration started, please wait...");
-        if (const auto status = qd4310.calibrate(); status == CalibrationStatus::Success)
-            print_len("Calibration completed");
-        else {
-            print("Calibration failed: ");
-            if (status == CalibrationStatus::EnvironmentError)
-                print_len("environment error");
-            else if (status == CalibrationStatus::VoltageError)
-                print_len("voltage error");
-            else if (status == CalibrationStatus::Busy)
-                print_len("busy");
-            else if (status == CalibrationStatus::CurrentSensorError)
-                print_len("current sensor error");
-            else if (status == CalibrationStatus::DriverError)
-                print_len("driver error");
-            else if (status == CalibrationStatus::EncoderError)
-                print_len("encoder error");
-            else
-                print_len("unknown error");
-        }
-    }
-
-    static void foc_restore() {
-        print_len("Are you sure you want to restore factory settings? (y/n)");
-        char response;
-        while (!shellRead(&response, 1)) {
-            delay(1);
-        }
-        if (response != 'y' && response != 'Y') {
-            print_len("Factory restore cancelled");
-            return;
-        }
-        qd4310.restore_calibration(); // 恢复出厂设置
-        print_len("QDrive factory restore completed");
-        foc_config_list();
-    }
-
-    static void foc_store() {
-        if (qd4310.started) {
-            print_len("QDrive is running, please disable it first");
-            return;
-        }
-        foc_config_list();
-        print_len("Are you sure you want to store configurations? (y/n)");
-        char response;
-        while (!shellRead(&response, 1)) {
-            delay(1);
-        }
-        if (response != 'y' && response != 'Y') {
-            print_len("Store operation cancelled");
-            return;
-        }
-        qd4310.freeze_storage_calibration(
-            static_cast<StorageStatus>(STORAGE_PID_PARAMETER_OK | // 储存PID参数
-                                       STORAGE_LIMIT_OK |         // 储存限制参数
-                                       STORAGE_PLUG_OK)           // 储存ID
-        );
-        print_len("Store configuration completed");
-    }
-
-    static void shell_reboot() {
-        NVIC_SystemReset();
-    }
-
-    static void shell_silent() {
-        shell.write = silent; // 禁止输出
-    }
-
-private
-:
-    // 解析 key=value 格式
-    static char* parse_key_value_arg(char *arg) {
-        if (!arg) return nullptr;
-        char *eq = strchr(arg, '=');
-        if (!eq) return nullptr;
-        *eq = '\0';
-        return eq + 1;
-    }
 };
 
 SHELL_EXPORT_CMD(
