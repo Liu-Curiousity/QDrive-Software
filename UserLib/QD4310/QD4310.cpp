@@ -47,7 +47,7 @@ bool QD4310::start() {
 bool QD4310::stop() {
     QDrive::stop();
     if (!started) {
-        QDrive::Ctrl(CtrlType::CurrentCtrl, 0);
+        QDrive::Ctrl({CtrlType::CurrentCtrl, 0});
         return true;
     }
     return false;
@@ -78,13 +78,13 @@ void QD4310::anticogging_calibrate() {
     return wrap(QDrive::getAngle() - zero_pos, 0, 2 * numbers::pi_v<float>);
 }
 
-bool QD4310::Ctrl(const CtrlType ctrl_type, float value) {
+bool QD4310::Ctrl(CtrlType ctrl_type) {
     if (!started) return false;
     if (error_code != NoError) return false;
-    if (ctrl_type == CtrlType::AngleCtrl) {
-        value = wrap(value + zero_pos, 0, 2 * numbers::pi_v<float>);
+    if (ctrl_type.type == CtrlType::AngleCtrl) {
+        ctrl_type.value = wrap(ctrl_type.value + zero_pos, 0, 2 * numbers::pi_v<float>);
     }
-    QDrive::Ctrl(ctrl_type, value);
+    QDrive::Ctrl(ctrl_type);
     return true;
 }
 

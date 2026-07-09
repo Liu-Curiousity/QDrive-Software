@@ -44,7 +44,7 @@ void USB_Disconnected() {
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
     delay_ms(300);
 }
-TaskHandle_t shellTaskHandle = nullptr;
+
 void StartStartShell(void *argument) {
     USB_Disconnected(); //USB重枚举
     MX_USB_Device_Init();
@@ -52,6 +52,6 @@ void StartStartShell(void *argument) {
     shell.read = shellRead;
     shell.write = shellWrite;
     shellInit(&shell, shellBuffer, sizeof(shellBuffer));
-    xTaskCreate(shellTask, "LetterShellTask", 512, &shell, osPriorityNormal, &shellTaskHandle);
+    xTaskCreate(shellTask, "LetterShellTask", 512, &shell, osPriorityNormal, nullptr);
     vTaskDelete(nullptr);
 }

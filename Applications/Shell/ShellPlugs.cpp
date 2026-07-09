@@ -62,11 +62,11 @@ public:
         print_len("  CAN ID       : %03d", qd4310.ID);
         print_len("  Status       : %s", qd4310.started ? "enabled" : "disabled");
         print_len("  CtrlMode     : %s ctrl",
-                  qd4310.getCtrlType() == CtrlType::CurrentCtrl ? CtrlItems[0].name :
-                  qd4310.getCtrlType() == CtrlType::SpeedCtrl ? CtrlItems[1].name :
-                  qd4310.getCtrlType() == CtrlType::AngleCtrl ? CtrlItems[2].name :
-                  qd4310.getCtrlType() == CtrlType::StepAngleCtrl ? CtrlItems[3].name :
-                  qd4310.getCtrlType() == CtrlType::LowSpeedCtrl ? CtrlItems[4].name : "Unknown");
+                  qd4310.getCtrlType().type == CtrlType::CurrentCtrl ? CtrlItems[0].name :
+                  qd4310.getCtrlType().type == CtrlType::SpeedCtrl ? CtrlItems[1].name :
+                  qd4310.getCtrlType().type == CtrlType::AngleCtrl ? CtrlItems[2].name :
+                  qd4310.getCtrlType().type == CtrlType::StepAngleCtrl ? CtrlItems[3].name :
+                  qd4310.getCtrlType().type == CtrlType::LowSpeedCtrl ? CtrlItems[4].name : "Unknown");
         print_len("  Current      : %.2f A", qd4310.getCurrent());
         print_len("  Speed        : %.2f rpm", qd4310.getSpeed());
         print_len("  Angle        : %.2f rad", qd4310.getAngle());
@@ -533,7 +533,7 @@ private:
             "current", "Set current in Q axis", "A", "%.3g",
             nullptr,
             [](const float value) {
-                qd4310.Ctrl(CtrlType::CurrentCtrl, value);
+                qd4310.Ctrl({CtrlType::CurrentCtrl, value});
                 return true;
             }
         },
@@ -541,7 +541,7 @@ private:
             "speed", "Set speed", "rpm", "%.3g",
             nullptr,
             [](const float value) {
-                qd4310.Ctrl(CtrlType::SpeedCtrl, value);
+                qd4310.Ctrl({CtrlType::SpeedCtrl, value});
                 return true;
             }
         },
@@ -549,7 +549,7 @@ private:
             "angle", "Set angle", "rad", "%.3g",
             nullptr,
             [](const float value) {
-                qd4310.Ctrl(CtrlType::AngleCtrl, value);
+                qd4310.Ctrl({CtrlType::AngleCtrl, value});
                 return true;
             }
         },
@@ -557,7 +557,7 @@ private:
             "step_angle", "Step an specific angle", "rad", "%.3g",
             nullptr,
             [](const float value) {
-                qd4310.Ctrl(CtrlType::StepAngleCtrl, value);
+                qd4310.Ctrl({CtrlType::StepAngleCtrl, value});
                 return true;
             }
         },
@@ -565,7 +565,7 @@ private:
             "low_speed", "Set speed by increasing angle", "rpm", "%.3g",
             nullptr,
             [](const float value) {
-                qd4310.Ctrl(CtrlType::LowSpeedCtrl, value);
+                qd4310.Ctrl({CtrlType::LowSpeedCtrl, value});
                 return true;
             }
         },

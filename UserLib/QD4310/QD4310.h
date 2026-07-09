@@ -80,10 +80,9 @@ public:
     /**
      * @brief QD4310控制设置函数
      * @param ctrl_type 控制类型
-     * @param value 控制值
      * @return 设置成功返回true,失败返回false
      */
-    bool Ctrl(CtrlType ctrl_type, float value);
+    bool Ctrl(CtrlType ctrl_type);
 
     /**
      * @brief FOC控制(速度环、角度环)中断服务函数

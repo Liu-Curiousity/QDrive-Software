@@ -87,8 +87,6 @@ QD4310 qd4310(FOC_POLE_PAIRS, 5000, 20000,
 );
 
 QDrive& qdrive = *reinterpret_cast<QDrive *>(&qd4310);
-extern TaskHandle_t shellTaskHandle;
-UBaseType_t uxHighWaterMark;
 
 void StartFOCTask(void *argument) {
     HAL_TIM_Base_Start_IT(&htim6);            // 开启速度环位置环中断控制
@@ -100,7 +98,6 @@ void StartFOCTask(void *argument) {
             qd4310.updateVoltage(hadc1.Instance->DR / 4095.0f * 3.3f / 2 * 17);
             LL_ADC_REG_StartConversion(hadc1.Instance);
         }
-        uxHighWaterMark = uxTaskGetStackHighWaterMark(shellTaskHandle);
         qd4310.error_detect();
         delay(1);
     }
