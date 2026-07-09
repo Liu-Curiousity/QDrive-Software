@@ -1,10 +1,10 @@
 /**
- * @file        QD4310.cpp
+ * @file        QD4310.h
  * @brief       QD4310电机控制库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-6-14
- * @version     V1.3.1
+ * @date        2026-7-2
+ * @version     V1.4.0
  * @note
  * @warning
  * @par         历史版本:
@@ -16,18 +16,26 @@
  *		        V1.2.1创建于2026-5-5, 调整PID参数存储位置
  *		        V1.3.0创建于2026-5-30, 优化初始化时从储存器读取参数的流程,添加清除校准数据的功能
  *		        V1.3.1修改于2026-6-14,适配PID重构,修复若干问题
+ *		        V1.4.0修改于2026-7-2,添加错误检测
  * @copyright   (c) 2026 QDrive
  */
 
 #ifndef FOC_QD4310_QD4310_H
 #define FOC_QD4310_QD4310_H
 
-#include "FOC.h"
+#include "QDrive.h"
 #include "Storage.h"
 #include "main.h"
 
-class QD4310 : public FOC {
+class QD4310 : public QDrive {
 public:
+    enum ErrorCode : uint8_t {
+        NoError = 0b0000'0000,
+        CalibrationError = 0b0000'0001,
+        VoltageError = 0b0000'0010,
+        TemperatureError = 0b0000'0100,
+    } error_code = NoError;
+
     /**
      * @brief 初始化
      * @param pole_pairs 极对数
@@ -49,7 +57,7 @@ public:
            Filter& CurrentQFilter, Filter& CurrentDFilter, Filter& SpeedFilter,
            BLDC_Driver& driver, Encoder& encoder, Storage& storage, CurrentSensor& current_sensor,
            const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Angle) :
-        FOC(pole_pairs, CtrlFrequency, CurrentCtrlFrequency,
+        QDrive(pole_pairs, CtrlFrequency, CurrentCtrlFrequency,
             CurrentQFilter, CurrentDFilter, SpeedFilter,
             driver, encoder, current_sensor,
             PID_CurrentQ, PID_CurrentD, PID_Speed, PID_Angle),
@@ -59,10 +67,12 @@ public:
     uint32_t uart_baud_rate{115200}; // UART波特率
 
     void init();
-    void start();
-    void stop();
+    bool start();
+    bool stop();
     CalibrationStatus calibrate();
     void anticogging_calibrate();
+
+    ErrorCode error_detect();
 
     // 获取电机角度,单位rad
     [[nodiscard]] float getAngle() const;
@@ -70,10 +80,14 @@ public:
     /**
      * @brief QD4310控制设置函数
      * @param ctrl_type 控制类型
-     * @param value 控制值
      * @return 设置成功返回true,失败返回false
      */
-    bool Ctrl(CtrlType ctrl_type, float value);
+    bool Ctrl(CtrlType ctrl_type);
+
+    /**
+     * @brief FOC控制(速度环、角度环)中断服务函数
+     */
+    void Ctrl_ISR();
 
     /**
      * @brief 设置电机ID
@@ -121,10 +135,8 @@ public:
      */
     bool setUartBaudRate(uint32_t baud_rate);
 
-private:
-    friend void foc_config_list();
-    friend void foc_store();
-    friend void foc_restore();
+protected:
+    friend class ShellPlugs;
 
     enum StorageStatus:uint8_t {
         STORAGE_NONE = 0b0000'0000,

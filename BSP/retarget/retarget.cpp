@@ -41,7 +41,8 @@ signed short shellRead(char *data, unsigned short len) {
     for (i = 0; i < len && !rx_queue.isEmpty(); ++i, ++data) {
         rx_queue.dequeue(*data);
     }
-    delay(1); // 延时1ms,因为shellTask是死循环一点delay都没有,为了让IDLE线程能够运行以释放内存等
+    if (rx_queue.isEmpty())
+        delay(1); // 延时1ms,因为shellTask是死循环一点delay都没有,为了让IDLE线程能够运行以释放内存等
     return i;
 }
 

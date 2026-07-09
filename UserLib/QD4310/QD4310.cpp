@@ -3,8 +3,8 @@
  * @brief       QD4310电机控制库
  * @details
  * @author      Liu-Curiousity (2675794963@qq.com)
- * @date        2026-6-14
- * @version     V1.3.1
+ * @date        2026-7-2
+ * @version     V1.4.0
  * @note
  * @warning
  * @par         历史版本:
@@ -16,11 +16,12 @@
  *		        V1.2.1创建于2026-5-5, 调整PID参数存储位置
  *		        V1.3.0创建于2026-5-30, 优化初始化时从储存器读取参数的流程,添加清除校准数据的功能
  *		        V1.3.1修改于2026-6-14,适配PID重构,修复若干问题
+ *		        V1.4.0修改于2026-7-2,添加错误检测
  * @copyright   (c) 2026 QDrive
  */
 
 #include "QD4310.h"
-#include "FOC_config.h"
+#include "QDrive_cfg.h"
 #include <algorithm>
 #include <numbers>
 #include "usart.h"
@@ -34,33 +35,28 @@ void QD4310::init() {
     // 2.从flash中读取校准数据
     load_storage_calibration();
     // 3.初始化FOC
-    FOC::init();
-    // 4.完成初始化
-    HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
+    QDrive::init();
 }
 
-void QD4310::start() {
-    FOC::start();
-    if (started) {
-        HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET);
-    }
+bool QD4310::start() {
+    if (error_code == NoError) QDrive::start();
+    if (started) return true;
+    else return false;
 }
 
-void QD4310::stop() {
-    FOC::stop();
+bool QD4310::stop() {
+    QDrive::stop();
     if (!started) {
-        FOC::Ctrl(CtrlType::CurrentCtrl, 0);
-        HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
+        QDrive::Ctrl({CtrlType::CurrentCtrl, 0});
+        return true;
     }
+    return false;
 }
 
 auto QD4310::calibrate() -> CalibrationStatus {
-    if (!enabled) return CalibrationStatus::EnvironmentError; // 如果没有使能,则不能校准
-    if (started) return CalibrationStatus::Busy;              // 如果已经启动,则不能校准
-    const auto status = FOC::calibrate();
+    if (error_code & VoltageError) return CalibrationStatus::VoltageError;          // 如果电压异常,则不能校准
+    if (error_code & ~CalibrationError) return CalibrationStatus::EnvironmentError; // 如果有错误,则不能校准
+    const auto status = QDrive::calibrate();
     if (status == CalibrationStatus::Success)                  // 如果基础校准成功
         freeze_storage_calibration(STORAGE_BASE_CALIBRATE_OK); // 保存基础校准数据
     // else if (status == CalibrationStatus::CurrentSensorError ||
@@ -72,26 +68,28 @@ auto QD4310::calibrate() -> CalibrationStatus {
 }
 
 void QD4310::anticogging_calibrate() {
-    if (!enabled) return;         // 如果没有使能,则不能校准
-    if (!calibrated) return;      // 如果没有基础校准,则不能校准
-    if (started) return;          // 如果已经启动,则不能校准
-    if (!anticogging_map) return; // 如果补偿表指针为空,则不能校准
-    FOC::anticogging_calibrate();
+    if (error_code != NoError) return; // 如果有错误,则不能校准
+    QDrive::anticogging_calibrate();
     if (anticogging_calibrated)                                       // 如果齿槽转矩补偿校准成功
         freeze_storage_calibration(STORAGE_ANTICOGGING_CALIBRATE_OK); // 储存齿槽转矩补偿表
 }
 
 [[nodiscard]] float QD4310::getAngle() const {
-    return wrap(FOC::getAngle() - zero_pos, 0, 2 * numbers::pi_v<float>);
+    return wrap(QDrive::getAngle() - zero_pos, 0, 2 * numbers::pi_v<float>);
 }
 
-bool QD4310::Ctrl(const CtrlType ctrl_type, float value) {
+bool QD4310::Ctrl(CtrlType ctrl_type) {
     if (!started) return false;
-    if (ctrl_type == CtrlType::AngleCtrl) {
-        value = wrap(value + zero_pos, 0, 2 * numbers::pi_v<float>);
+    if (error_code != NoError) return false;
+    if (ctrl_type.type == CtrlType::AngleCtrl) {
+        ctrl_type.value = wrap(ctrl_type.value + zero_pos, 0, 2 * numbers::pi_v<float>);
     }
-    FOC::Ctrl(ctrl_type, value);
+    QDrive::Ctrl(ctrl_type);
     return true;
+}
+
+void QD4310::Ctrl_ISR() {
+    QDrive::Ctrl_ISR();
 }
 
 bool QD4310::setID(const uint8_t id) {
@@ -128,6 +126,7 @@ bool QD4310::setLimit(const std::optional<float> speed_limit, const std::optiona
 }
 
 bool QD4310::setZeroPosition(const std::optional<float> position) {
+    if (started) return false; // 如果电机已经启动,则不能设置零点
     zero_pos = wrap(zero_pos + position.value_or(getAngle()), 0, 2 * numbers::pi_v<float>);
     freeze_storage_calibration(STORAGE_ZERO_POS_OK);
     return true;
@@ -142,7 +141,36 @@ bool QD4310::setUartBaudRate(const uint32_t baud_rate) {
     if (HAL_UART_Init(&huart3) != HAL_OK) {
         Error_Handler();
     }
+    // 软件触发进HAL_UART_ErrorCallback
+    HAL_UART_ErrorCallback(&huart3);
     return true;
+}
+
+auto QD4310::error_detect() -> ErrorCode {
+    if (Voltage < FOC_ABSOLUTE_MIN_VOLTAGE || Voltage > FOC_ABSOLUTE_MAX_VOLTAGE) {
+        error_code = static_cast<ErrorCode>(error_code | VoltageError);
+    } else {
+        error_code = static_cast<ErrorCode>(error_code & ~VoltageError);
+    }
+    if (!calibrated) {
+        error_code = static_cast<ErrorCode>(error_code | CalibrationError);
+    } else {
+        error_code = static_cast<ErrorCode>(error_code & ~CalibrationError);
+    }
+    if (error_code != NoError) {
+        stop();
+        HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
+        static uint16_t count = 0;
+        count = (count + 1) % 100; // 1kHz/100/2 = 5Hz
+        if (count == 0) HAL_GPIO_TogglePin(LED_R_GPIO_Port, LED_R_Pin);
+    } else if (started) {
+        HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_SET);
+    } else {
+        HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(LED_R_GPIO_Port, LED_R_Pin, GPIO_PIN_RESET);
+    }
+    return error_code;
 }
 
 void QD4310::restore_calibration() {
@@ -290,6 +318,6 @@ void QD4310::clear_storage_calibration(const StorageStatus storage_type) const {
     }
     // 更新储存状态
     storage.read(0x010, &storage_status, 1);
-    storage_status = static_cast<StorageStatus>(storage_status & !storage_type);
+    storage_status = static_cast<StorageStatus>(storage_status & ~storage_type);
     storage.write(0x010, &storage_status, sizeof(storage_status));
 }
