@@ -127,6 +127,7 @@ void StartCommunicateTask(void *argument) {
     while (true) {
         xQueueReceive(xQueue1, &rx_command, portMAX_DELAY);
         if (!RxCommand::is_CmdType(rx_command.rx_data.fields.cmd_type)) continue;
+        qd4310.feedTimeout(); // 喂狗,重置超时计时器
 
         bool status = false;
         switch (rx_command.rx_data.fields.cmd_type) {

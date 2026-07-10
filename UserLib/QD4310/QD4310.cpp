@@ -108,11 +108,6 @@ float QD4310::getTimeout() const {
     return timeout;
 }
 
-void QD4310::feedTimeout() {
-    timeout_time = 0.0f;
-    error_code = static_cast<ErrorCode>(error_code & ~TimeoutError);
-}
-
 bool QD4310::setPID(const std::optional<float> pid_speed_kp,
                     const std::optional<float> pid_speed_ki,
                     const std::optional<float> pid_speed_kd,
@@ -296,8 +291,8 @@ void QD4310::freeze_storage(const StorageStatus storage_type) {
         *reinterpret_cast<decltype(PID_Angle.kp) *>(&storage_buffer[0x030]) = PID_Angle.kp;
         *reinterpret_cast<decltype(PID_Angle.ki) *>(&storage_buffer[0x040]) = PID_Angle.ki;
         *reinterpret_cast<decltype(PID_Angle.kd) *>(&storage_buffer[0x050]) = PID_Angle.kd;
-        *reinterpret_cast<decltype(PID_Angle.output_limit_p) *>(&storage_buffer[0x000]) = PID_Angle.output_limit_p;
-        *reinterpret_cast<decltype(PID_Speed.output_limit_p) *>(&storage_buffer[0x010]) = PID_Speed.output_limit_p;
+        *reinterpret_cast<decltype(PID_Angle.output_limit_p) *>(&storage_buffer[0x060]) = PID_Angle.output_limit_p;
+        *reinterpret_cast<decltype(PID_Speed.output_limit_p) *>(&storage_buffer[0x070]) = PID_Speed.output_limit_p;
         storage.write(0x200, storage_buffer, 0x080);
     }
     if ((storage_type & STORAGE_PLUG_OK) == STORAGE_PLUG_OK) {

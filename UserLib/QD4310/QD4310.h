@@ -118,7 +118,10 @@ public:
     /**
      * @brief 喂狗函数,用于喂养超时计时器
      */
-    void feedTimeout();
+    void feedTimeout() {
+        timeout_time = 0.0f;
+        error_code = static_cast<ErrorCode>(error_code & ~TimeoutError);
+    }
 
     /**
      * @brief 设置PID参数
