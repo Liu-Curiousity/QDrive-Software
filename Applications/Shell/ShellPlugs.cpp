@@ -275,9 +275,8 @@ public:
             print_len("Store operation cancelled");
             return;
         }
-        qd4310.freeze_storage_calibration(
+        qd4310.freeze_storage(
             static_cast<StorageStatus>(STORAGE_PID_PARAMETER_OK | // 储存PID参数
-                                       STORAGE_LIMIT_OK |         // 储存限制参数
                                        STORAGE_PLUG_OK)           // 储存ID
         );
         print_len("Store operation completed");
@@ -491,6 +490,13 @@ private:
                 }
                 return true;
             }
+        },
+        {
+            "timeout", "Communication timeout", "s", "%.3g",
+            [](const Item& self) {
+                print(self.format, qd4310.getTimeout());
+            },
+            [](const float value) { return qd4310.setTimeout(value); }
         },
         {
             "uart.baud_rate", "UART BaudRate of the motor (50K-10M)", "bps", "%u",
