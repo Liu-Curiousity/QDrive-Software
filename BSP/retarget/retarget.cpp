@@ -9,6 +9,7 @@
 #include "usbd_cdc_if.h"
 #include "CharCircularQueue.h"
 #include "CDC_Tx_DualBuffer.h"
+#include "QD4310.h"
 
 #if !defined(OS_USE_SEMIHOSTING)
 
@@ -26,10 +27,12 @@ void RetargetInit() {
 
 CharCircularQueue rx_queue{128};
 TxDualBuffer<char, 512> tx_buffer(&CDC_Transmit_FS);
+extern QD4310 qd4310;
 
 void CDC_Receive_FS_Callback(uint8_t *Buf, uint32_t *Len) {
     auto length = *Len;
     while (length--) rx_queue.enqueue(*(Buf++));
+    qd4310.feedTimeout(); // 喂狗,重置超时计时器
 }
 
 void CDC_TransmitCplt_FS_Callback() {
@@ -41,7 +44,8 @@ signed short shellRead(char *data, unsigned short len) {
     for (i = 0; i < len && !rx_queue.isEmpty(); ++i, ++data) {
         rx_queue.dequeue(*data);
     }
-    delay(1); // 延时1ms,因为shellTask是死循环一点delay都没有,为了让IDLE线程能够运行以释放内存等
+    if (rx_queue.isEmpty())
+        delay(1); // 延时1ms,因为shellTask是死循环一点delay都没有,为了让IDLE线程能够运行以释放内存等
     return i;
 }
 

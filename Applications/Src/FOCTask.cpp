@@ -18,8 +18,9 @@
  */
 
 #include "task_public.h"
-#include "FOC.h"
-#include "FOC_config.h"
+#include "FreeRTOS.h"
+#include "QDrive.h"
+#include "QDrive_cfg.h"
 #include "tim.h"
 #include "spi.h"
 #include "adc.h"
@@ -30,6 +31,7 @@
 #include "CurrentSensor_Embed.h"
 #include "filters.h"
 #include "QD4310.h"
+#include "task.h"
 
 BLDC_Driver_DRV8300 bldc_driver(&htim1, 2125);
 Encoder_MT6826S bldc_encoder(SPI1_CSn_GPIO_Port, SPI1_CSn_Pin, &hspi1);
@@ -84,7 +86,7 @@ QD4310 qd4310(FOC_POLE_PAIRS, 5000, 20000,
               )
 );
 
-FOC& foc = *reinterpret_cast<FOC *>(&qd4310);
+QDrive& qdrive = *reinterpret_cast<QDrive *>(&qd4310);
 
 void StartFOCTask(void *argument) {
     HAL_TIM_Base_Start_IT(&htim6);            // 开启速度环位置环中断控制
@@ -96,6 +98,7 @@ void StartFOCTask(void *argument) {
             qd4310.updateVoltage(hadc1.Instance->DR / 4095.0f * 3.3f / 2 * 17);
             LL_ADC_REG_StartConversion(hadc1.Instance);
         }
+        qd4310.error_detect();
         delay(1);
     }
 }

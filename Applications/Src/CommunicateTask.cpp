@@ -28,8 +28,10 @@
 #include "fdcan.h"
 #include "usart.h"
 #include "QD4310.h"
-#include "queue.h"
 #include <numbers>
+
+#include "FreeRTOS.h"
+#include "queue.h"
 
 using namespace std;
 
@@ -125,6 +127,7 @@ void StartCommunicateTask(void *argument) {
     while (true) {
         xQueueReceive(xQueue1, &rx_command, portMAX_DELAY);
         if (!RxCommand::is_CmdType(rx_command.rx_data.fields.cmd_type)) continue;
+        qd4310.feedTimeout(); // 喂狗,重置超时计时器
 
         bool status = false;
         switch (rx_command.rx_data.fields.cmd_type) {
@@ -138,24 +141,34 @@ void StartCommunicateTask(void *argument) {
                 status = qd4310.stop();
                 break;
             case RxCommand::CmdType::CurrentCtrl: // 电流控制
-                status = qd4310.Ctrl(QD4310::CtrlType::CurrentCtrl,
-                                     rx_command.rx_data.fields.data * 10.0f / INT16_MAX);
+                status = qd4310.Ctrl({
+                    QD4310::CtrlType::CurrentCtrl,
+                    rx_command.rx_data.fields.data * 10.0f / INT16_MAX
+                });
                 break;
             case RxCommand::CmdType::SpeedCtrl: // 速度控制
-                status = qd4310.Ctrl(QD4310::CtrlType::SpeedCtrl,
-                                     rx_command.rx_data.fields.data * 1000.0f / INT16_MAX);
+                status = qd4310.Ctrl({
+                    QD4310::CtrlType::SpeedCtrl,
+                    rx_command.rx_data.fields.data * 1000.0f / INT16_MAX
+                });
                 break;
             case RxCommand::CmdType::AngleCtrl: // 角度控制
-                status = qd4310.Ctrl(QD4310::CtrlType::AngleCtrl,
-                                     rx_command.rx_data.fields.data * 2 * numbers::pi_v<float> / UINT16_MAX);
+                status = qd4310.Ctrl({
+                    QD4310::CtrlType::AngleCtrl,
+                    rx_command.rx_data.fields.data * 2 * numbers::pi_v<float> / UINT16_MAX
+                });
                 break;
             case RxCommand::CmdType::LowSpeedCtrl: // 低速控制
-                status = qd4310.Ctrl(QD4310::CtrlType::LowSpeedCtrl,
-                                     rx_command.rx_data.fields.data * 1000.0f / INT16_MAX);
+                status = qd4310.Ctrl({
+                    QD4310::CtrlType::LowSpeedCtrl,
+                    rx_command.rx_data.fields.data * 1000.0f / INT16_MAX
+                });
                 break;
             case RxCommand::CmdType::StepAngleCtrl: // 角度步进
-                status = qd4310.Ctrl(QD4310::CtrlType::StepAngleCtrl,
-                                     rx_command.rx_data.fields.data * 2 * numbers::pi_v<float> / INT16_MAX);
+                status = qd4310.Ctrl({
+                    QD4310::CtrlType::StepAngleCtrl,
+                    rx_command.rx_data.fields.data * 2 * numbers::pi_v<float> / INT16_MAX
+                });
                 break;
             case RxCommand::CmdType::Reboot: // 重启
                 status = true;
@@ -170,7 +183,7 @@ void StartCommunicateTask(void *argument) {
         static TxData tx_data{};
         tx_data.data.id = qd4310.ID;
         tx_data.data.motor_state = qd4310.started | status << 1 |
-                                   static_cast<uint8_t>(qd4310.getCtrlType()) << 4;       // 电机状态
+                                   static_cast<uint8_t>(qd4310.getCtrlType().type) << 4;  // 电机状态
         tx_data.data.error_code = qd4310.error_code;                                      // 错误码
         tx_data.data.current = qd4310.getCurrent() / 10 * INT16_MAX;                      // Q轴电流
         tx_data.data.speed = qd4310.getSpeed() / 1000 * INT16_MAX;                        // 电机转速

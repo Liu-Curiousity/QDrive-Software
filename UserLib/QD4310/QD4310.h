@@ -23,17 +23,18 @@
 #ifndef FOC_QD4310_QD4310_H
 #define FOC_QD4310_QD4310_H
 
-#include "FOC.h"
+#include "QDrive.h"
 #include "Storage.h"
 #include "main.h"
 
-class QD4310 : public FOC {
+class QD4310 : public QDrive {
 public:
     enum ErrorCode : uint8_t {
         NoError = 0b0000'0000,
         CalibrationError = 0b0000'0001,
         VoltageError = 0b0000'0010,
-        TemperatureError = 0b0000'0100,
+        TimeoutError = 0b0000'0100,
+        TemperatureError = 0b0000'1000,
     } error_code = NoError;
 
     /**
@@ -57,10 +58,10 @@ public:
            Filter& CurrentQFilter, Filter& CurrentDFilter, Filter& SpeedFilter,
            BLDC_Driver& driver, Encoder& encoder, Storage& storage, CurrentSensor& current_sensor,
            const PID& PID_CurrentQ, const PID& PID_CurrentD, const PID& PID_Speed, const PID& PID_Angle) :
-        FOC(pole_pairs, CtrlFrequency, CurrentCtrlFrequency,
-            CurrentQFilter, CurrentDFilter, SpeedFilter,
-            driver, encoder, current_sensor,
-            PID_CurrentQ, PID_CurrentD, PID_Speed, PID_Angle),
+        QDrive(pole_pairs, CtrlFrequency, CurrentCtrlFrequency,
+               CurrentQFilter, CurrentDFilter, SpeedFilter,
+               driver, encoder, current_sensor,
+               PID_CurrentQ, PID_CurrentD, PID_Speed, PID_Angle),
         storage(storage) {}
 
     uint8_t ID{0};                   // 电机ID
@@ -72,16 +73,22 @@ public:
     CalibrationStatus calibrate();
     void anticogging_calibrate();
 
+    /**
+     * @brief 错误检测函数,用于检测电机是否有错误,并在有错误时停止电机
+     * @note 此函数需以1kHz调用
+     * @return ErrorCode 错误码
+     */
+    ErrorCode error_detect();
+
     // 获取电机角度,单位rad
     [[nodiscard]] float getAngle() const;
 
     /**
      * @brief QD4310控制设置函数
      * @param ctrl_type 控制类型
-     * @param value 控制值
      * @return 设置成功返回true,失败返回false
      */
-    bool Ctrl(CtrlType ctrl_type, float value);
+    bool Ctrl(CtrlType ctrl_type);
 
     /**
      * @brief FOC控制(速度环、角度环)中断服务函数
@@ -94,6 +101,27 @@ public:
      * @return 设置成功返回true,失败返回false
     */
     bool setID(uint8_t id);
+
+    /**
+     * @brief 设置电机timeout,0表示不超时
+     * @param timeout_ 电机超时时间,单位s,范围[0,+inf)
+     * @return 设置成功返回true,失败返回false
+    */
+    bool setTimeout(float timeout_);
+
+    /**
+     * @brief 获取电机timeout
+     * @return 电机超时时间,单位s
+     */
+    [[nodiscard]] float getTimeout() const;
+
+    /**
+     * @brief 喂狗函数,用于喂养超时计时器
+     */
+    void feedTimeout() {
+        timeout_time = 0.0f;
+        error_code = static_cast<ErrorCode>(error_code & ~TimeoutError);
+    }
 
     /**
      * @brief 设置PID参数
@@ -134,37 +162,34 @@ public:
      */
     bool setUartBaudRate(uint32_t baud_rate);
 
-private:
-    friend void foc_config_list();
-    friend void foc_store();
-    friend void foc_restore();
+protected:
+    friend class ShellPlugs;
 
     enum StorageStatus:uint8_t {
         STORAGE_NONE = 0b0000'0000,
         STORAGE_BASE_CALIBRATE_OK = 0b0000'0001,
         STORAGE_ANTICOGGING_CALIBRATE_OK = 0b0000'0010,
         STORAGE_PID_PARAMETER_OK = 0b0000'0100,
-        STORAGE_LIMIT_OK = 0b0000'1000,
-        STORAGE_PLUG_OK = 0b0001'0000,
-        STORAGE_ZERO_POS_OK = 0b0010'0000,
+        STORAGE_PLUG_OK = 0b0000'1000,
+        STORAGE_ZERO_POS_OK = 0b0001'0000,
         STORAGE_ALL_OK = STORAGE_BASE_CALIBRATE_OK |
                          STORAGE_ANTICOGGING_CALIBRATE_OK |
                          STORAGE_PID_PARAMETER_OK |
-                         STORAGE_LIMIT_OK |
                          STORAGE_PLUG_OK |
                          STORAGE_ZERO_POS_OK,
     };
 
     static constexpr uint8_t STORAGE_MAGIC = 0xAA; // 存储器魔术字,储存在0x000
 
-    Storage& storage;     //存储器
-    float zero_pos{0.0f}; //位置零点
+    Storage& storage;         // 存储器
+    float zero_pos{0.0f};     // 位置零点, 单位rad
+    float timeout{0.0f};      // 超时时间, 单位s
+    float timeout_time{0.0f}; // 超时计时器, 单位s
 
-    ErrorCode error_detect();
     void restore_calibration();
     void load_storage_calibration();
-    void freeze_storage_calibration(StorageStatus storage_type);
-    void clear_storage_calibration(StorageStatus storage_type) const;
+    void freeze_storage(StorageStatus storage_type);
+    void clear_storage(StorageStatus storage_type) const;
 };
 
 #endif //FOC_QD4310_QD4310_H
