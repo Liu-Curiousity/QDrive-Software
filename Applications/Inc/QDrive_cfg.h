@@ -32,7 +32,7 @@ void qdrive_delay_ms(uint32_t ms);
 extern "C" {
 #endif
 
-#define FOC_SOFTWARE_VERSION "6.3.0"     // 软件版本
+#define FOC_SOFTWARE_VERSION "6.3.1-alpha"  // 软件版本
 
 /*==========================电机参数==========================*/
 #define FOC_KV                      33.0f   // KV值,单位rpm/V
