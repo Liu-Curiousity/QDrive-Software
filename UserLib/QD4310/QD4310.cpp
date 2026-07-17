@@ -160,8 +160,8 @@ auto QD4310::error_detect() -> ErrorCode {
     if (timeout != 0) {
         timeout_time += 0.001f; // 每次调用增加1ms
         if (timeout_time > timeout) {
+            Ctrl({CtrlType::CurrentCtrl, 0}); // 超时后强制电流控制为0
             error_code = static_cast<ErrorCode>(error_code | TimeoutError);
-            stop();
         }
     } else {
         error_code = static_cast<ErrorCode>(error_code & ~TimeoutError);
@@ -176,9 +176,9 @@ auto QD4310::error_detect() -> ErrorCode {
     } else {
         error_code = static_cast<ErrorCode>(error_code & ~CalibrationError);
     }
-    if (error_code != NoError) stop();
     // 如果有除timeout以外的错误,则闪报警灯
     if (error_code & ~TimeoutError) {
+        stop();
         HAL_GPIO_WritePin(LED_G_GPIO_Port, LED_G_Pin, GPIO_PIN_SET);
         static uint16_t count = 0;
         count = (count + 1) % 100; // 1kHz/100/2 = 5Hz
