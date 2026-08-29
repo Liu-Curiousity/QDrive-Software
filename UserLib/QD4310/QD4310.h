@@ -133,12 +133,12 @@ public:
      * @param pid_angle_kd 角度环微分系数
      * @return 设置成功返回true,失败返回false
      */
-    bool setPID(std::optional<float> pid_speed_kp,
-                std::optional<float> pid_speed_ki,
-                std::optional<float> pid_speed_kd,
-                std::optional<float> pid_angle_kp,
-                std::optional<float> pid_angle_ki,
-                std::optional<float> pid_angle_kd);
+    bool setPID(const std::optional<float>& pid_speed_kp,
+                const std::optional<float>& pid_speed_ki,
+                const std::optional<float>& pid_speed_kd,
+                const std::optional<float>& pid_angle_kp,
+                const std::optional<float>& pid_angle_ki,
+                const std::optional<float>& pid_angle_kd);
 
     /**
      * @brief 设置速度和电流限制
@@ -146,7 +146,7 @@ public:
      * @param current_limit 电流限制,单位A
      * @return 设置成功返回true,失败返回false
      */
-    bool setLimit(std::optional<float> speed_limit, std::optional<float> current_limit);
+    bool setLimit(const std::optional<float>& speed_limit, const std::optional<float>& current_limit);
 
     /**
      * @brief 设置位置零点

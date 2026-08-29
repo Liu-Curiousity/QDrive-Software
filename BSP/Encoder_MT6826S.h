@@ -61,10 +61,55 @@ public:
         return (rxData[0] << 7 | rxData[1] >> 1) * resolution;
     }
 
+    void start_calibrate() override {
+        if (enabled) return;
+        // 1.配置校准转速
+        write_reg(0x00E, (read_reg(0x00E) & 0b1000'1111) | 0b0100'0000); // 100: 200-400rpm
+        // 2.启动校准
+        write_reg(0x155, 0x5E);
+    }
+
+    void stop_calibrate() override {
+        if (enabled) return;
+        // 1.停止校准
+        write_reg(0x155, 0x00);
+    }
+
+    [[nodiscard]] CalibrateStatus calibrate_status() override {
+        if (enabled) return NotStarted;
+        const uint8_t status = read_reg(0x113) >> 6;
+        return status == 0b00 ? NotStarted : status == 0b01 ? InProgress : status == 0b10 ? Failed : Success;
+    }
+
 private:
     SPI_HandleTypeDef *hspi = nullptr;
     GPIO_TypeDef *CS_GPIO_Port = nullptr;
     uint16_t CS_GPIO_Pin = 0;
+
+    [[nodiscard]] uint8_t read_reg(const uint16_t reg) const {
+        if (enabled) return 0;
+
+        static uint8_t txData[2]{0x30, 0x00};
+        static uint8_t rxData{0};
+        txData[0] = 0x30 | ((reg >> 8) & 0x0F);
+        txData[1] = reg;
+        HAL_GPIO_WritePin(CS_GPIO_Port, CS_GPIO_Pin, GPIO_PIN_RESET);
+        HAL_SPI_Transmit(hspi, txData, 2, HAL_MAX_DELAY);
+        HAL_SPI_Receive(hspi, &rxData, 1, HAL_MAX_DELAY);
+        HAL_GPIO_WritePin(CS_GPIO_Port, CS_GPIO_Pin, GPIO_PIN_SET);
+        return rxData;
+    }
+
+    void write_reg(const uint16_t reg, const uint8_t data) const {
+        if (enabled) return;
+        static uint8_t txData[3]{0x60, 0x00, 0x00};
+        txData[0] = 0x60 | ((reg >> 8) & 0x0F);
+        txData[1] = reg;
+        txData[2] = data;
+        HAL_GPIO_WritePin(CS_GPIO_Port, CS_GPIO_Pin, GPIO_PIN_RESET);
+        HAL_SPI_Transmit(hspi, txData, 3, HAL_MAX_DELAY);
+        HAL_GPIO_WritePin(CS_GPIO_Port, CS_GPIO_Pin, GPIO_PIN_SET);
+    }
 };
 
 #endif //ENCODER_DRIVER_MT6826S_H
