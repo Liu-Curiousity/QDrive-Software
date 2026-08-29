@@ -61,23 +61,24 @@ public:
         return (rxData[0] << 7 | rxData[1] >> 1) * resolution;
     }
 
-    void start_self_calibrate() const {
+    void start_calibrate() override {
         if (enabled) return;
-
         // 1.配置校准转速
-        write_reg(0x00E, (read_reg(0x00E) & 0b1000'1111) | 0b0011'0000); // 011: 200-400rpm
+        write_reg(0x00E, (read_reg(0x00E) & 0b1000'1111) | 0b0100'0000); // 100: 200-400rpm
         // 2.启动校准
         write_reg(0x155, 0x5E);
-        // HAL_GPIO_WritePin(CAL_EN_GPIO_Port, CAL_EN_Pin, GPIO_PIN_SET);
-        // 3.等待校准完成
-        // while (read_reg(0x113) >> 6 == 0x01) {
-        //     delay(10);
-        // }
     }
 
-    [[nodiscard]] uint8_t self_calibrate_status() const {
-        if (enabled) return 0x00;
-        return read_reg(0x113) >> 6;
+    void stop_calibrate() override {
+        if (enabled) return;
+        // 1.停止校准
+        write_reg(0x155, 0x00);
+    }
+
+    [[nodiscard]] CalibrateStatus calibrate_status() override {
+        if (enabled) return NotStarted;
+        const uint8_t status = read_reg(0x113) >> 6;
+        return status == 0b00 ? NotStarted : status == 0b01 ? InProgress : status == 0b10 ? Failed : Success;
     }
 
 private:
