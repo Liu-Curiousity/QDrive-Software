@@ -47,7 +47,7 @@ bool QD4310::start() {
 bool QD4310::stop() {
     QDrive::stop();
     if (!started) {
-        QDrive::Ctrl({CtrlType::CurrentCtrl, 0});
+        QDrive::Ctrl({.type = CtrlType::CurrentCtrl, .value = 0});
         return true;
     }
     return false;
@@ -108,12 +108,12 @@ float QD4310::getTimeout() const {
     return timeout;
 }
 
-bool QD4310::setPID(const std::optional<float> pid_speed_kp,
-                    const std::optional<float> pid_speed_ki,
-                    const std::optional<float> pid_speed_kd,
-                    const std::optional<float> pid_angle_kp,
-                    const std::optional<float> pid_angle_ki,
-                    const std::optional<float> pid_angle_kd) {
+bool QD4310::setPID(const std::optional<float>& pid_speed_kp,
+                    const std::optional<float>& pid_speed_ki,
+                    const std::optional<float>& pid_speed_kd,
+                    const std::optional<float>& pid_angle_kp,
+                    const std::optional<float>& pid_angle_ki,
+                    const std::optional<float>& pid_angle_kd) {
     if (pid_speed_kp) PID_Speed.kp = pid_speed_kp.value();
     if (pid_speed_ki) PID_Speed.ki = pid_speed_ki.value();
     if (pid_speed_kd) PID_Speed.kd = pid_speed_kd.value();
@@ -123,7 +123,7 @@ bool QD4310::setPID(const std::optional<float> pid_speed_kp,
     return true;
 }
 
-bool QD4310::setLimit(const std::optional<float> speed_limit, const std::optional<float> current_limit) {
+bool QD4310::setLimit(const std::optional<float>& speed_limit, const std::optional<float>& current_limit) {
     if (speed_limit) {
         PID_Angle.output_limit_p = speed_limit.value();
         PID_Angle.output_limit_n = -speed_limit.value();

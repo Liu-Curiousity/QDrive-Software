@@ -33,13 +33,13 @@
 #include "QD4310.h"
 #include "task.h"
 
-BLDC_Driver_DRV8300 bldc_driver(&htim1, 2125);
-Encoder_MT6826S bldc_encoder(SPI1_CSn_GPIO_Port, SPI1_CSn_Pin, &hspi1);
-CurrentSensor_Embed current_sensor(&hadc1, &hadc2);
+static BLDC_Driver_DRV8300 bldc_driver(&htim1, 2125);
+static Encoder_MT6826S bldc_encoder(SPI1_CSn_GPIO_Port, SPI1_CSn_Pin, &hspi1);
+static CurrentSensor_Embed current_sensor(&hadc1, &hadc2);
 
-LowPassFilter_2_Order CurrentQFilter(0.00005f, 1500); // 20kHz
-LowPassFilter_2_Order CurrentDFilter(0.00005f, 1500); // 20kHz
-LowPassFilter_2_Order SpeedFilter(0.00005f, 300);     // 20kHz
+static LowPassFilter_2_Order CurrentQFilter(0.00005f, 1500); // 20kHz
+static LowPassFilter_2_Order CurrentDFilter(0.00005f, 1500); // 20kHz
+static LowPassFilter_2_Order SpeedFilter(0.00005f, 300);     // 20kHz
 
 QD4310 qd4310(FOC_POLE_PAIRS, 5000, 20000,
               CurrentQFilter, CurrentDFilter, SpeedFilter,

@@ -51,10 +51,10 @@ public:
         print_len("  Pole pairs       : %d ", FOC_POLE_PAIRS);
         print_len("  KV rating        : %.1f rpm/V", FOC_KV);
         print_len("  Nominal voltage  : %d V", FOC_NOMINAL_VOLTAGE);
-        print_len("  Phase inductance : %.2f mH", FOC_PHASE_INDUCTANCE);
-        print_len("  Phase resistance : %.2f Ω", FOC_PHASE_RESISTANCE);
-        print_len("  Torque constant  : %.2f Nm/A", FOC_TORQUE_CONSTANT);
-        print_len("  Max current      : %.2f A", FOC_MAX_CURRENT);
+        print_len("  Phase inductance : %.3f mH", FOC_PHASE_INDUCTANCE);
+        print_len("  Phase resistance : %.3f Ω", FOC_PHASE_RESISTANCE);
+        print_len("  Torque constant  : %.3f Nm/A", FOC_TORQUE_CONSTANT);
+        print_len("  Max current      : %.3f A", FOC_MAX_CURRENT);
     }
 
     static void foc_status() {
@@ -67,10 +67,10 @@ public:
                   qd4310.getCtrlType().type == CtrlType::AngleCtrl ? CtrlItems[2].name :
                   qd4310.getCtrlType().type == CtrlType::StepAngleCtrl ? CtrlItems[3].name :
                   qd4310.getCtrlType().type == CtrlType::LowSpeedCtrl ? CtrlItems[4].name : "Unknown");
-        print_len("  Current      : %.2f A", qd4310.getCurrent());
-        print_len("  Speed        : %.2f rpm", qd4310.getSpeed());
-        print_len("  Angle        : %.2f rad", qd4310.getAngle());
-        print_len("  Voltage      : %.2f V", qd4310.getVoltage());
+        print_len("  Current      : %.3f A", qd4310.getCurrent());
+        print_len("  Speed        : %.3f rpm", qd4310.getSpeed());
+        print_len("  Angle        : %.3f rad", qd4310.getAngle());
+        print_len("  Voltage      : %.3f V", qd4310.getVoltage());
     }
 
     static void foc_config_help() {
@@ -149,7 +149,7 @@ public:
         print_len("");
         print_len("Control Parameters:");
         for (const auto& item : CtrlItems) {
-            print_len("  %-18s : %s (%s)", item.name, item.description, item.unit);
+            print_len("  %-14s : %s (%s)", item.name, item.description, item.unit);
         }
     }
 
@@ -159,15 +159,16 @@ public:
             return;
         }
 
+        if (!qd4310.started) {
+            print_len(PROMPT_ENABLE_FIRST);
+            return;
+        }
+
         char *key = argv[1];
         const char *value = parse_key_value_arg(key);
         if (!value && argc >= 3)
             value = argv[2];
 
-        if (!qd4310.started) {
-            print_len(PROMPT_ENABLE_FIRST);
-            return;
-        }
         const auto *ctrl_item = Item::find_item(CtrlItems, key);
         if (!ctrl_item || !ctrl_item->set_value) {
             print_len(PROMPT_UNKNOW_TARGET(ctrl, key));
