@@ -37,6 +37,8 @@ void version_detect() {
         while (LL_ADC_REG_IsConversionOngoing(ADC2)) {}
         if (std::abs(LL_ADC_REG_ReadConversionData12(ADC2) - 54) <= 50) {
             FOC_HARDWARE_VERSION = FOC_HARDWARE_VERSIONS[2];
+        } else if (std::abs(LL_ADC_REG_ReadConversionData12(ADC2) - 372) <= 50) {
+            FOC_HARDWARE_VERSION = FOC_HARDWARE_VERSIONS[3];
         } else {
             FOC_HARDWARE_VERSION = FOC_HARDWARE_VERSIONS[0];
         }

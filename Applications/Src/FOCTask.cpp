@@ -94,10 +94,6 @@ void StartFOCTask(void *argument) {
     qd4310.init();                            // 初始化FOC
     qd4310.enable();                          // 使能FOC
     while (true) {
-        if (!LL_ADC_REG_IsConversionOngoing(hadc1.Instance)) {
-            qd4310.updateVoltage(hadc1.Instance->DR / 4095.0f * 3.3f / 2 * 17);
-            LL_ADC_REG_StartConversion(hadc1.Instance);
-        }
         qd4310.error_detect();
         delay(1);
     }
@@ -107,6 +103,28 @@ __attribute__((section(".ccmram_func")))
 void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *hadc) {
     if (&hadc1 == hadc) {
         current_sensor.update();
+
+        static uint8_t count = 0;
+        if (++count >= 20) {
+            count = 0;
+            // 先读取上一轮结果，读取 DR 会清除对应 ADC 的 EOC。
+            if (!LL_ADC_REG_IsConversionOngoing(hadc1.Instance) &&
+                !LL_ADC_REG_IsConversionOngoing(hadc2.Instance)) {
+                if (LL_ADC_IsActiveFlag_EOC(hadc1.Instance)) {
+                    const uint16_t adc_value = LL_ADC_REG_ReadConversionData12(hadc1.Instance);
+                    qd4310.updateVoltage(adc_value / 4095.0f * 3.3f / 2 * 17);
+                }
+                if (LL_ADC_IsActiveFlag_EOC(hadc2.Instance)) {
+                    (void)LL_ADC_REG_ReadConversionData12(hadc2.Instance);
+                }
+
+                // 仅在安全的 PWM 相位启动下一轮双 ADC 常规转换。
+                if (!__HAL_TIM_IS_TIM_COUNTING_DOWN(&htim1)) {
+                    LL_ADC_REG_StartConversion(hadc1.Instance);
+                }
+            }
+        }
+
         qd4310.loopCtrl();
     }
 }
