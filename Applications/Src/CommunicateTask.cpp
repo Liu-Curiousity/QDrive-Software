@@ -219,6 +219,7 @@ void FDCAN_Filter_INIT(FDCAN_HandleTypeDef *hfdcan) {
     HAL_FDCAN_ConfigGlobalFilter(hfdcan, FDCAN_REJECT, FDCAN_REJECT, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE);
     HAL_FDCAN_Start(hfdcan);
     HAL_FDCAN_ActivateNotification(hfdcan, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0);
+    HAL_FDCAN_ActivateNotification(hfdcan, FDCAN_IT_BUS_OFF, 0);
 }
 
 /**
@@ -237,6 +238,18 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
             if (RxHeader.Identifier == 0x400 + qd4310.ID && RxHeader.DataLength == 3) {
                 xQueueSendToBackFromISR(xQueue1, &rx_command, &xHigherPriorityTaskWoken);
                 portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+            }
+        }
+    }
+}
+
+void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t ErrorStatusITs) {
+    if (hfdcan == &hfdcan1) {
+        if ((ErrorStatusITs & FDCAN_IT_BUS_OFF) != RESET) {
+            FDCAN_ProtocolStatusTypeDef protocolStatus = {};
+            HAL_FDCAN_GetProtocolStatus(hfdcan, &protocolStatus);
+            if (protocolStatus.BusOff) {
+                CLEAR_BIT(hfdcan->Instance->CCCR, FDCAN_CCCR_INIT);
             }
         }
     }

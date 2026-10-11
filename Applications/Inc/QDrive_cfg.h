@@ -21,7 +21,8 @@
 inline constexpr const char *FOC_HARDWARE_VERSIONS[] = {
     "unknown",
     "4310_6.1.0",
-    "4310_6.2.1"
+    "4310_6.2.1",
+    "4310_6.2.2"
 };
 inline const char *FOC_HARDWARE_VERSION = FOC_HARDWARE_VERSIONS[0]; // 硬件版本
 
@@ -32,7 +33,7 @@ void qdrive_delay_ms(uint32_t ms);
 extern "C" {
 #endif
 
-#define FOC_SOFTWARE_VERSION "6.4.0"  // 软件版本
+#define FOC_SOFTWARE_VERSION "6.4.1"  // 软件版本
 
 /*==========================电机参数==========================*/
 #define FOC_KV                      33.0f   // KV值,单位rpm/V
